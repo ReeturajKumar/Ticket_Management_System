@@ -22,9 +22,9 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Welcome to the Student Ticketing System API (TypeScript)');
 });
 
-// Routes
-// import routes from './routes';
-// app.use('/api', routes); // Placeholder for when routes are created
+// API Routes
+import routes from './routes';
+app.use('/api/v1', routes);
 
 // Start Server
 app.listen(PORT, () => {

@@ -7,6 +7,7 @@ export interface IUser extends Document {
   password: string;
   role: UserRole;
   department?: Department;
+  refreshToken?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,6 +47,10 @@ const UserSchema: Schema = new Schema(
       required: function (this: IUser) {
         return this.role === UserRole.DEPARTMENT_USER;
       },
+    },
+    refreshToken: {
+      type: String,
+      default: null,
     },
   },
   {

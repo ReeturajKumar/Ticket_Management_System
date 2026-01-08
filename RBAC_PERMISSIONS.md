@@ -428,6 +428,3 @@ if (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN) {
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** 2026-01-08  
-**Status:** Draft - Pending Implementation

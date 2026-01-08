@@ -25,12 +25,12 @@ export const generateTokens = (payload: JWTPayload): TokenPair => {
   }
 
   const accessToken = jwt.sign(payload, accessSecret, {
-    expiresIn: (process.env.ACCESS_TOKEN_EXPIRY || '15m') as any,
-  });
+    expiresIn: process.env.ACCESS_TOKEN_EXPIRY || '15m',
+  } as SignOptions);
 
   const refreshToken = jwt.sign(payload, refreshSecret, {
-    expiresIn: (process.env.REFRESH_TOKEN_EXPIRY || '7d') as any,
-  });
+    expiresIn: process.env.REFRESH_TOKEN_EXPIRY || '7d',
+  } as SignOptions);
 
   return { accessToken, refreshToken };
 };

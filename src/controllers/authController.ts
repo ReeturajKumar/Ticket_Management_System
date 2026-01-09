@@ -2,10 +2,11 @@ import { Request, Response } from 'express';
 import User from '../models/User';
 import { hashPassword, comparePassword } from '../utils/password';
 import { generateTokens, verifyRefreshToken } from '../utils/jwt';
+import { generateOTP, sendOTPEmail, sendWelcomeEmail } from '../utils/email';
 import { UserRole } from '../constants';
 
 /**
- * Register a new user
+ * Register a new user (Step 1: Send OTP)
  * POST /api/v1/auth/register
  */
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -21,9 +22,18 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Check if user already exists
+    // Validate password length
+    if (password.length < 6) {
+      res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long',
+      });
+      return;
+    }
+
+    // Check if user already exists and is verified
     const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
+    if (existingUser && existingUser.isVerified) {
       res.status(400).json({
         success: false,
         message: 'User with this email already exists',
@@ -31,50 +41,50 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Generate OTP
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 30 * 1000); // 30 seconds
+
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create new user - ALWAYS as STUDENT role
-    // Other roles (DEPARTMENT_USER, ADMIN, SUPER_ADMIN) must be created by admins
-    const user = await User.create({
-      name,
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      role: UserRole.STUDENT,  // Always STUDENT for public registration
-      department: undefined,    // Students don't have departments
-    });
+    if (existingUser && !existingUser.isVerified) {
+      // User exists but not verified - update OTP
+      existingUser.name = name;
+      existingUser.password = hashedPassword;
+      existingUser.verificationOTP = otp;
+      existingUser.otpExpiry = otpExpiry;
+      await existingUser.save();
+    } else {
+      // Create new unverified user
+      await User.create({
+        name,
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        role: UserRole.STUDENT,
+        department: undefined,
+        isVerified: false,
+        verificationOTP: otp,
+        otpExpiry,
+      });
+    }
 
-    // Generate tokens
-    const { accessToken, refreshToken } = generateTokens({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    });
+    // Send OTP email
+    await sendOTPEmail(email, name, otp);
 
-    // Save refresh token to database
-    user.refreshToken = refreshToken;
-    await user.save();
-
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      message: 'User registered successfully',
+      message: 'Verification OTP sent to your email. Please check your inbox.',
       data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          department: user.department,
-        },
-        accessToken,
-        refreshToken,
+        email: email.toLowerCase(),
+        otpExpiresIn: '30 seconds',
       },
     });
   } catch (error: any) {
     console.error('Registration error:', error);
     res.status(500).json({
       success: false,
-      message: 'Error registering user',
+      message: 'Error sending verification email',
       error: error.message,
     });
   }
@@ -103,6 +113,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       res.status(401).json({
         success: false,
         message: 'Invalid email or password',
+      });
+      return;
+    }
+
+    // Check if email is verified
+    if (!user.isVerified) {
+      res.status(403).json({
+        success: false,
+        message: 'Please verify your email before logging in. Check your inbox for the OTP.',
       });
       return;
     }

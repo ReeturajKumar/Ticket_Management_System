@@ -8,6 +8,9 @@ export interface IUser extends Document {
   role: UserRole;
   department?: Department;
   refreshToken?: string | null;
+  isVerified: boolean;
+  verificationOTP?: string;
+  otpExpiry?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +53,18 @@ const UserSchema: Schema = new Schema(
     },
     refreshToken: {
       type: String,
+      default: null,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationOTP: {
+      type: String,
+      default: null,
+    },
+    otpExpiry: {
+      type: Date,
       default: null,
     },
   },

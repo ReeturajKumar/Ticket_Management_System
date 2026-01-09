@@ -226,12 +226,33 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Find user with this refresh token and clear it
-    const user = await User.findOne({ refreshToken });
-    if (user) {
-      user.refreshToken = null;
-      await user.save();
+    // Verify refresh token is valid (not expired/tampered)
+    try {
+      verifyRefreshToken(refreshToken);
+    } catch (error) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid or expired refresh token',
+      });
+      return;
     }
+
+    // Find user with this refresh token
+    const user = await User.findOne({ refreshToken });
+    
+    if (!user) {
+      // Token is valid but not found in database
+      // This means user already logged out or token was rotated
+      res.status(401).json({
+        success: false,
+        message: 'Refresh token not found. You may already be logged out.',
+      });
+      return;
+    }
+
+    // Clear refresh token from database
+    user.refreshToken = null;
+    await user.save();
 
     res.status(200).json({
       success: true,

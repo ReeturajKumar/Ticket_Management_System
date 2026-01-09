@@ -1,11 +1,15 @@
 import { Router } from 'express';
 import { getProfile, updateProfile, changePassword } from '../controllers/profileController';
 import { authenticate } from '../middleware/auth';
+import { profileLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
 // All profile routes require authentication
 router.use(authenticate);
+
+// Apply rate limiter to all profile routes
+router.use(profileLimiter);
 
 // GET /api/v1/profile - Get authenticated user's profile
 router.get('/', getProfile);

@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/db';
 import errorHandler from './middleware/errorHandler';
+import { globalLimiter } from './middleware/rateLimiter';
 
 // Load environment variables
 dotenv.config();
@@ -17,6 +18,9 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Apply global rate limiter to all requests
+app.use(globalLimiter);
 
 // Basic Route
 app.get('/', (req: Request, res: Response) => {

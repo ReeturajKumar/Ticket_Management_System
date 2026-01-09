@@ -105,7 +105,7 @@ export const sendOTPEmail = async (
               
               <p><strong>Important:</strong></p>
               <ul>
-                <li>This OTP is valid for <strong>30 seconds</strong></li>
+                <li>This OTP is valid for <strong>2 minutes</strong></li>
                 <li>Do not share this code with anyone</li>
                 <li>If you didn't request this, please ignore this email</li>
               </ul>
@@ -197,3 +197,109 @@ export const sendWelcomeEmail = async (
     // Don't throw error for welcome email, it's not critical
   }
 };
+
+/**
+ * Send password reset email with reset link
+ */
+export const sendPasswordResetEmail = async (
+  email: string,
+  name: string,
+  resetToken: string
+): Promise<void> => {
+  try {
+    const transporter = createTransporter();
+    
+    // Reset link (frontend will handle this route)
+    const resetLink = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+
+    const mailOptions = {
+      from: `"${process.env.EMAIL_FROM_NAME || 'Student Ticketing System'}" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Password Reset Request',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background-color: #EF4444;
+              color: white;
+              padding: 20px;
+              text-align: center;
+              border-radius: 5px 5px 0 0;
+            }
+            .content {
+              background-color: #f9fafb;
+              padding: 30px;
+              border-radius: 0 0 5px 5px;
+            }
+            .button {
+              display: inline-block;
+              padding: 12px 30px;
+              background-color: #EF4444;
+              color: white;
+              text-decoration: none;
+              border-radius: 5px;
+              margin: 20px 0;
+              font-weight: bold;
+            }
+            .warning {
+              background-color: #FEF2F2;
+              border-left: 4px solid #EF4444;
+              padding: 15px;
+              margin: 20px 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔒 Password Reset Request</h1>
+            </div>
+            <div class="content">
+              <p>Hello <strong>${name}</strong>,</p>
+              <p>We received a request to reset your password for your Student Ticketing System account.</p>
+              <p>Click the button below to reset your password:</p>
+              
+              <div style="text-align: center;">
+                <a href="${resetLink}" class="button">Reset Password</a>
+              </div>
+              
+              <p>Or copy and paste this link into your browser:</p>
+              <p style="word-break: break-all; color: #4F46E5;">${resetLink}</p>
+              
+              <div class="warning">
+                <p><strong>⚠️ Important:</strong></p>
+                <ul>
+                  <li>This link is valid for <strong>1 hour</strong></li>
+                  <li>If you didn't request this, please ignore this email</li>
+                  <li>Your password won't change until you create a new one</li>
+                </ul>
+              </div>
+              
+              <p>Best regards,<br>Student Ticketing System Team</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Password reset email sent to ${email}`);
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    throw new Error('Failed to send password reset email');
+  }
+};
+

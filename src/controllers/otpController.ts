@@ -150,7 +150,7 @@ export const resendOTP = async (req: Request, res: Response): Promise<void> => {
 
     // Generate new OTP
     const otp = generateOTP();
-    const otpExpiry = new Date(Date.now() + 30 * 1000); // 30 seconds
+    const otpExpiry = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
 
     // Update user with new OTP
     user.verificationOTP = otp;
@@ -165,7 +165,7 @@ export const resendOTP = async (req: Request, res: Response): Promise<void> => {
       message: 'New OTP sent to your email',
       data: {
         email: user.email,
-        otpExpiresIn: '30 seconds',
+        otpExpiresIn: '2 minutes',
       },
     });
   } catch (error: any) {

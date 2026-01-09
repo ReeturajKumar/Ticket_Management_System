@@ -43,7 +43,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     // Generate OTP
     const otp = generateOTP();
-    const otpExpiry = new Date(Date.now() + 30 * 1000); // 30 seconds
+    const otpExpiry = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
 
     // Hash password
     const hashedPassword = await hashPassword(password);
@@ -77,7 +77,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       message: 'Verification OTP sent to your email. Please check your inbox.',
       data: {
         email: email.toLowerCase(),
-        otpExpiresIn: '30 seconds',
+        otpExpiresIn: '2 minutes',
       },
     });
   } catch (error: any) {

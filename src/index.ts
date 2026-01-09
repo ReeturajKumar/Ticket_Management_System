@@ -2,6 +2,7 @@ import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/db';
+import errorHandler from './middleware/errorHandler';
 
 // Load environment variables
 dotenv.config();
@@ -25,6 +26,9 @@ app.get('/', (req: Request, res: Response) => {
 // API Routes
 import routes from './routes';
 app.use('/api/v1', routes);
+
+// Global Error Handler (must be last)
+app.use(errorHandler);
 
 // Start Server
 app.listen(PORT, () => {

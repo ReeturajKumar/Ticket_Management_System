@@ -10,7 +10,7 @@ import { UserRole } from '../constants';
  */
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, email, password, role, department } = req.body;
+    const { name, email, password } = req.body;
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -34,13 +34,14 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create new user
+    // Create new user - ALWAYS as STUDENT role
+    // Other roles (DEPARTMENT_USER, ADMIN, SUPER_ADMIN) must be created by admins
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
-      role: role || UserRole.STUDENT,
-      department,
+      role: UserRole.STUDENT,  // Always STUDENT for public registration
+      department: undefined,    // Students don't have departments
     });
 
     // Generate tokens

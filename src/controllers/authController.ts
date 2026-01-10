@@ -188,15 +188,43 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Verify refresh token
-    const decoded = verifyRefreshToken(refreshToken);
-
-    // Find user and verify refresh token matches
-    const user = await User.findById(decoded.userId);
-    if (!user || user.refreshToken !== refreshToken) {
+    // Verify refresh token signature and expiry
+    let decoded;
+    try {
+      decoded = verifyRefreshToken(refreshToken);
+    } catch (error: any) {
+      console.error('Token verification failed:', error.message);
       res.status(401).json({
         success: false,
-        message: 'Invalid refresh token',
+        message: 'Invalid or expired refresh token',
+        error: error.message,
+      });
+      return;
+    }
+
+    // Find user
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      console.error('User not found for userId:', decoded.userId);
+      res.status(401).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    // Verify refresh token matches the one in database
+    if (user.refreshToken !== refreshToken) {
+      console.error('Token mismatch!');
+      console.error('Sent token length:', refreshToken.length);
+      console.error('DB token length:', user.refreshToken?.length);
+      console.error('Sent token (last 50 chars):', refreshToken.substring(refreshToken.length - 50));
+      console.error('DB token (last 50 chars):', user.refreshToken?.substring(user.refreshToken.length - 50));
+      console.error('Tokens are equal?', user.refreshToken === refreshToken);
+      res.status(401).json({
+        success: false,
+        message: 'Invalid refresh token. This token has been replaced. Please login again.',
+        hint: 'You may have logged in from another device or session. Use the latest refresh token from your most recent login.',
       });
       return;
     }
@@ -211,6 +239,8 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     // Update refresh token in database
     user.refreshToken = tokens.refreshToken;
     await user.save();
+
+    console.log('Token refreshed successfully for user:', user.email);
 
     res.status(200).json({
       success: true,

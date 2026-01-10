@@ -2,6 +2,8 @@ import { Router } from 'express';
 import authRoutes from './authRoutes';
 import testRoutes from './testRoutes';
 import profileRoutes from './profileRoutes';
+import ticketRoutes from './ticketRoutes';
+import dashboardRoutes from './dashboardRoutes';
 
 const router = Router();
 
@@ -9,6 +11,8 @@ const router = Router();
 router.use('/auth', authRoutes);
 router.use('/test', testRoutes);
 router.use('/profile', profileRoutes);
+router.use('/tickets', ticketRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 // Health check route
 router.get('/health', (req, res) => {

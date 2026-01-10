@@ -4,6 +4,7 @@ import testRoutes from './testRoutes';
 import profileRoutes from './profileRoutes';
 import ticketRoutes from './ticketRoutes';
 import dashboardRoutes from './dashboardRoutes';
+import departmentRoutes from './departmentRoutes';
 
 const router = Router();
 
@@ -13,6 +14,7 @@ router.use('/test', testRoutes);
 router.use('/profile', profileRoutes);
 router.use('/tickets', ticketRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/departments', departmentRoutes);
 
 // Health check route
 router.get('/health', (req, res) => {

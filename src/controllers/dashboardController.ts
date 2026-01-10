@@ -3,40 +3,24 @@ import Ticket from '../models/Ticket';
 import { TicketStatus, Priority, Department } from '../constants';
 
 /**
- * Get Student Dashboard Statistics
- * GET /api/v1/dashboard/student
+ * Get Student Dashboard Overview
+ * GET /api/v1/dashboard/student/overview
  */
-export const getStudentDashboard = async (req: Request, res: Response): Promise<void> => {
+export const getStudentOverview = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user!.userId;
 
     // Get all tickets for the user
     const allTickets = await Ticket.find({ createdBy: userId });
 
-    // Calculate statistics
-    const stats = {
+    // Calculate summary statistics
+    const summary = {
       totalTickets: allTickets.length,
-      
-      // Status breakdown
       openTickets: allTickets.filter(t => t.status === TicketStatus.OPEN).length,
       inProgressTickets: allTickets.filter(t => t.status === TicketStatus.IN_PROGRESS).length,
       resolvedTickets: allTickets.filter(t => t.status === TicketStatus.RESOLVED).length,
       closedTickets: allTickets.filter(t => t.status === TicketStatus.CLOSED).length,
       reopenedTickets: allTickets.filter(t => t.status === TicketStatus.REOPENED).length,
-
-      // Priority breakdown
-      lowPriority: allTickets.filter(t => t.priority === Priority.LOW).length,
-      mediumPriority: allTickets.filter(t => t.priority === Priority.MEDIUM).length,
-      highPriority: allTickets.filter(t => t.priority === Priority.HIGH).length,
-      criticalPriority: allTickets.filter(t => t.priority === Priority.CRITICAL).length,
-
-      // Department breakdown
-      departmentStats: {
-        PLACEMENT: allTickets.filter(t => t.department === Department.PLACEMENT).length,
-        OPERATIONS: allTickets.filter(t => t.department === Department.OPERATIONS).length,
-        TRAINING: allTickets.filter(t => t.department === Department.TRAINING).length,
-        FINANCE: allTickets.filter(t => t.department === Department.FINANCE).length,
-      },
     };
 
     // Get recent tickets (last 5)
@@ -48,7 +32,7 @@ export const getStudentDashboard = async (req: Request, res: Response): Promise<
     res.status(200).json({
       success: true,
       data: {
-        stats,
+        summary,
         recentTickets: recentTickets.map(ticket => ({
           id: ticket._id,
           subject: ticket.subject,
@@ -65,10 +49,53 @@ export const getStudentDashboard = async (req: Request, res: Response): Promise<
 };
 
 /**
- * Get Ticket Analytics (Monthly trend)
- * GET /api/v1/dashboard/student/analytics
+ * Get Department-wise Statistics
+ * GET /api/v1/dashboard/student/departments
  */
-export const getTicketAnalytics = async (req: Request, res: Response): Promise<void> => {
+export const getDepartmentStats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+
+    // Get all tickets for the user
+    const allTickets = await Ticket.find({ createdBy: userId });
+
+    // Calculate stats for each department
+    const departments = Object.values(Department).map(dept => {
+      const deptTickets = allTickets.filter(t => t.department === dept);
+      
+      return {
+        department: dept,
+        total: deptTickets.length,
+        open: deptTickets.filter(t => t.status === TicketStatus.OPEN).length,
+        inProgress: deptTickets.filter(t => t.status === TicketStatus.IN_PROGRESS).length,
+        resolved: deptTickets.filter(t => t.status === TicketStatus.RESOLVED).length,
+        closed: deptTickets.filter(t => t.status === TicketStatus.CLOSED).length,
+        reopened: deptTickets.filter(t => t.status === TicketStatus.REOPENED).length,
+        // Priority breakdown per department
+        lowPriority: deptTickets.filter(t => t.priority === Priority.LOW).length,
+        mediumPriority: deptTickets.filter(t => t.priority === Priority.MEDIUM).length,
+        highPriority: deptTickets.filter(t => t.priority === Priority.HIGH).length,
+        criticalPriority: deptTickets.filter(t => t.priority === Priority.CRITICAL).length,
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        departments,
+        totalTickets: allTickets.length,
+      },
+    });
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+/**
+ * Get Monthly Statistics
+ * GET /api/v1/dashboard/student/monthly
+ */
+export const getMonthlyStats = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user!.userId;
 
@@ -79,16 +106,32 @@ export const getTicketAnalytics = async (req: Request, res: Response): Promise<v
     const tickets = await Ticket.find({
       createdBy: userId,
       createdAt: { $gte: sixMonthsAgo },
-    }).select('createdAt status');
+    }).select('createdAt status department priority');
 
     // Group by month
-    const monthlyData: { [key: string]: { created: number; resolved: number } } = {};
+    const monthlyData: { [key: string]: any } = {};
 
     tickets.forEach(ticket => {
       const monthKey = ticket.createdAt.toISOString().substring(0, 7); // YYYY-MM
       
       if (!monthlyData[monthKey]) {
-        monthlyData[monthKey] = { created: 0, resolved: 0 };
+        monthlyData[monthKey] = {
+          created: 0,
+          resolved: 0,
+          byDepartment: {
+            PLACEMENT: 0,
+            OPERATIONS: 0,
+            TRAINING: 0,
+            FINANCE: 0,
+          },
+          byStatus: {
+            OPEN: 0,
+            IN_PROGRESS: 0,
+            RESOLVED: 0,
+            CLOSED: 0,
+            REOPENED: 0,
+          },
+        };
       }
       
       monthlyData[monthKey].created++;
@@ -96,21 +139,30 @@ export const getTicketAnalytics = async (req: Request, res: Response): Promise<v
       if (ticket.status === TicketStatus.RESOLVED || ticket.status === TicketStatus.CLOSED) {
         monthlyData[monthKey].resolved++;
       }
+
+      // Count by department
+      monthlyData[monthKey].byDepartment[ticket.department]++;
+
+      // Count by status
+      monthlyData[monthKey].byStatus[ticket.status]++;
     });
 
-    // Convert to array format
-    const analytics = Object.keys(monthlyData)
+    // Convert to array format and sort by month
+    const monthly = Object.keys(monthlyData)
       .sort()
       .map(month => ({
         month,
         created: monthlyData[month].created,
         resolved: monthlyData[month].resolved,
+        byDepartment: monthlyData[month].byDepartment,
+        byStatus: monthlyData[month].byStatus,
       }));
 
     res.status(200).json({
       success: true,
       data: {
-        analytics,
+        monthly,
+        totalMonths: monthly.length,
       },
     });
   } catch (error: any) {

@@ -1,0 +1,954 @@
+{
+  "info": {
+    "name": "Student Ticketing System - Complete API Collection",
+    "description": "Complete API collection with all endpoints organized by role. Includes critical fixes: pagination, transactions, close ticket, and file download.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "studentToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staffToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "headToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ticketId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "attachmentId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🎓 STUDENT APIs",
+      "item": [
+        {
+          "name": "Authentication",
+          "item": [
+            {
+              "name": "Register Student",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/auth/register",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"John Student\",\n  \"email\": \"john.student@example.com\",\n  \"password\": \"SecurePass123\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Verify OTP",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/auth/verify-otp",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john.student@example.com\",\n  \"otp\": \"123456\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Login Student",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/auth/login",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john.student@example.com\",\n  \"password\": \"SecurePass123\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "pm.collectionVariables.set(\"studentToken\", jsonData.data.accessToken);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Tickets - WITH PAGINATION ✨",
+          "item": [
+            {
+              "name": "Create Ticket",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/tickets",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"subject\": \"Login Issue - Cannot Access Dashboard\",\n  \"description\": \"I am unable to login to my student dashboard. Getting error 'Invalid credentials' even with correct password.\",\n  \"department\": \"OPERATIONS\",\n  \"priority\": \"HIGH\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "pm.collectionVariables.set(\"ticketId\", jsonData.data.ticket.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "List My Tickets (Paginated) ✨ NEW",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/tickets?page=1&limit=20&status=OPEN",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tickets"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    },
+                    {
+                      "key": "status",
+                      "value": "OPEN"
+                    },
+                    {
+                      "key": "priority",
+                      "value": "HIGH",
+                      "disabled": true
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Ticket Details",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/tickets/{{ticketId}}"
+              }
+            },
+            {
+              "name": "Update Ticket",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/tickets/{{ticketId}}",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"description\": \"Updated: I tried resetting password but still can't login. Please help urgently.\",\n  \"priority\": \"CRITICAL\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Add Comment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/tickets/{{ticketId}}/comments",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"comment\": \"I have tried clearing browser cache as suggested. Still facing the same issue.\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Upload Attachment ✨",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/tickets/{{ticketId}}/attachments",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "/path/to/screenshot.png"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "pm.collectionVariables.set(\"attachmentId\", jsonData.data.attachment.filename);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Download Attachment ✨ NEW",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/tickets/{{ticketId}}/attachments/{{attachmentId}}"
+              }
+            },
+            {
+              "name": "Rate Ticket ✨",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/tickets/{{ticketId}}/rate",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"stars\": 5,\n  \"comment\": \"Excellent support! Issue resolved quickly and professionally.\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Reopen Ticket",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/tickets/{{ticketId}}/reopen",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Issue has reoccurred. Still unable to login after password reset.\"\n}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dashboard",
+          "item": [
+            {
+              "name": "Student Overview",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/dashboard/overview"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "👨‍💼 DEPARTMENT STAFF APIs",
+      "item": [
+        {
+          "name": "Authentication",
+          "item": [
+            {
+              "name": "Login Staff",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/department-auth/login",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"staff@operations.com\",\n  \"password\": \"StaffPass123\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "pm.collectionVariables.set(\"staffToken\", jsonData.data.accessToken);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "My Tickets",
+          "item": [
+            {
+              "name": "List My Assigned Tickets",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{staffToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/department/staff/my-tickets?page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "department",
+                    "staff",
+                    "my-tickets"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    },
+                    {
+                      "key": "status",
+                      "value": "IN_PROGRESS",
+                      "disabled": true
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get My Ticket Details",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{staffToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/staff/my-tickets/{{ticketId}}"
+              }
+            },
+            {
+              "name": "Update My Ticket Status",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{staffToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/staff/my-tickets/{{ticketId}}/status",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Add Comment to My Ticket",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{staffToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/staff/my-tickets/{{ticketId}}/comments",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"comment\": \"I've identified the issue. Your account was locked due to multiple failed login attempts. I've unlocked it and reset your password.\"\n}"
+                }
+              }
+            },
+            {
+              "name": "View Unassigned Tickets",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{staffToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/staff/unassigned-tickets"
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Performance",
+          "item": [
+            {
+              "name": "My Dashboard",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{staffToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/staff/my-dashboard"
+              }
+            },
+            {
+              "name": "My Performance History",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{staffToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/staff/my-performance"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "👔 DEPARTMENT HEAD APIs",
+      "item": [
+        {
+          "name": "Authentication",
+          "item": [
+            {
+              "name": "Login Head",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/department-auth/login",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"head@operations.com\",\n  \"password\": \"HeadPass123\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "pm.collectionVariables.set(\"headToken\", jsonData.data.accessToken);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Ticket Management",
+          "item": [
+            {
+              "name": "List All Department Tickets",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/department/tickets?status=OPEN&page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "department",
+                    "tickets"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "OPEN"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Assign Ticket",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/tickets/{{ticketId}}/assign",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"assignedTo\": \"STAFF_USER_ID_HERE\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Update Ticket Status",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/tickets/{{ticketId}}/status",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"RESOLVED\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Close Ticket ✨ NEW",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/tickets/{{ticketId}}/close",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              }
+            },
+            {
+              "name": "Change Priority",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/tickets/{{ticketId}}/priority",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"priority\": \"CRITICAL\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Add Internal Note",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/tickets/{{ticketId}}/notes",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"note\": \"Escalated to senior team member due to complexity.\"\n}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bulk Operations - WITH TRANSACTIONS ✨",
+          "item": [
+            {
+              "name": "Bulk Assign Tickets ✨ TRANSACTIONAL",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/tickets/bulk-assign",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ticketIds\": [\n    \"TICKET_ID_1\",\n    \"TICKET_ID_2\",\n    \"TICKET_ID_3\"\n  ],\n  \"assignedTo\": \"STAFF_USER_ID\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Bulk Update Status ✨ TRANSACTIONAL",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/tickets/bulk-status",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ticketIds\": [\n    \"TICKET_ID_1\",\n    \"TICKET_ID_2\"\n  ],\n  \"status\": \"RESOLVED\"\n}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Team Management",
+          "item": [
+            {
+              "name": "List Team Members",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/team"
+              }
+            },
+            {
+              "name": "Get Team Member Performance",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/team/STAFF_USER_ID/performance"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reports & Export",
+          "item": [
+            {
+              "name": "Summary Report",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/department/reports/summary?period=month",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "department",
+                    "reports",
+                    "summary"
+                  ],
+                  "query": [
+                    {
+                      "key": "period",
+                      "value": "month"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Export CSV (Tickets) ✨ REAL FILE",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/department/reports/export?format=csv&type=tickets",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "department",
+                    "reports",
+                    "export"
+                  ],
+                  "query": [
+                    {
+                      "key": "format",
+                      "value": "csv"
+                    },
+                    {
+                      "key": "type",
+                      "value": "tickets"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Export PDF (Summary) ✨ REAL FILE",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/department/reports/export?format=pdf&type=summary",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "department",
+                    "reports",
+                    "export"
+                  ],
+                  "query": [
+                    {
+                      "key": "format",
+                      "value": "pdf"
+                    },
+                    {
+                      "key": "type",
+                      "value": "summary"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dashboard",
+          "item": [
+            {
+              "name": "Dashboard Overview",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/dashboard/overview"
+              }
+            },
+            {
+              "name": "Team Performance",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/department/dashboard/team-performance"
+              }
+            },
+            {
+              "name": "Analytics",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{headToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/department/dashboard/analytics?period=30d",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "department",
+                    "dashboard",
+                    "analytics"
+                  ],
+                  "query": [
+                    {
+                      "key": "period",
+                      "value": "30d"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

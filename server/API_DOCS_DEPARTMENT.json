@@ -1,0 +1,356 @@
+{
+  "DEPARTMENT_USER_AUTHENTICATION": {
+    "Register Department User API": "http://localhost:5000/api/v1/department-auth/register",
+    "Register Description": "Register as a department user. Account will be in PENDING status until admin approval.",
+    "Register Request": "POST request",
+    "Register Body": {
+      "name": "John Doe",
+      "email": "john@placement.com",
+      "password": "SecurePass123",
+      "department": "PLACEMENT",
+      "isHead": false
+    },
+    "Register Response": {
+      "success": true,
+      "message": "Registration request submitted. Please verify your email and wait for admin approval.",
+      "data": {
+        "email": "john@placement.com",
+        "department": "PLACEMENT",
+        "approvalStatus": "PENDING",
+        "otpExpiry": "2026-01-10T11:27:00.000Z"
+      }
+    },
+    "Register Notes": [
+      "User must verify email with OTP (use /department-auth/verify-otp)",
+      "Account status will be PENDING until admin approves",
+      "Cannot login until status is APPROVED",
+      "Valid departments: PLACEMENT, OPERATIONS, TRAINING, FINANCE",
+      "isHead defaults to false if not provided"
+    ],
+    "Verify OTP API": "http://localhost:5000/api/v1/department-auth/verify-otp",
+    "Verify OTP Description": "Verify email with OTP code sent during registration",
+    "Verify OTP Request": "POST request",
+    "Verify OTP Body": {
+      "email": "john@placement.com",
+      "otp": "123456"
+    },
+    "Verify OTP Response": {
+      "success": true,
+      "message": "Email verified successfully. Your account is pending admin approval.",
+      "data": {
+        "email": "john@placement.com",
+        "isVerified": true,
+        "approvalStatus": "PENDING"
+      }
+    },
+    "Verify OTP Notes": [
+      "OTP expires in 2 minutes",
+      "After verification, account is still PENDING",
+      "Cannot login until admin approves"
+    ],
+    "Resend OTP API": "http://localhost:5000/api/v1/department-auth/resend-otp",
+    "Resend OTP Description": "Request a new OTP if previous one expired",
+    "Resend OTP Request": "POST request",
+    "Resend OTP Body": {
+      "email": "john@placement.com"
+    },
+    "Resend OTP Response": {
+      "success": true,
+      "message": "OTP sent successfully",
+      "data": {
+        "email": "john@placement.com",
+        "otpExpiry": "2026-01-10T11:37:00.000Z"
+      }
+    },
+    "Resend OTP Notes": [
+      "Can only resend if email not yet verified",
+      "New OTP expires in 2 minutes",
+      "Rate limited to prevent abuse"
+    ],
+    "Login Department User API": "http://localhost:5000/api/v1/department-auth/login",
+    "Login Description": "Login as department user. Only works if account is APPROVED.",
+    "Login Request": "POST request",
+    "Login Body": {
+      "email": "john@placement.com",
+      "password": "SecurePass123"
+    },
+    "Login Response (Success)": {
+      "success": true,
+      "message": "Login successful",
+      "data": {
+        "user": {
+          "id": "65f1a2b3c4d5e6f7g8h9i0j1",
+          "name": "John Doe",
+          "email": "john@placement.com",
+          "role": "DEPARTMENT_USER",
+          "department": "PLACEMENT",
+          "isHead": false
+        },
+        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      }
+    },
+    "Login Response (Pending)": {
+      "success": false,
+      "message": "Your account is pending admin approval. Please wait for approval."
+    },
+    "Login Response (Rejected)": {
+      "success": false,
+      "message": "Your registration was rejected. Reason: Invalid department credentials"
+    },
+    "Login Notes": [
+      "Email must be verified first",
+      "Account must be APPROVED by admin",
+      "Returns access token (15 min) and refresh token (7 days)",
+      "Use access token for subsequent API calls"
+    ],
+    "Refresh Token API": "http://localhost:5000/api/v1/department-auth/refresh",
+    "Refresh Description": "Get new access token using refresh token",
+    "Refresh Request": "POST request",
+    "Refresh Body": {
+      "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    },
+    "Refresh Response": {
+      "success": true,
+      "message": "Token refreshed successfully",
+      "data": {
+        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      }
+    },
+    "Refresh Notes": [
+      "Use when access token expires (after 15 minutes)",
+      "Returns NEW access token AND NEW refresh token",
+      "Old refresh token becomes invalid (token rotation)",
+      "If refresh token is invalid, user must login again"
+    ],
+    "Logout API": "http://localhost:5000/api/v1/department-auth/logout",
+    "Logout Description": "Logout department user and invalidate refresh token",
+    "Logout Request": "POST request with Authorization header",
+    "Logout Headers": {
+      "Authorization": "Bearer <access_token>"
+    },
+    "Logout Response": {
+      "success": true,
+      "message": "Logged out successfully"
+    },
+    "Logout Notes": [
+      "Requires authentication (access token)",
+      "Clears refresh token from database",
+      "User must login again to get new tokens",
+      "Access token becomes invalid after logout"
+    ],
+    "Forgot Password API": "http://localhost:5000/api/v1/department-auth/forgot-password",
+    "Forgot Password Description": "Request password reset link via email",
+    "Forgot Password Request": "POST request",
+    "Forgot Password Body": {
+      "email": "john@placement.com"
+    },
+    "Forgot Password Response": {
+      "success": true,
+      "message": "Password reset link sent to your email"
+    },
+    "Forgot Password Notes": [
+      "Sends reset token to email",
+      "Token expires in 15 minutes",
+      "Only works for department users",
+      "Doesn't reveal if email exists (security)"
+    ],
+    "Reset Password API": "http://localhost:5000/api/v1/department-auth/reset-password",
+    "Reset Password Description": "Reset password using token from email",
+    "Reset Password Request": "POST request",
+    "Reset Password Body": {
+      "token": "abc123def456...",
+      "newPassword": "NewSecurePass123"
+    },
+    "Reset Password Response": {
+      "success": true,
+      "message": "Password reset successfully. You can now login with your new password."
+    },
+    "Reset Password Notes": [
+      "Token must be valid and not expired",
+      "Clears reset token after successful reset",
+      "User can login immediately with new password"
+    ],
+    "Change Password API": "http://localhost:5000/api/v1/department-auth/change-password",
+    "Change Password Description": "Change password while logged in",
+    "Change Password Request": "PATCH request with Authorization header",
+    "Change Password Headers": {
+      "Authorization": "Bearer <access_token>"
+    },
+    "Change Password Body": {
+      "currentPassword": "OldPassword123",
+      "newPassword": "NewPassword123"
+    },
+    "Change Password Response": {
+      "success": true,
+      "message": "Password changed successfully"
+    },
+    "Change Password Notes": [
+      "Requires authentication (access token)",
+      "Must provide correct current password",
+      "Only works for department users",
+      "User remains logged in after password change"
+    ],
+    "Check Registration Status API": "http://localhost:5000/api/v1/department-auth/status",
+    "Status Description": "Check approval status of department user registration",
+    "Status Request": "GET request with query parameter",
+    "Status Query": "?email=john@placement.com",
+    "Status Response (Pending)": {
+      "success": true,
+      "data": {
+        "email": "john@placement.com",
+        "name": "John Doe",
+        "department": "PLACEMENT",
+        "approvalStatus": "PENDING",
+        "isVerified": true,
+        "message": "Your registration is pending admin approval"
+      }
+    },
+    "Status Response (Approved)": {
+      "success": true,
+      "data": {
+        "email": "john@placement.com",
+        "name": "John Doe",
+        "department": "PLACEMENT",
+        "approvalStatus": "APPROVED",
+        "isVerified": true,
+        "message": "Your registration has been approved. You can now login."
+      }
+    },
+    "Status Response (Rejected)": {
+      "success": true,
+      "data": {
+        "email": "john@placement.com",
+        "name": "John Doe",
+        "department": "PLACEMENT",
+        "approvalStatus": "REJECTED",
+        "isVerified": true,
+        "message": "Your registration was rejected. Reason: Invalid credentials"
+      }
+    }
+  },
+  "ADMIN_APPROVAL_APIS": {
+    "Get Pending Users API": "http://localhost:5000/api/v1/admin/pending-users",
+    "Pending Users Description": "Get list of department users waiting for approval",
+    "Pending Users Request": "GET request with Authorization header",
+    "Pending Users Response": {
+      "success": true,
+      "data": {
+        "pendingUsers": [
+          {
+            "id": "65f1a2b3c4d5e6f7g8h9i0j1",
+            "name": "John Doe",
+            "email": "john@placement.com",
+            "department": "PLACEMENT",
+            "isHead": false,
+            "requestedAt": "2026-01-10T10:00:00.000Z"
+          },
+          {
+            "id": "65f1a2b3c4d5e6f7g8h9i0j2",
+            "name": "Jane Smith",
+            "email": "jane@operations.com",
+            "department": "OPERATIONS",
+            "isHead": true,
+            "requestedAt": "2026-01-10T09:30:00.000Z"
+          }
+        ],
+        "count": 2
+      }
+    },
+    "Pending Users Notes": [
+      "Requires admin authentication",
+      "Only shows verified users (email verified)",
+      "Ordered by registration date"
+    ],
+    "Approve User API": "http://localhost:5000/api/v1/admin/approve-user/:userId",
+    "Approve Description": "Approve a pending department user registration",
+    "Approve Request": "POST request with Authorization header",
+    "Approve URL Example": "POST /admin/approve-user/65f1a2b3c4d5e6f7g8h9i0j1",
+    "Approve Response": {
+      "success": true,
+      "message": "User approved successfully",
+      "data": {
+        "user": {
+          "id": "65f1a2b3c4d5e6f7g8h9i0j1",
+          "name": "John Doe",
+          "email": "john@placement.com",
+          "department": "PLACEMENT",
+          "approvalStatus": "APPROVED"
+        }
+      }
+    },
+    "Approve Notes": [
+      "User can now login",
+      "Approval is recorded with admin ID and timestamp",
+      "User will receive access to department dashboard"
+    ],
+    "Reject User API": "http://localhost:5000/api/v1/admin/reject-user/:userId",
+    "Reject Description": "Reject a pending department user registration with reason",
+    "Reject Request": "POST request with Authorization header",
+    "Reject URL Example": "POST /admin/reject-user/65f1a2b3c4d5e6f7g8h9i0j1",
+    "Reject Body": {
+      "reason": "Invalid department credentials"
+    },
+    "Reject Response": {
+      "success": true,
+      "message": "User rejected successfully",
+      "data": {
+        "user": {
+          "id": "65f1a2b3c4d5e6f7g8h9i0j1",
+          "name": "John Doe",
+          "email": "john@placement.com",
+          "rejectionReason": "Invalid department credentials"
+        }
+      }
+    },
+    "Reject Notes": [
+      "User cannot login after rejection",
+      "Rejection reason is stored and shown to user",
+      "User can see rejection reason via status API"
+    ]
+  },
+  "SHARED_ENDPOINTS": {
+    "Note": "Department users have completely independent authentication endpoints",
+    "Department Endpoints": "All under /department-auth (register, verify-otp, resend-otp, login, refresh, logout, forgot-password, reset-password, change-password)",
+    "No Shared Endpoints": "Department users do not share any endpoints with students"
+  },
+  "APPROVAL_WORKFLOW": {
+    "Step 1": "User registers via /department-auth/register",
+    "Step 2": "User receives OTP email",
+    "Step 3": "User verifies email via /department-auth/verify-otp",
+    "Step 4": "User status is PENDING",
+    "Step 5": "Admin views pending users via /admin/pending-users",
+    "Step 6": "Admin approves via /admin/approve-user/:userId OR rejects via /admin/reject-user/:userId",
+    "Step 7 (Approved)": "User can login via /department-auth/login",
+    "Step 7 (Rejected)": "User cannot login, sees rejection reason"
+  },
+  "USER_STATES": {
+    "PENDING": {
+      "description": "Waiting for admin approval",
+      "canLogin": false,
+      "canAccessDashboard": false
+    },
+    "APPROVED": {
+      "description": "Approved by admin",
+      "canLogin": true,
+      "canAccessDashboard": true
+    },
+    "REJECTED": {
+      "description": "Rejected by admin",
+      "canLogin": false,
+      "canAccessDashboard": false,
+      "hasReason": true
+    }
+  },
+  "DEPARTMENTS": {
+    "PLACEMENT": "Placement & Career Services",
+    "OPERATIONS": "Operations & Facilities",
+    "TRAINING": "Training & Development",
+    "FINANCE": "Finance & Accounts"
+  },
+  "ROLES": {
+    "isHead_false": "Department Staff - Can view and manage assigned tickets",
+    "isHead_true": "Department Head - Can view all department tickets, assign tickets, view team performance"
+  }
+}

@@ -1,0 +1,463 @@
+{
+  "DEPARTMENT_HEAD_DASHBOARD_APIS": {
+    "Note": "These APIs are only accessible by department heads (isHead: true)",
+    "Dashboard Overview API": "http://localhost:5000/api/v1/department/dashboard/overview",
+    "Overview Description": "Get department summary statistics and recent tickets",
+    "Overview Request": "GET request with Authorization header",
+    "Overview Headers": {
+      "Authorization": "Bearer <access_token>"
+    },
+    "Overview Response": {
+      "success": true,
+      "data": {
+        "summary": {
+          "totalTickets": 50,
+          "openTickets": 15,
+          "inProgressTickets": 20,
+          "resolvedTickets": 10,
+          "closedTickets": 5,
+          "unassignedTickets": 8
+        },
+        "byPriority": {
+          "CRITICAL": 3,
+          "HIGH": 10,
+          "MEDIUM": 25,
+          "LOW": 12
+        },
+        "recentTickets": [
+          {
+            "id": "65f1a2b3c4d5e6f7g8h9i0j1",
+            "subject": "Login Issue",
+            "status": "OPEN",
+            "priority": "HIGH",
+            "createdAt": "2026-01-10T10:00:00.000Z",
+            "studentName": "John Doe",
+            "studentEmail": "john@student.com"
+          }
+        ]
+      }
+    },
+    "Overview Notes": [
+      "Requires department head authentication",
+      "Shows only department-specific data",
+      "Recent tickets limited to last 10",
+      "Summary includes all ticket statuses"
+    ],
+    "Team Performance API": "http://localhost:5000/api/v1/department/dashboard/team-performance",
+    "Team Performance Description": "Get individual team member performance metrics",
+    "Team Performance Request": "GET request with Authorization header",
+    "Team Performance Headers": {
+      "Authorization": "Bearer <access_token>"
+    },
+    "Team Performance Response": {
+      "success": true,
+      "data": {
+        "teamMembers": [
+          {
+            "userId": "65f1a2b3c4d5e6f7g8h9i0j1",
+            "name": "Jane Smith",
+            "email": "jane@placement.com",
+            "isHead": false,
+            "assignedTickets": 12,
+            "resolvedTickets": 8,
+            "inProgressTickets": 4,
+            "avgResolutionTime": "2.5 hours",
+            "performance": "67%"
+          }
+        ],
+        "teamStats": {
+          "totalMembers": 5,
+          "activeMembers": 4,
+          "totalAssigned": 45,
+          "totalResolved": 30
+        }
+      }
+    },
+    "Team Performance Notes": [
+      "Shows all department team members",
+      "Performance = (resolved / assigned) * 100",
+      "avgResolutionTime calculated from resolved tickets",
+      "activeMembers excludes department head"
+    ],
+    "Analytics API": "http://localhost:5000/api/v1/department/dashboard/analytics",
+    "Analytics Description": "Get detailed analytics, trends, and insights",
+    "Analytics Request": "GET request with Authorization header and query params",
+    "Analytics Headers": {
+      "Authorization": "Bearer <access_token>"
+    },
+    "Analytics Query Params": {
+      "period": "7d | 30d | 90d (default: 7d)"
+    },
+    "Analytics Response": {
+      "success": true,
+      "data": {
+        "period": "7d",
+        "trends": {
+          "ticketsCreated": [
+            {
+              "date": "2026-01-04",
+              "count": 5
+            },
+            {
+              "date": "2026-01-05",
+              "count": 8
+            },
+            {
+              "date": "2026-01-06",
+              "count": 6
+            }
+          ],
+          "ticketsResolved": [
+            {
+              "date": "2026-01-04",
+              "count": 3
+            },
+            {
+              "date": "2026-01-05",
+              "count": 6
+            },
+            {
+              "date": "2026-01-06",
+              "count": 4
+            }
+          ]
+        },
+        "avgResolutionTime": "3.2 hours",
+        "slaCompliance": "92%",
+        "topIssues": [
+          {
+            "category": "Login Issues",
+            "count": 15
+          },
+          {
+            "category": "Payment Issues",
+            "count": 10
+          },
+          {
+            "category": "Access Issues",
+            "count": 8
+          }
+        ]
+      }
+    },
+    "Analytics Notes": [
+      "Period options: 7d, 30d, 90d",
+      "Trends show daily ticket counts",
+      "SLA compliance based on 24-hour resolution time",
+      "Top issues categorized by subject keywords",
+      "All data scoped to department only"
+    ]
+  },
+  "DEPARTMENT_HEAD_TICKET_MANAGEMENT": {
+    "Note": "These APIs are only accessible by department heads for managing department tickets",
+    "List All Tickets API": "http://localhost:5000/api/v1/department/tickets",
+    "List Tickets Description": "View all tickets for the department",
+    "List Tickets Request": "GET request with Authorization header",
+    "List Tickets Headers": {
+      "Authorization": "Bearer <access_token>"
+    },
+    "List Tickets Query Params": {
+      "status": "OPEN | IN_PROGRESS | RESOLVED | CLOSED (optional)",
+      "priority": "LOW | MEDIUM | HIGH | CRITICAL (optional)",
+      "assignedTo": "userId (optional)",
+      "page": "1 (default: 1)",
+      "limit": "20 (default: 20)"
+    },
+    "List Tickets Response": {
+      "success": true,
+      "data": {
+        "tickets": [
+          {
+            "id": "65f1a2b3c4d5e6f7g8h9i0j1",
+            "subject": "Login Issue",
+            "description": "Cannot login to portal",
+            "status": "OPEN",
+            "priority": "HIGH",
+            "department": "PLACEMENT",
+            "createdBy": {
+              "id": "...",
+              "name": "John Doe",
+              "email": "john@student.com"
+            },
+            "assignedTo": null,
+            "createdAt": "2026-01-10T10:00:00.000Z",
+            "updatedAt": "2026-01-10T10:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "total": 50,
+          "page": 1,
+          "limit": 20,
+          "pages": 3
+        }
+      }
+    },
+    "Get Ticket Details API": "http://localhost:5000/api/v1/department/tickets/:id",
+    "Ticket Details Description": "View detailed information about a specific ticket",
+    "Ticket Details Request": "GET request with Authorization header",
+    "Ticket Details URL Example": "GET /department/tickets/65f1a2b3c4d5e6f7g8h9i0j1",
+    "Ticket Details Response": {
+      "success": true,
+      "data": {
+        "id": "65f1a2b3c4d5e6f7g8h9i0j1",
+        "subject": "Login Issue",
+        "description": "Cannot login to portal",
+        "status": "IN_PROGRESS",
+        "priority": "HIGH",
+        "department": "PLACEMENT",
+        "createdBy": {
+          "id": "...",
+          "name": "John Doe",
+          "email": "john@student.com"
+        },
+        "assignedTo": {
+          "id": "...",
+          "name": "Jane Smith",
+          "email": "jane@placement.com"
+        },
+        "comments": [
+          {
+            "user": "...",
+            "userName": "Jane Smith",
+            "comment": "Looking into this issue",
+            "createdAt": "2026-01-10T11:00:00.000Z"
+          }
+        ],
+        "reopenHistory": [],
+        "createdAt": "2026-01-10T10:00:00.000Z",
+        "updatedAt": "2026-01-10T11:00:00.000Z"
+      }
+    },
+    "Assign Ticket API": "http://localhost:5000/api/v1/department/tickets/:id/assign",
+    "Assign Description": "Assign ticket to a team member",
+    "Assign Request": "PATCH request with Authorization header",
+    "Assign URL Example": "PATCH /department/tickets/65f1a2b3c4d5e6f7g8h9i0j1/assign",
+    "Assign Body": {
+      "assignedTo": "65f1a2b3c4d5e6f7g8h9i0j2"
+    },
+    "Assign Response": {
+      "success": true,
+      "message": "Ticket assigned successfully",
+      "data": {
+        "id": "65f1a2b3c4d5e6f7g8h9i0j1",
+        "assignedTo": {
+          "id": "65f1a2b3c4d5e6f7g8h9i0j2",
+          "name": "Jane Smith"
+        }
+      }
+    },
+    "Assign Notes": [
+      "Can assign to any team member in the department",
+      "Can reassign already assigned tickets",
+      "Status automatically changes to ASSIGNED"
+    ],
+    "Update Status API": "http://localhost:5000/api/v1/department/tickets/:id/status",
+    "Update Status Description": "Update ticket status",
+    "Update Status Request": "PATCH request with Authorization header",
+    "Update Status URL Example": "PATCH /department/tickets/65f1a2b3c4d5e6f7g8h9i0j1/status",
+    "Update Status Body": {
+      "status": "IN_PROGRESS"
+    },
+    "Update Status Response": {
+      "success": true,
+      "message": "Ticket status updated successfully",
+      "data": {
+        "id": "65f1a2b3c4d5e6f7g8h9i0j1",
+        "status": "IN_PROGRESS"
+      }
+    },
+    "Update Status Notes": [
+      "Valid statuses: OPEN, ASSIGNED, IN_PROGRESS, WAITING_FOR_STUDENT, RESOLVED, CLOSED",
+      "Setting to RESOLVED automatically sets resolvedAt timestamp",
+      "Cannot change status of CLOSED tickets"
+    ],
+    "Add Internal Note API": "http://localhost:5000/api/v1/department/tickets/:id/notes",
+    "Add Note Description": "Add internal note to ticket (not visible to students)",
+    "Add Note Request": "POST request with Authorization header",
+    "Add Note URL Example": "POST /department/tickets/65f1a2b3c4d5e6f7g8h9i0j1/notes",
+    "Add Note Body": {
+      "note": "Escalated to senior team member"
+    },
+    "Add Note Response": {
+      "success": true,
+      "message": "Internal note added successfully"
+    },
+    "Add Note Notes": [
+      "Internal notes are NOT visible to students",
+      "Only visible to department team members",
+      "Useful for internal communication"
+    ],
+    "Change Priority API": "http://localhost:5000/api/v1/department/tickets/:id/priority",
+    "Change Priority Description": "Change ticket priority level",
+    "Change Priority Request": "PATCH request with Authorization header",
+    "Change Priority URL Example": "PATCH /department/tickets/65f1a2b3c4d5e6f7g8h9i0j1/priority",
+    "Change Priority Body": {
+      "priority": "CRITICAL"
+    },
+    "Change Priority Response": {
+      "success": true,
+      "message": "Ticket priority updated successfully",
+      "data": {
+        "id": "65f1a2b3c4d5e6f7g8h9i0j1",
+        "priority": "CRITICAL"
+      }
+    },
+    "Change Priority Notes": [
+      "Valid priorities: LOW, MEDIUM, HIGH, CRITICAL",
+      "Priority affects SLA and urgency",
+      "Can be changed at any time"
+    ]
+  },
+  "DEPARTMENT_HEAD_TEAM_MANAGEMENT": {
+    "Note": "These APIs are for managing department team members",
+    "List Team Members API": "http://localhost:5000/api/v1/department/team",
+    "List Team Description": "Get list of all team members in the department",
+    "List Team Request": "GET request with Authorization header",
+    "List Team Response": {
+      "success": true,
+      "data": {
+        "teamMembers": [
+          {
+            "id": "65f1a2b3c4d5e6f7g8h9i0j1",
+            "name": "Jane Smith",
+            "email": "jane@placement.com",
+            "isHead": false,
+            "isApproved": true,
+            "assignedTickets": 12,
+            "activeTickets": 4,
+            "joinedAt": "2026-01-01T00:00:00.000Z"
+          }
+        ],
+        "count": 5
+      }
+    },
+    "Team Member Tickets API": "http://localhost:5000/api/v1/department/team/:userId/tickets",
+    "Team Member Tickets Description": "View all tickets assigned to a specific team member",
+    "Team Member Tickets Request": "GET request with Authorization header",
+    "Team Member Tickets URL Example": "GET /department/team/65f1a2b3c4d5e6f7g8h9i0j1/tickets",
+    "Team Member Tickets Query Params": {
+      "status": "OPEN | IN_PROGRESS | RESOLVED (optional)"
+    },
+    "Team Member Tickets Response": {
+      "success": true,
+      "data": {
+        "teamMember": {
+          "id": "65f1a2b3c4d5e6f7g8h9i0j1",
+          "name": "Jane Smith",
+          "email": "jane@placement.com"
+        },
+        "tickets": [
+          {
+            "id": "...",
+            "subject": "Login Issue",
+            "status": "IN_PROGRESS",
+            "priority": "HIGH",
+            "createdAt": "2026-01-10T10:00:00.000Z"
+          }
+        ],
+        "count": 12
+      }
+    },
+    "Team Member Performance API": "http://localhost:5000/api/v1/department/team/:userId/performance",
+    "Team Member Performance Description": "Get detailed performance stats for a team member",
+    "Team Member Performance Request": "GET request with Authorization header",
+    "Team Member Performance URL Example": "GET /department/team/65f1a2b3c4d5e6f7g8h9i0j1/performance",
+    "Team Member Performance Response": {
+      "success": true,
+      "data": {
+        "teamMember": {
+          "id": "65f1a2b3c4d5e6f7g8h9i0j1",
+          "name": "Jane Smith",
+          "email": "jane@placement.com"
+        },
+        "stats": {
+          "totalAssigned": 45,
+          "resolved": 30,
+          "inProgress": 10,
+          "open": 5,
+          "avgResolutionTime": "2.5 hours",
+          "performance": "67%",
+          "thisWeek": {
+            "assigned": 8,
+            "resolved": 6
+          },
+          "thisMonth": {
+            "assigned": 25,
+            "resolved": 20
+          }
+        }
+      }
+    }
+  },
+  "DEPARTMENT_HEAD_REPORTS": {
+    "Note": "These APIs are for generating and exporting reports",
+    "Summary Report API": "http://localhost:5000/api/v1/department/reports/summary",
+    "Summary Report Description": "Generate comprehensive summary report",
+    "Summary Report Request": "GET request with Authorization header",
+    "Summary Report Query Params": {
+      "startDate": "2026-01-01 (optional)",
+      "endDate": "2026-01-31 (optional)",
+      "period": "week | month | quarter | year (optional)"
+    },
+    "Summary Report Response": {
+      "success": true,
+      "data": {
+        "period": {
+          "start": "2026-01-01T00:00:00.000Z",
+          "end": "2026-01-31T23:59:59.000Z"
+        },
+        "summary": {
+          "totalTickets": 150,
+          "resolved": 120,
+          "open": 20,
+          "inProgress": 10,
+          "avgResolutionTime": "3.2 hours",
+          "slaCompliance": "92%"
+        },
+        "byPriority": {
+          "CRITICAL": 10,
+          "HIGH": 40,
+          "MEDIUM": 70,
+          "LOW": 30
+        },
+        "byStatus": {
+          "OPEN": 20,
+          "IN_PROGRESS": 10,
+          "RESOLVED": 100,
+          "CLOSED": 20
+        },
+        "teamPerformance": [
+          {
+            "name": "Jane Smith",
+            "resolved": 30,
+            "avgTime": "2.5 hours"
+          }
+        ]
+      }
+    },
+    "Export Report API": "http://localhost:5000/api/v1/department/reports/export",
+    "Export Description": "Export department data in CSV or PDF format",
+    "Export Request": "GET request with Authorization header",
+    "Export Query Params": {
+      "format": "csv | pdf",
+      "type": "tickets | team | summary",
+      "startDate": "2026-01-01 (optional)",
+      "endDate": "2026-01-31 (optional)"
+    },
+    "Export Response": {
+      "success": true,
+      "data": {
+        "downloadUrl": "/downloads/placement-report-2026-01.csv",
+        "fileName": "placement-report-2026-01.csv",
+        "fileSize": "25KB",
+        "expiresAt": "2026-01-12T12:00:00.000Z"
+      }
+    },
+    "Export Notes": [
+      "CSV format for Excel/Sheets",
+      "PDF format for printing/sharing",
+      "Download link expires in 1 hour",
+      "Files are automatically deleted after 24 hours"
+    ]
+  }
+}

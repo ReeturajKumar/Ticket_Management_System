@@ -1,0 +1,357 @@
+import { Request, Response } from 'express';
+import Ticket from '../models/Ticket';
+import User from '../models/User';
+import { TicketStatus, Priority, UserRole } from '../constants';
+import AppError from '../utils/AppError';
+import { generateCSV, generatePDF, cleanupOldExports } from '../utils/exportUtils';
+import fs from 'fs';
+
+/**
+ * Generate summary report for the department
+ * GET /api/v1/department/reports/summary
+ */
+export const getSummaryReport = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = (req as any).user;
+    const { startDate, endDate, period } = req.query;
+
+    // Calculate date range
+    let start: Date;
+    let end: Date = new Date();
+
+    if (startDate && endDate) {
+      start = new Date(startDate as string);
+      end = new Date(endDate as string);
+    } else if (period) {
+      end = new Date();
+      start = new Date();
+
+      switch (period) {
+        case 'week':
+          start.setDate(start.getDate() - 7);
+          break;
+        case 'month':
+          start.setMonth(start.getMonth() - 1);
+          break;
+        case 'quarter':
+          start.setMonth(start.getMonth() - 3);
+          break;
+        case 'year':
+          start.setFullYear(start.getFullYear() - 1);
+          break;
+        default:
+          start.setDate(start.getDate() - 7); // Default to week
+      }
+    } else {
+      // Default to current month
+      start = new Date();
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+    }
+
+    // Get all tickets in the date range for this department
+    const tickets = await Ticket.find({
+      department: user.department,
+      createdAt: { $gte: start, $lte: end },
+    });
+
+    // Calculate summary statistics
+    const totalTickets = tickets.length;
+    const resolved = tickets.filter((t) => t.status === TicketStatus.RESOLVED).length;
+    const open = tickets.filter((t) => t.status === TicketStatus.OPEN).length;
+    const inProgress = tickets.filter((t) => t.status === TicketStatus.IN_PROGRESS).length;
+
+    // Calculate average resolution time
+    const resolvedTickets = tickets.filter((t) => t.resolvedAt);
+    let avgResolutionTime = '0 hours';
+
+    if (resolvedTickets.length > 0) {
+      const totalTime = resolvedTickets.reduce((sum, ticket) => {
+        const createdAt = new Date(ticket.createdAt).getTime();
+        const resolvedAt = new Date(ticket.resolvedAt!).getTime();
+        return sum + (resolvedAt - createdAt);
+      }, 0);
+
+      const avgTimeMs = totalTime / resolvedTickets.length;
+      const avgTimeHours = (avgTimeMs / (1000 * 60 * 60)).toFixed(1);
+      avgResolutionTime = `${avgTimeHours} hours`;
+    }
+
+    // Calculate SLA compliance (assuming 24-hour SLA)
+    const slaCompliantTickets = resolvedTickets.filter((ticket) => {
+      const createdAt = new Date(ticket.createdAt).getTime();
+      const resolvedAt = new Date(ticket.resolvedAt!).getTime();
+      const timeDiff = resolvedAt - createdAt;
+      const hoursDiff = timeDiff / (1000 * 60 * 60);
+      return hoursDiff <= 24;
+    });
+
+    const slaCompliance =
+      resolvedTickets.length > 0
+        ? Math.round((slaCompliantTickets.length / resolvedTickets.length) * 100)
+        : 0;
+
+    // Group by priority
+    const byPriority: any = {};
+    Object.values(Priority).forEach((priority) => {
+      byPriority[priority] = tickets.filter((t) => t.priority === priority).length;
+    });
+
+    // Group by status
+    const byStatus: any = {};
+    Object.values(TicketStatus).forEach((status) => {
+      byStatus[status] = tickets.filter((t) => t.status === status).length;
+    });
+
+    // Get team performance
+    const teamMembers = await User.find({
+      role: UserRole.DEPARTMENT_USER,
+      department: user.department,
+      isApproved: true,
+      isHead: false,
+    }).select('name');
+
+    const teamPerformance = await Promise.all(
+      teamMembers.map(async (member) => {
+        const memberTickets = tickets.filter(
+          (t) => t.assignedTo && t.assignedTo.toString() === member._id.toString()
+        );
+
+        const memberResolved = memberTickets.filter((t) => t.status === TicketStatus.RESOLVED).length;
+
+        // Calculate average resolution time for this member
+        const memberResolvedTickets = memberTickets.filter((t) => t.resolvedAt);
+        let memberAvgTime = '0 hours';
+
+        if (memberResolvedTickets.length > 0) {
+          const totalTime = memberResolvedTickets.reduce((sum, ticket) => {
+            const createdAt = new Date(ticket.createdAt).getTime();
+            const resolvedAt = new Date(ticket.resolvedAt!).getTime();
+            return sum + (resolvedAt - createdAt);
+          }, 0);
+
+          const avgTimeMs = totalTime / memberResolvedTickets.length;
+          const avgTimeHours = (avgTimeMs / (1000 * 60 * 60)).toFixed(1);
+          memberAvgTime = `${avgTimeHours} hours`;
+        }
+
+        return {
+          name: member.name,
+          resolved: memberResolved,
+          avgTime: memberAvgTime,
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        period: {
+          start: start.toISOString(),
+          end: end.toISOString(),
+        },
+        summary: {
+          totalTickets,
+          resolved,
+          open,
+          inProgress,
+          avgResolutionTime,
+          slaCompliance: `${slaCompliance}%`,
+        },
+        byPriority,
+        byStatus,
+        teamPerformance,
+      },
+    });
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+/**
+ * Export department data in CSV or PDF format
+ * GET /api/v1/department/reports/export
+ */
+export const exportReport = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = (req as any).user;
+    const { format, type, startDate, endDate } = req.query;
+
+    if (!format || !type) {
+      throw new AppError('Please provide format (csv/pdf) and type (tickets/team/summary)', 400);
+    }
+
+    if (!['csv', 'pdf'].includes(format as string)) {
+      throw new AppError('Invalid format. Use csv or pdf', 400);
+    }
+
+    if (!['tickets', 'team', 'summary'].includes(type as string)) {
+      throw new AppError('Invalid type. Use tickets, team, or summary', 400);
+    }
+
+    // Calculate date range
+    let start: Date = new Date();
+    start.setMonth(start.getMonth() - 1);
+    let end: Date = new Date();
+
+    if (startDate && endDate) {
+      start = new Date(startDate as string);
+      end = new Date(endDate as string);
+    }
+
+    const dateStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+    const fileName = `${user.department.toLowerCase()}-${type}-${dateStr}.${format}`;
+
+    let filePath: string;
+
+    if (format === 'csv') {
+      // Generate CSV
+      if (type === 'tickets') {
+        const tickets = await Ticket.find({
+          department: user.department,
+          createdAt: { $gte: start, $lte: end },
+        }).select('subject status priority createdBy createdByName assignedToName createdAt resolvedAt');
+
+        const data = tickets.map((t) => ({
+          subject: t.subject,
+          status: t.status,
+          priority: t.priority,
+          createdBy: t.createdByName,
+          assignedTo: t.assignedToName || 'Unassigned',
+          createdAt: t.createdAt.toISOString(),
+          resolvedAt: t.resolvedAt ? t.resolvedAt.toISOString() : 'N/A',
+        }));
+
+        filePath = await generateCSV(
+          data,
+          [
+            { id: 'subject', title: 'Subject' },
+            { id: 'status', title: 'Status' },
+            { id: 'priority', title: 'Priority' },
+            { id: 'createdBy', title: 'Created By' },
+            { id: 'assignedTo', title: 'Assigned To' },
+            { id: 'createdAt', title: 'Created At' },
+            { id: 'resolvedAt', title: 'Resolved At' },
+          ],
+          fileName
+        );
+      } else if (type === 'team') {
+        const teamMembers = await User.find({
+          role: UserRole.DEPARTMENT_USER,
+          department: user.department,
+          isApproved: true,
+        }).select('name email isHead');
+
+        const data = await Promise.all(
+          teamMembers.map(async (member) => {
+            const tickets = await Ticket.find({
+              assignedTo: member._id,
+              department: user.department,
+            });
+            const resolved = tickets.filter((t) => t.status === TicketStatus.RESOLVED).length;
+
+            return {
+              name: member.name,
+              email: member.email,
+              role: member.isHead ? 'Head' : 'Staff',
+              totalAssigned: tickets.length,
+              resolved,
+            };
+          })
+        );
+
+        filePath = await generateCSV(
+          data,
+          [
+            { id: 'name', title: 'Name' },
+            { id: 'email', title: 'Email' },
+            { id: 'role', title: 'Role' },
+            { id: 'totalAssigned', title: 'Total Assigned' },
+            { id: 'resolved', title: 'Resolved' },
+          ],
+          fileName
+        );
+      } else {
+        throw new AppError('CSV export not supported for summary type. Use PDF instead.', 400);
+      }
+    } else {
+      // Generate PDF
+      const tickets = await Ticket.find({
+        department: user.department,
+        createdAt: { $gte: start, $lte: end },
+      });
+
+      const summary = {
+        totalTickets: tickets.length,
+        resolved: tickets.filter((t) => t.status === TicketStatus.RESOLVED).length,
+        open: tickets.filter((t) => t.status === TicketStatus.OPEN).length,
+        inProgress: tickets.filter((t) => t.status === TicketStatus.IN_PROGRESS).length,
+      };
+
+      const byPriority: any = {};
+      Object.values(Priority).forEach((priority) => {
+        byPriority[priority] = tickets.filter((t) => t.priority === priority).length;
+      });
+
+      const byStatus: any = {};
+      Object.values(TicketStatus).forEach((status) => {
+        byStatus[status] = tickets.filter((t) => t.status === status).length;
+      });
+
+      const teamMembers = await User.find({
+        role: UserRole.DEPARTMENT_USER,
+        department: user.department,
+        isApproved: true,
+        isHead: false,
+      }).select('name');
+
+      const teamPerformance = await Promise.all(
+        teamMembers.map(async (member) => {
+          const memberTickets = tickets.filter(
+            (t) => t.assignedTo && t.assignedTo.toString() === member._id.toString()
+          );
+          const resolved = memberTickets.filter((t) => t.status === TicketStatus.RESOLVED).length;
+
+          return {
+            name: member.name,
+            resolved,
+            avgTime: 'N/A',
+          };
+        })
+      );
+
+      filePath = await generatePDF(
+        `${user.department} Department Report`,
+        {
+          summary,
+          byPriority,
+          byStatus,
+          teamPerformance,
+        },
+        fileName
+      );
+    }
+
+    // Get file stats
+    const stats = fs.statSync(filePath);
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        downloadUrl: `/downloads/${fileName}`,
+        fileName,
+        fileSize: `${(stats.size / 1024).toFixed(2)}KB`,
+        expiresAt: expiresAt.toISOString(),
+      },
+    });
+
+    // Schedule cleanup (in production, use a cron job)
+    setTimeout(() => {
+      cleanupOldExports();
+    }, 1000);
+  } catch (error: any) {
+    throw error;
+  }
+};

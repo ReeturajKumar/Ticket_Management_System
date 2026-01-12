@@ -1,0 +1,358 @@
+{
+  "ENHANCED_FEATURES": {
+    "Note": "New features added: File Attachments, Ticket Rating, CSV/PDF Export, Bulk Operations",
+    "FILE_ATTACHMENT_APIS": {
+      "Upload Ticket Attachment API": "http://localhost:5000/api/v1/tickets/:id/attachments",
+      "Upload Description": "Upload file attachment to a ticket (Student only, own tickets)",
+      "Upload Request": "POST request with multipart/form-data",
+      "Upload Headers": {
+        "Authorization": "Bearer <access_token>",
+        "Content-Type": "multipart/form-data"
+      },
+      "Upload Body": {
+        "file": "<file object>"
+      },
+      "Upload Notes": [
+        "Max file size: 5MB",
+        "Allowed types: images (jpg, png, gif, webp), PDF, DOC, DOCX, TXT",
+        "Only ticket owner can upload",
+        "Files stored in /uploads directory",
+        "Returns filename, size, and mime type"
+      ],
+      "Upload Response": {
+        "success": true,
+        "message": "File uploaded successfully",
+        "data": {
+          "attachment": {
+            "filename": "screenshot-1234567890.png",
+            "originalName": "screenshot.png",
+            "size": 245678,
+            "mimeType": "image/png"
+          }
+        }
+      },
+      "Upload Example cURL": "curl -X POST http://localhost:5000/api/v1/tickets/65f1a2b3c4d5e6f7g8h9i0j1/attachments -H \"Authorization: Bearer <token>\" -F \"file=@/path/to/file.png\""
+    },
+    "TICKET_RATING_APIS": {
+      "Rate Ticket API": "http://localhost:5000/api/v1/tickets/:id/rate",
+      "Rate Description": "Rate a resolved or closed ticket (Student only, own tickets)",
+      "Rate Request": "POST request with Authorization header",
+      "Rate Headers": {
+        "Authorization": "Bearer <access_token>",
+        "Content-Type": "application/json"
+      },
+      "Rate Body": {
+        "stars": 5,
+        "comment": "Great support! Issue resolved quickly."
+      },
+      "Rate Notes": [
+        "Stars must be between 1 and 5",
+        "Comment is optional (max 500 characters)",
+        "Can only rate RESOLVED or CLOSED tickets",
+        "Can only rate own tickets",
+        "Cannot rate same ticket twice"
+      ],
+      "Rate Response": {
+        "success": true,
+        "message": "Thank you for your feedback!",
+        "data": {
+          "rating": {
+            "stars": 5,
+            "comment": "Great support! Issue resolved quickly."
+          }
+        }
+      },
+      "Rate Example cURL": "curl -X POST http://localhost:5000/api/v1/tickets/65f1a2b3c4d5e6f7g8h9i0j1/rate -H \"Authorization: Bearer <token>\" -H \"Content-Type: application/json\" -d '{\"stars\": 5, \"comment\": \"Excellent service!\"}'"
+    },
+    "BULK_OPERATIONS_APIS": {
+      "Bulk Assign Tickets API": "http://localhost:5000/api/v1/department/tickets/bulk-assign",
+      "Bulk Assign Description": "Assign multiple tickets to a team member (Department Head only)",
+      "Bulk Assign Request": "POST request with Authorization header",
+      "Bulk Assign Headers": {
+        "Authorization": "Bearer <access_token>",
+        "Content-Type": "application/json"
+      },
+      "Bulk Assign Body": {
+        "ticketIds": [
+          "65f1a2b3c4d5e6f7g8h9i0j1",
+          "65f1a2b3c4d5e6f7g8h9i0j2",
+          "65f1a2b3c4d5e6f7g8h9i0j3"
+        ],
+        "assignedTo": "65f1a2b3c4d5e6f7g8h9i0j9"
+      },
+      "Bulk Assign Notes": [
+        "Requires department head privileges",
+        "All tickets must belong to your department",
+        "Assignee must be a team member in your department",
+        "OPEN tickets automatically change to ASSIGNED status",
+        "Returns count of successfully assigned tickets"
+      ],
+      "Bulk Assign Response": {
+        "success": true,
+        "message": "Successfully assigned 3 tickets",
+        "data": {
+          "assignedCount": 3,
+          "assignedTo": {
+            "id": "65f1a2b3c4d5e6f7g8h9i0j9",
+            "name": "Jane Smith"
+          }
+        }
+      },
+      "Bulk Assign Example cURL": "curl -X POST http://localhost:5000/api/v1/department/tickets/bulk-assign -H \"Authorization: Bearer <token>\" -H \"Content-Type: application/json\" -d '{\"ticketIds\": [\"id1\", \"id2\"], \"assignedTo\": \"userId\"}'",
+      "Bulk Update Status API": "http://localhost:5000/api/v1/department/tickets/bulk-status",
+      "Bulk Status Description": "Update status of multiple tickets (Department Head only)",
+      "Bulk Status Request": "POST request with Authorization header",
+      "Bulk Status Headers": {
+        "Authorization": "Bearer <access_token>",
+        "Content-Type": "application/json"
+      },
+      "Bulk Status Body": {
+        "ticketIds": [
+          "65f1a2b3c4d5e6f7g8h9i0j1",
+          "65f1a2b3c4d5e6f7g8h9i0j2"
+        ],
+        "status": "IN_PROGRESS"
+      },
+      "Bulk Status Notes": [
+        "Requires department head privileges",
+        "All tickets must belong to your department",
+        "Cannot update CLOSED tickets",
+        "Valid statuses: OPEN, ASSIGNED, IN_PROGRESS, WAITING_FOR_STUDENT, RESOLVED, CLOSED",
+        "Auto-sets resolvedAt when status is RESOLVED"
+      ],
+      "Bulk Status Response": {
+        "success": true,
+        "message": "Successfully updated 2 tickets to IN_PROGRESS",
+        "data": {
+          "updatedCount": 2,
+          "status": "IN_PROGRESS"
+        }
+      },
+      "Bulk Status Example cURL": "curl -X POST http://localhost:5000/api/v1/department/tickets/bulk-status -H \"Authorization: Bearer <token>\" -H \"Content-Type: application/json\" -d '{\"ticketIds\": [\"id1\", \"id2\"], \"status\": \"RESOLVED\"}'"
+    },
+    "ACTUAL_EXPORT_APIS": {
+      "Note": "Export endpoint now generates actual CSV/PDF files instead of mock URLs",
+      "Export Report API": "http://localhost:5000/api/v1/department/reports/export",
+      "Export Description": "Export department data in CSV or PDF format (Department Head only)",
+      "Export Request": "GET request with Authorization header and query params",
+      "Export Headers": {
+        "Authorization": "Bearer <access_token>"
+      },
+      "Export Query Params": {
+        "format": "csv | pdf (required)",
+        "type": "tickets | team | summary (required)",
+        "startDate": "2026-01-01 (optional)",
+        "endDate": "2026-01-31 (optional)"
+      },
+      "Export Notes": [
+        "CSV format: Generates actual .csv file",
+        "PDF format: Generates actual .pdf file with formatted report",
+        "CSV supports: tickets, team (summary not supported for CSV)",
+        "PDF supports: all types (tickets, team, summary)",
+        "Files stored in /exports directory",
+        "Files auto-delete after 24 hours",
+        "Returns actual file size and download URL"
+      ],
+      "Export CSV Tickets Response": {
+        "success": true,
+        "data": {
+          "downloadUrl": "/downloads/placement-tickets-2026-01.csv",
+          "fileName": "placement-tickets-2026-01.csv",
+          "fileSize": "12.45KB",
+          "expiresAt": "2026-01-12T13:42:00.000Z"
+        }
+      },
+      "Export PDF Summary Response": {
+        "success": true,
+        "data": {
+          "downloadUrl": "/downloads/placement-summary-2026-01.pdf",
+          "fileName": "placement-summary-2026-01.pdf",
+          "fileSize": "25.67KB",
+          "expiresAt": "2026-01-12T13:42:00.000Z"
+        }
+      },
+      "Export CSV Tickets Example": "curl -X GET \"http://localhost:5000/api/v1/department/reports/export?format=csv&type=tickets&startDate=2026-01-01&endDate=2026-01-31\" -H \"Authorization: Bearer <token>\"",
+      "Export PDF Summary Example": "curl -X GET \"http://localhost:5000/api/v1/department/reports/export?format=pdf&type=summary&startDate=2026-01-01&endDate=2026-01-31\" -H \"Authorization: Bearer <token>\"",
+      "Export CSV Team Example": "curl -X GET \"http://localhost:5000/api/v1/department/reports/export?format=csv&type=team\" -H \"Authorization: Bearer <token>\""
+    }
+  },
+  "COMPLETE_API_SUMMARY": {
+    "Total Endpoints": "57+",
+    "New Endpoints Added": 4,
+    "Student APIs": {
+      "Total": 14,
+      "New": 2,
+      "Endpoints": [
+        "POST /tickets/:id/attachments - Upload file",
+        "POST /tickets/:id/rate - Rate ticket"
+      ]
+    },
+    "Department Head APIs": {
+      "Total": 16,
+      "New": 2,
+      "Endpoints": [
+        "POST /department/tickets/bulk-assign - Bulk assign",
+        "POST /department/tickets/bulk-status - Bulk update status"
+      ],
+      "Updated": [
+        "GET /department/reports/export - Now generates actual files"
+      ]
+    },
+    "Department Staff APIs": {
+      "Total": 7,
+      "New": 0
+    }
+  },
+  "TESTING_GUIDE": {
+    "File Upload Test": {
+      "Step 1": "Create a ticket as student",
+      "Step 2": "Upload an image file using POST /tickets/:id/attachments",
+      "Step 3": "Verify file appears in /uploads directory",
+      "Step 4": "Check ticket.attachments array has file info"
+    },
+    "Rating Test": {
+      "Step 1": "Create and resolve a ticket",
+      "Step 2": "Rate it using POST /tickets/:id/rate with stars 1-5",
+      "Step 3": "Verify rating saved in ticket.rating",
+      "Step 4": "Try rating again - should fail (already rated)"
+    },
+    "Bulk Assign Test": {
+      "Step 1": "Login as department head",
+      "Step 2": "Get multiple unassigned ticket IDs",
+      "Step 3": "Use POST /department/tickets/bulk-assign",
+      "Step 4": "Verify all tickets assigned to team member"
+    },
+    "Bulk Status Test": {
+      "Step 1": "Login as department head",
+      "Step 2": "Get multiple ticket IDs",
+      "Step 3": "Use POST /department/tickets/bulk-status",
+      "Step 4": "Verify all tickets have new status"
+    },
+    "CSV Export Test": {
+      "Step 1": "Login as department head",
+      "Step 2": "Use GET /department/reports/export?format=csv&type=tickets",
+      "Step 3": "Check /exports directory for .csv file",
+      "Step 4": "Open CSV file and verify data"
+    },
+    "PDF Export Test": {
+      "Step 1": "Login as department head",
+      "Step 2": "Use GET /department/reports/export?format=pdf&type=summary",
+      "Step 3": "Check /exports directory for .pdf file",
+      "Step 4": "Open PDF and verify formatted report"
+    }
+  },
+  "POSTMAN_COLLECTION": {
+    "Collection Name": "Student Ticketing System - Enhanced",
+    "Base URL": "http://localhost:5000/api/v1",
+    "Folders": [
+      {
+        "name": "File Attachments",
+        "requests": [
+          {
+            "name": "Upload Ticket Attachment",
+            "method": "POST",
+            "url": "{{baseUrl}}/tickets/{{ticketId}}/attachments",
+            "headers": {
+              "Authorization": "Bearer {{studentToken}}"
+            },
+            "body": {
+              "type": "form-data",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/file.png"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "Ticket Rating",
+        "requests": [
+          {
+            "name": "Rate Ticket",
+            "method": "POST",
+            "url": "{{baseUrl}}/tickets/{{ticketId}}/rate",
+            "headers": {
+              "Authorization": "Bearer {{studentToken}}",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "stars": 5,
+              "comment": "Excellent service!"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Bulk Operations",
+        "requests": [
+          {
+            "name": "Bulk Assign Tickets",
+            "method": "POST",
+            "url": "{{baseUrl}}/department/tickets/bulk-assign",
+            "headers": {
+              "Authorization": "Bearer {{headToken}}",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "ticketIds": [
+                "id1",
+                "id2",
+                "id3"
+              ],
+              "assignedTo": "userId"
+            }
+          },
+          {
+            "name": "Bulk Update Status",
+            "method": "POST",
+            "url": "{{baseUrl}}/department/tickets/bulk-status",
+            "headers": {
+              "Authorization": "Bearer {{headToken}}",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "ticketIds": [
+                "id1",
+                "id2"
+              ],
+              "status": "IN_PROGRESS"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Export Reports",
+        "requests": [
+          {
+            "name": "Export CSV Tickets",
+            "method": "GET",
+            "url": "{{baseUrl}}/department/reports/export?format=csv&type=tickets&startDate=2026-01-01&endDate=2026-01-31",
+            "headers": {
+              "Authorization": "Bearer {{headToken}}"
+            }
+          },
+          {
+            "name": "Export PDF Summary",
+            "method": "GET",
+            "url": "{{baseUrl}}/department/reports/export?format=pdf&type=summary",
+            "headers": {
+              "Authorization": "Bearer {{headToken}}"
+            }
+          },
+          {
+            "name": "Export CSV Team",
+            "method": "GET",
+            "url": "{{baseUrl}}/department/reports/export?format=csv&type=team",
+            "headers": {
+              "Authorization": "Bearer {{headToken}}"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

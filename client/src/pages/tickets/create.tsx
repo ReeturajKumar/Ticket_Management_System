@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { Loader2,  AlertCircle } from "lucide-react"
 import { createTicket } from "@/services/ticketService"
 
 const ticketSchema = z.object({

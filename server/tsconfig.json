@@ -4,9 +4,12 @@
     "module": "commonjs",
     "rootDir": "./src",
     "outDir": "./dist",
-    "strict": true,
+    "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "types": [
+      "node"
+    ],
     "forceConsistentCasingInFileNames": true
   },
   "include": [

@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/ReeturajKumar/Ticket_Management_System#readme",
   "dependencies": {
+    "@types/node": "^20.19.28",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "csv-writer": "^1.6.0",
@@ -43,7 +44,6 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mongoose": "^5.11.96",
     "@types/multer": "^2.0.0",
-    "@types/node": "^20.19.28",
     "@types/nodemailer": "^7.0.5",
     "@types/pdfkit": "^0.17.4",
     "nodemon": "^3.1.11",

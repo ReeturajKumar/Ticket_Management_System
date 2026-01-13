@@ -23,8 +23,9 @@ const createTransporter = () => {
      logger: true 
   };
 
-  // Use the built-in 'service' option for Gmail for better reliability
-  if (host.includes('gmail')) {
+  // Use the built-in 'service' option for Gmail for better reliability,
+  // BUT only if we aren't explicitly trying to use port 587 (STARTTLS) to fix timeouts.
+  if (host.includes('gmail') && port !== 587) {
     config.service = 'gmail';
   } else {
     config.host = host;

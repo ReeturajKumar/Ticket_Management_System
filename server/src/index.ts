@@ -14,6 +14,9 @@ connectDB();
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy - required for rate limiting to work correctly behind Render/Heroku/etc
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors());
 app.use(express.json());

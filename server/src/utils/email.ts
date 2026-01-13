@@ -31,9 +31,6 @@ const createTransporter = () => {
     config.host = host;
     config.port = port;
     config.secure = port === 465; // true for 465, false for other ports
-    config.tls = {
-      ciphers: 'SSLv3'
-    };
   }
   
   return nodemailer.createTransport(config);

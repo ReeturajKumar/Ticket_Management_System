@@ -265,6 +265,7 @@ export default function HomePage() {
                             left: 0,
                             bottom: 0,
                           }}
+                          barSize={32}
                         >
                           <defs>
                             <linearGradient id="colorCreated" x1="0" y1="0" x2="0" y2="1">

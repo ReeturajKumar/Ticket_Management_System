@@ -81,11 +81,28 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (error: any) {
-    console.error('Registration error:', error);
+    console.error('Registration error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      command: error.command
+    });
+    
+    // Check if it's an email error specifically
+    if (error.message.includes('verification email') || error.code === 'EAUTH' || error.code === 'ETIMEDOUT') {
+       res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email. Please contact support or try again later.',
+        // Don't expose internal error details in production response unless needing to debug client-side
+        debug: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+      return;
+    }
+
     res.status(500).json({
       success: false,
-      message: 'Error sending verification email',
-      error: error.message,
+      message: 'Internal server error during registration',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };

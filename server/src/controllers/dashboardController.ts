@@ -27,7 +27,7 @@ export const getStudentOverview = async (req: Request, res: Response): Promise<v
     const recentTickets = await Ticket.find({ createdBy: userId })
       .select('subject status priority department createdAt')
       .sort({ createdAt: -1 })
-      .limit(5);
+      .limit(6);
 
     res.status(200).json({
       success: true,

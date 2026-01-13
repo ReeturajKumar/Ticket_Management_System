@@ -7,26 +7,28 @@ import nodemailer from 'nodemailer';
 
 // Create reusable transporter
 const createTransporter = () => {
-  const host = process.env.EMAIL_HOST || 'smtp.gmail.com';
-  const port = parseInt(process.env.EMAIL_PORT || '587');
-  const user = process.env.EMAIL_USER;
+  // Support both EMAIL_* and SMTP_* environment variable naming
+  const host = process.env.SMTP_HOST || process.env.EMAIL_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || '587');
+  const user = process.env.SMTP_MAIL || process.env.EMAIL_USER;
+  const service = process.env.SMTP_SERVICE || (host.includes('gmail') ? 'gmail' : undefined);
+  
   // Google App Passwords often have spaces, but Nodemailer needs them removed
-  const pass = process.env.EMAIL_PASSWORD?.replace(/\s+/g, '');
+  const pass = (process.env.SMTP_PASSWORD || process.env.EMAIL_PASSWORD)?.replace(/\s+/g, '');
 
   const config: any = {
     auth: {
       user: user,
       pass: pass,
     },
-     // Helpful for debugging
-     debug: true,
-     logger: true 
+    // Helpful for debugging
+    debug: true,
+    logger: true 
   };
 
-  // Use the built-in 'service' option for Gmail for better reliability,
-  // BUT only if we aren't explicitly trying to use port 587 (STARTTLS) to fix timeouts.
-  if (host.includes('gmail') && port !== 587) {
-    config.service = 'gmail';
+  // Use the built-in 'service' option if specified or for Gmail (unless using port 587 explicitly)
+  if (service && !(service === 'gmail' && port === 587)) {
+    config.service = service;
   } else {
     config.host = host;
     config.port = port;
@@ -54,8 +56,23 @@ export const sendOTPEmail = async (
   try {
     const transporter = createTransporter();
 
+    // Verify SMTP connection configuration
+    try {
+      await transporter.verify();
+      console.log('SMTP connection verified successfully');
+    } catch (verifyError: any) {
+      console.error('SMTP verification failed:', {
+        message: verifyError.message,
+        code: verifyError.code,
+        command: verifyError.command,
+        responseCode: verifyError.responseCode,
+        response: verifyError.response
+      });
+      throw new Error(`SMTP connection failed: ${verifyError.message}`);
+    }
+
     const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'Student Ticketing System'}" <${process.env.EMAIL_USER}>`,
+      from: `"${process.env.SMTP_FROM_NAME || process.env.EMAIL_FROM_NAME || 'Student Ticketing System'}" <${process.env.SMTP_MAIL || process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Email Verification - OTP Code',
       html: `

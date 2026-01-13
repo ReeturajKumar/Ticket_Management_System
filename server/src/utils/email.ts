@@ -7,23 +7,35 @@ import nodemailer from 'nodemailer';
 
 // Create reusable transporter
 const createTransporter = () => {
+  const host = process.env.EMAIL_HOST || 'smtp.gmail.com';
   const port = parseInt(process.env.EMAIL_PORT || '587');
-  
-  const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: port,
-    secure: port === 465, // true for 465, false for other ports
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD,
-    },
-    // Helpful for debugging in some cloud environments
-    tls: {
-      ciphers: 'SSLv3'
-    }
-  });
+  const user = process.env.EMAIL_USER;
+  // Google App Passwords often have spaces, but Nodemailer needs them removed
+  const pass = process.env.EMAIL_PASSWORD?.replace(/\s+/g, '');
 
-  return transporter;
+  const config: any = {
+    auth: {
+      user: user,
+      pass: pass,
+    },
+     // Helpful for debugging
+     debug: true,
+     logger: true 
+  };
+
+  // Use the built-in 'service' option for Gmail for better reliability
+  if (host.includes('gmail')) {
+    config.service = 'gmail';
+  } else {
+    config.host = host;
+    config.port = port;
+    config.secure = port === 465; // true for 465, false for other ports
+    config.tls = {
+      ciphers: 'SSLv3'
+    };
+  }
+  
+  return nodemailer.createTransport(config);
 };
 
 /**

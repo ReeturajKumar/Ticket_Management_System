@@ -9,6 +9,18 @@ import ProfilePage from "./pages/profile"
 import CreateTicketPage from "./pages/tickets/create"
 import TicketListPage from "./pages/tickets"
 import TicketDetailsPage from "./pages/tickets/details"
+import DepartmentLoginPage from "./pages/department/auth/Login"
+import DepartmentRegisterPage from "./pages/department/auth/Register"
+import DepartmentVerifyOTP from "./pages/department/auth/VerifyOTP"
+import DepartmentForgotPassword from "./pages/department/auth/ForgotPassword"
+import DepartmentResetPassword from "./pages/department/auth/ResetPassword"
+import DepartmentDashboard from "./pages/department/dashboard"
+import DepartmentTicketsPage from "./pages/department/tickets"
+import DepartmentTicketDetailsPage from "./pages/department/tickets/details"
+import { DepartmentProtectedRoute } from "./components/DepartmentProtectedRoute"
+import DepartmentProfilePage from "./pages/department/profile"
+import TeamMemberDetailPage from "./pages/department/team/[userId]"
+import DepartmentReportsPage from "./pages/department/reports"
 
 function App() {
   return (
@@ -66,6 +78,78 @@ function App() {
           }
         />
         
+        {/* Department Routes - Public Auth */}
+        <Route path="/department/login" element={<DepartmentLoginPage />} />
+        <Route path="/department/register" element={<DepartmentRegisterPage />} />
+        <Route path="/department/verify-otp" element={<DepartmentVerifyOTP />} />
+        <Route path="/department/forgot-password" element={<DepartmentForgotPassword />} />
+        <Route path="/department/reset-password" element={<DepartmentResetPassword />} />
+
+        {/* Department Routes - Protected */}
+        <Route
+          path="/department/dashboard"
+          element={
+            <DepartmentProtectedRoute>
+              <DepartmentDashboard />
+            </DepartmentProtectedRoute>
+          }
+        />
+        <Route
+          path="/department/profile"
+          element={
+            <DepartmentProtectedRoute>
+              <DepartmentProfilePage />
+            </DepartmentProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/department/tickets"
+          element={
+            <DepartmentProtectedRoute>
+              <DepartmentTicketsPage />
+            </DepartmentProtectedRoute>
+          }
+        />
+
+
+        {/* Specific route for unassigned tickets to avoid collision with :id param */}
+        <Route
+          path="/department/tickets/unassigned"
+          element={
+            <DepartmentProtectedRoute>
+              <DepartmentTicketsPage />
+            </DepartmentProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/department/tickets/:id"
+          element={
+            <DepartmentProtectedRoute>
+              <DepartmentTicketDetailsPage />
+            </DepartmentProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/department/team/:userId"
+          element={
+            <DepartmentProtectedRoute>
+              <TeamMemberDetailPage />
+            </DepartmentProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/department/reports"
+          element={
+            <DepartmentProtectedRoute>
+              <DepartmentReportsPage />
+            </DepartmentProtectedRoute>
+          }
+        />
+
         {/* Default redirect to login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         

@@ -3,7 +3,7 @@ import Ticket from '../models/Ticket';
 import User from '../models/User';
 import { TicketStatus, Priority, UserRole } from '../constants';
 import AppError from '../utils/AppError';
-import { generateCSV, generatePDF, cleanupOldExports } from '../utils/exportUtils';
+import { generateCSV, generatePDF, generateExcel, cleanupOldExports } from '../utils/exportUtils';
 import fs from 'fs';
 
 /**
@@ -178,11 +178,11 @@ export const exportReport = async (req: Request, res: Response): Promise<void> =
     const { format, type, startDate, endDate } = req.query;
 
     if (!format || !type) {
-      throw new AppError('Please provide format (csv/pdf) and type (tickets/team/summary)', 400);
+      throw new AppError('Please provide format (csv/excel/pdf) and type (tickets/team/summary)', 400);
     }
 
-    if (!['csv', 'pdf'].includes(format as string)) {
-      throw new AppError('Invalid format. Use csv or pdf', 400);
+    if (!['csv', 'excel', 'pdf'].includes(format as string)) {
+      throw new AppError('Invalid format. Use csv, excel or pdf', 400);
     }
 
     if (!['tickets', 'team', 'summary'].includes(type as string)) {
@@ -200,12 +200,15 @@ export const exportReport = async (req: Request, res: Response): Promise<void> =
     }
 
     const dateStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
-    const fileName = `${user.department.toLowerCase()}-${type}-${dateStr}.${format}`;
+    const extension = format === 'excel' ? 'xlsx' : format;
+    const fileName = `${user.department.toLowerCase()}-${type}-${dateStr}.${extension}`;
 
     let filePath: string;
 
-    if (format === 'csv') {
-      // Generate CSV
+    if (format === 'csv' || format === 'excel') {
+      const generator = format === 'excel' ? generateExcel : generateCSV;
+
+      // Generate CSV or Excel
       if (type === 'tickets') {
         const tickets = await Ticket.find({
           department: user.department,
@@ -222,7 +225,7 @@ export const exportReport = async (req: Request, res: Response): Promise<void> =
           resolvedAt: t.resolvedAt ? t.resolvedAt.toISOString() : 'N/A',
         }));
 
-        filePath = await generateCSV(
+        filePath = await generator(
           data,
           [
             { id: 'subject', title: 'Subject' },
@@ -260,7 +263,7 @@ export const exportReport = async (req: Request, res: Response): Promise<void> =
           })
         );
 
-        filePath = await generateCSV(
+        filePath = await generator(
           data,
           [
             { id: 'name', title: 'Name' },
@@ -272,7 +275,7 @@ export const exportReport = async (req: Request, res: Response): Promise<void> =
           fileName
         );
       } else {
-        throw new AppError('CSV export not supported for summary type. Use PDF instead.', 400);
+        throw new AppError(`${format.toString().toUpperCase()} export not supported for summary type. Use PDF instead.`, 400);
       }
     } else {
       // Generate PDF

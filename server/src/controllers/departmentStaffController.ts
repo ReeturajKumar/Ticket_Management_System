@@ -229,7 +229,7 @@ export const listUnassignedTickets = async (req: Request, res: Response): Promis
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    // Get unassigned tickets in department
+    // Get unassigned tickets in department with populated student data
     const tickets = await Ticket.find({
       department: user.department,
       assignedTo: null,
@@ -238,7 +238,16 @@ export const listUnassignedTickets = async (req: Request, res: Response): Promis
       .sort({ priority: -1, createdAt: -1 }) // Sort by priority first, then date
       .skip(skip)
       .limit(limitNum)
-      .select('subject priority createdBy createdByName createdAt');
+      .populate('createdBy', 'name email')
+      .select('-__v')
+      .lean();
+
+    // Transform tickets to include student names directly
+    const transformedTickets = tickets.map((ticket: any) => ({
+      ...ticket,
+      studentName: ticket.createdBy?.name || ticket.createdByName || 'Unknown',
+      studentEmail: ticket.createdBy?.email || ticket.createdByEmail,
+    }));
 
     const total = await Ticket.countDocuments({
       department: user.department,
@@ -249,7 +258,7 @@ export const listUnassignedTickets = async (req: Request, res: Response): Promis
     res.status(200).json({
       success: true,
       data: {
-        tickets,
+        tickets: transformedTickets,
         pagination: {
           total,
           page: pageNum,

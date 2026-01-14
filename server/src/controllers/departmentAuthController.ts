@@ -207,7 +207,8 @@ export const loginDepartmentUser = async (req: Request, res: Response): Promise<
 
     // Check if user is department user
     if (user.role !== UserRole.DEPARTMENT_USER) {
-      throw new AppError('Invalid login endpoint. Please use the correct login page.', 403);
+      console.log('Login failed: Role mismatch', { userRole: user.role, expected: UserRole.DEPARTMENT_USER });
+      throw new AppError(`Invalid login endpoint. Role mistmatch. Got: '${user.role}', Expected: '${UserRole.DEPARTMENT_USER}'`, 403);
     }
 
     // Check if email is verified

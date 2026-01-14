@@ -33,19 +33,31 @@ export const listDepartmentTickets = async (req: Request, res: Response): Promis
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    // Get tickets
+    // Get tickets with populated user data
     const tickets = await Ticket.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
-      .select('-__v');
+      .populate('createdBy', 'name email')
+      .populate('assignedTo', 'name email')
+      .select('-__v')
+      .lean();
+
+    // Transform tickets to include names directly
+    const transformedTickets = tickets.map((ticket: any) => ({
+      ...ticket,
+      studentName: ticket.createdBy?.name || ticket.createdByName || 'Unknown',
+      studentEmail: ticket.createdBy?.email || ticket.createdByEmail,
+      assignedToName: ticket.assignedTo?.name,
+      assignedToEmail: ticket.assignedTo?.email,
+    }));
 
     const total = await Ticket.countDocuments(filter);
 
     res.status(200).json({
       success: true,
       data: {
-        tickets,
+        tickets: transformedTickets,
         pagination: {
           total,
           page: pageNum,

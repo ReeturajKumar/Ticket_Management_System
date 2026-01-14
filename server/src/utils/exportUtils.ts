@@ -1,4 +1,5 @@
 import { createObjectCsvWriter } from 'csv-writer';
+import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
@@ -25,6 +26,35 @@ export const generateCSV = async (
   });
 
   await csvWriter.writeRecords(data);
+  return filePath;
+};
+
+/**
+ * Generate Excel file from data
+ */
+export const generateExcel = async (
+  data: any[],
+  headers: { id: string; title: string }[],
+  filename: string
+): Promise<string> => {
+  const filePath = path.join(exportsDir, filename);
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Report');
+
+  // Convert header format { id: 'key', title: 'Title' } to columns
+  worksheet.columns = headers.map(h => ({
+    header: h.title,
+    key: h.id,
+    width: 25 
+  }));
+
+  // Add rows
+  worksheet.addRows(data);
+
+  // Style header row
+  worksheet.getRow(1).font = { bold: true };
+  
+  await workbook.xlsx.writeFile(filePath);
   return filePath;
 };
 

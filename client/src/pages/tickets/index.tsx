@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { getMyTickets, type Ticket } from "@/services/ticketService"
-import { Plus, Loader2, Search, Filter, X } from "lucide-react"
+import { Plus, Loader2, Search, Filter, X, TicketIcon } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useNavigate } from "react-router-dom"
 
@@ -97,10 +97,16 @@ export default function TicketListPage() {
     <StudentLayout>
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">My Tickets</h1>
-            <p className="text-muted-foreground">
-              View and manage your support requests.
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <TicketIcon className="h-6 w-6 text-primary" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight">Support Requests</h1>
+            </div>
+            <p className="text-muted-foreground max-w-2xl pl-[3.25rem]">
+              Track the status of your inquiries, view historical requests, and stay updated on resolutions. 
+              Manage all your support needs in one centralized dashboard.
             </p>
           </div>
           <Link to="/tickets/new">

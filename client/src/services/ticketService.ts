@@ -21,7 +21,7 @@ export interface CreateTicketData {
   priority: string
 }
 
-export async function createTicket(data: CreateTicketData): Promise<{ success: boolean; data: Ticket }> {
+export async function createTicket(data: CreateTicketData): Promise<{ success: boolean; data: { ticket: Ticket } }> {
   const response = await fetchWithAuth(`${API_URL}/tickets`, {
     method: 'POST',
     headers: {
@@ -76,6 +76,20 @@ export interface TicketDetails extends Ticket {
     reopenedBy: string
     reason: string
     reopenedAt: string
+  }>
+  rating?: {
+    stars: number
+    comment?: string
+    ratedBy: string
+    ratedByName: string
+    ratedAt: string
+  }
+  attachments?: Array<{
+    filename: string
+    originalName: string
+    size: number
+    mimeType: string
+    uploadedAt: string
   }>
 }
 
@@ -139,7 +153,7 @@ export async function reopenTicket(id: string, reason: string): Promise<void> {
   return result
 }
 
-export async function updateTicket(id: string, data: { description?: string; priority?: string }): Promise<void> {
+export async function updateTicket(id: string, data: { subject?: string; description?: string; priority?: string }): Promise<void> {
   const response = await fetchWithAuth(`${API_URL}/tickets/${id}`, {
     method: 'PUT',
     headers: {
@@ -152,6 +166,48 @@ export async function updateTicket(id: string, data: { description?: string; pri
 
   if (!response.ok) {
     throw new Error(result.message || 'Failed to update ticket')
+  }
+
+  return result
+}
+
+/**
+ * Upload attachment to ticket
+ */
+export async function uploadAttachment(ticketId: string, file: File): Promise<void> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await fetchWithAuth(`${API_URL}/tickets/${ticketId}/attachments`, {
+    method: 'POST',
+    body: formData, // Don't set Content-Type header, browser will set it with boundary
+  })
+
+  const result = await response.json()
+
+  if (!response.ok) {
+    throw new Error(result.message || 'Failed to upload attachment')
+  }
+
+  return result
+}
+
+/**
+ * Rate a resolved ticket
+ */
+export async function rateTicket(ticketId: string, rating: number, feedback?: string): Promise<void> {
+  const response = await fetchWithAuth(`${API_URL}/tickets/${ticketId}/rate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ stars: rating, comment: feedback }),
+  })
+
+  const result = await response.json()
+
+  if (!response.ok) {
+    throw new Error(result.message || 'Failed to rate ticket')
   }
 
   return result

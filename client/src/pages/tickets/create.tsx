@@ -25,8 +25,8 @@ import {
 } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2,  AlertCircle } from "lucide-react"
-import { createTicket } from "@/services/ticketService"
+import { Loader2, AlertCircle, Upload, X, FileIcon } from "lucide-react"
+import { createTicket, uploadAttachment } from "@/services/ticketService"
 
 const ticketSchema = z.object({
   subject: z.string()
@@ -45,6 +45,7 @@ export default function CreateTicketPage() {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   const form = useForm<TicketValues>({
     resolver: zodResolver(ticketSchema),
@@ -56,12 +57,46 @@ export default function CreateTicketPage() {
     },
   })
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("File size must be less than 5MB")
+        return
+      }
+      setSelectedFile(file)
+      setError(null)
+    }
+  }
+
+  const removeFile = () => {
+    setSelectedFile(null)
+  }
+
   async function onSubmit(data: TicketValues) {
     setIsLoading(true)
     setError(null)
 
     try {
-      await createTicket(data)
+      const result = await createTicket(data)
+      const ticketId = result.data.ticket.id
+
+      // Upload file if selected
+      if (selectedFile && ticketId) {
+        try {
+          console.log('Uploading file for ticket:', ticketId)
+          await uploadAttachment(ticketId, selectedFile)
+          console.log('File uploaded successfully')
+        } catch (uploadError: any) {
+          console.error("File upload failed:", uploadError)
+          setError(`Ticket created but file upload failed: ${uploadError.message}`)
+          // Still navigate after showing error
+          setTimeout(() => navigate("/tickets"), 2000)
+          return
+        }
+      }
+
       navigate("/tickets")
     } catch (err: any) {
       setError(err.message || "Failed to create ticket. Please try again.")
@@ -175,6 +210,52 @@ export default function CreateTicketPage() {
                     </FormItem>
                   )}
                 />
+
+                {/* File Upload */}
+                <div className="space-y-2">
+                  <FormLabel>Attachment (Optional)</FormLabel>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      id="file-upload"
+                      type="file"
+                      onChange={handleFileChange}
+                      disabled={isLoading}
+                      className="hidden"
+                      accept="image/*,.pdf,.doc,.docx,.txt"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('file-upload')?.click()}
+                      disabled={isLoading}
+                      className="cursor-pointer"
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Choose File
+                    </Button>
+                    {selectedFile && (
+                      <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                        <FileIcon className="h-4 w-4 text-muted-foreground" />
+                        <span className="max-w-[200px] truncate">{selectedFile.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({(selectedFile.size / 1024).toFixed(1)} KB)
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={removeFile}
+                          className="h-auto p-1 cursor-pointer"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <FormDescription>
+                    Max file size: 5MB. Supported formats: Images, PDF, DOC, TXT
+                  </FormDescription>
+                </div>
 
                 <div className="flex justify-end gap-4">
                   <Button 

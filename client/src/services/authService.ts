@@ -117,6 +117,74 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
 }
 
 /**
+ * Logout user
+ */
+export async function logoutUser(): Promise<void> {
+  const refreshToken = localStorage.getItem('refreshToken')
+  
+  if (refreshToken) {
+    try {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken }),
+      })
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
+  
+  // Clear local storage regardless of API call success
+  localStorage.removeItem('accessToken')
+  localStorage.removeItem('refreshToken')
+  localStorage.removeItem('user')
+}
+
+/**
+ * Request password reset email
+ */
+export async function forgotPassword(email: string): Promise<AuthResponse> {
+  const response = await fetch(`${API_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  })
+
+  const result = await response.json()
+
+  if (!response.ok) {
+    throw new Error(result.message || 'Failed to send reset email')
+  }
+
+  return result
+}
+
+/**
+ * Reset password with token
+ */
+export async function resetPassword(token: string, newPassword: string): Promise<AuthResponse> {
+  const response = await fetch(`${API_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token, newPassword }),
+  })
+
+  const result = await response.json()
+
+  if (!response.ok) {
+    throw new Error(result.message || 'Failed to reset password')
+  }
+
+  return result
+}
+
+/**
  * Store authentication tokens in localStorage
  */
 export function storeAuthTokens(accessToken: string, refreshToken: string, user: any) {

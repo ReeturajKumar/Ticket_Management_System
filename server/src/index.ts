@@ -41,6 +41,9 @@ app.use(express.urlencoded({ extended: true }));
 // Apply global rate limiter to all requests
 app.use(globalLimiter);
 
+// Serve static files from uploads directory
+app.use('/api/v1/uploads', express.static('uploads'));
+
 // Basic Route
 app.get('/', (req: Request, res: Response) => {
   res.send('Welcome to the Student Ticketing System API (TypeScript)');

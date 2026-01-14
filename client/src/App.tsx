@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import LoginPage from "./pages/auth/login"
 import SignUpPage from "./pages/auth/signup"
+import ForgotPassword from "./pages/auth/ForgotPassword"
+import ResetPassword from "./pages/auth/ResetPassword"
 import HomePage from "./pages/home"
 import ProfilePage from "./pages/profile"
 import CreateTicketPage from "./pages/tickets/create"
@@ -15,6 +17,8 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         
         {/* Protected Routes */}
         <Route

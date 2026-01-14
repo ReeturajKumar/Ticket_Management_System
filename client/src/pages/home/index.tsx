@@ -381,9 +381,33 @@ export default function HomePage() {
                           outerRadius={90}
                           paddingAngle={2}
                           dataKey="value"
+                          labelLine={false}
+                          label={(props: any) => {
+                            const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props;
+                            const RADIAN = Math.PI / 180;
+                            const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                            
+                            // Only show label if percentage is significant (> 5%)
+                            if (percent < 0.05) return null;
+
+                            return (
+                              <text 
+                                x={x} 
+                                y={y} 
+                                fill="white" 
+                                textAnchor="middle" 
+                                dominantBaseline="central"
+                                className="text-[10px] font-bold pointer-events-none"
+                              >
+                                {`${(percent * 100).toFixed(0)}%`}
+                              </text>
+                            );
+                          }}
                         >
                           {statusDistribution.map((entry, index) => {
-                             // Custom colors map for statuses
+                             // Custom colors map for statuses with better transparency/gradients support
                              let color = '#94a3b8'; // default slate-400
                              if (entry.name === 'Open') color = '#3b82f6'; // blue-500
                              if (entry.name === 'In Progress') color = '#f59e0b'; // amber-500
@@ -391,23 +415,36 @@ export default function HomePage() {
                              if (entry.name === 'Closed') color = '#64748b'; // slate-500
                              if (entry.name === 'Reopened') color = '#ef4444'; // red-500
                              
-                             return <Cell key={`cell-${index}`} fill={color} strokeWidth={0} />
+                             return <Cell key={`cell-${index}`} fill={color} strokeWidth={0} className="hover:opacity-80 transition-opacity" />
                           })}
                         </Pie>
                         <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--popover))', 
-                            borderColor: 'hsl(var(--border))', 
-                            borderRadius: 'var(--radius)',
-                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              const total = statusDistribution.reduce((acc, curr) => acc + curr.value, 0);
+                              const percentage = ((data.value / total) * 100).toFixed(1);
+                              
+                              return (
+                                <div className="rounded-lg border bg-popover px-3 py-2 shadow-sm">
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-sm font-medium uppercase text-muted-foreground">{data.name}</span>
+                                    <div className="flex items-baseline gap-2">
+                                      <span className="text-2xl font-bold">{data.value}</span>
+                                      <span className="text-xs text-muted-foreground">({percentage}%)</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
                           }}
-                          itemStyle={{ color: 'hsl(var(--popover-foreground))', fontSize: '0.875rem' }}
                         />
                         <Legend 
                           verticalAlign="bottom" 
                           height={36} 
                           iconType="circle"
-                          formatter={(value) => <span className="text-sm text-foreground">{value}</span>}
+                          formatter={(value) => <span className="text-sm text-foreground/80 font-medium">{value}</span>}
                         />
                       </PieChart>
                     </ResponsiveContainer>

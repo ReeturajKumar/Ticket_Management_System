@@ -4,6 +4,7 @@ import { StudentLayout } from "@/components/layout/StudentLayout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -24,8 +25,9 @@ import {
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { getTicketById, addComment, reopenTicket, updateTicket, type TicketDetails } from "@/services/ticketService"
-import { Loader2, ArrowLeft, Send, RotateCcw, User, Clock, AlertCircle, Edit } from "lucide-react"
+import { Loader2, ArrowLeft, Send, RotateCcw, User, Clock, AlertCircle, Edit, Star, FileIcon } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { RateTicketDialog } from "@/components/tickets/RateTicketDialog"
 
 export default function TicketDetailsPage() {
   const { id } = useParams<{ id: string }>()
@@ -38,10 +40,12 @@ export default function TicketDetailsPage() {
   const [isReopening, setIsReopening] = useState(false)
   const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editSubject, setEditSubject] = useState("")
   const [editDescription, setEditDescription] = useState("")
   const [editPriority, setEditPriority] = useState("")
   const [isUpdating, setIsUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false)
 
   const fetchTicket = async () => {
     if (!id) return
@@ -49,6 +53,7 @@ export default function TicketDetailsPage() {
       const result = await getTicketById(id)
       if (result.success) {
         setTicket(result.data.ticket)
+        setEditSubject(result.data.ticket.subject || "")
         setEditDescription(result.data.ticket.description || "")
         setEditPriority(result.data.ticket.priority)
       }
@@ -70,6 +75,7 @@ export default function TicketDetailsPage() {
     setIsUpdating(true)
     try {
       await updateTicket(id, {
+        subject: editSubject,
         description: editDescription,
         priority: editPriority
       })
@@ -194,10 +200,19 @@ export default function TicketDetailsPage() {
                     <DialogHeader>
                       <DialogTitle>Edit Ticket Details</DialogTitle>
                       <DialogDescription>
-                        Update the description or priority of your ticket.
+                        Update the subject, description, or priority of your ticket.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="subject">Subject</Label>
+                        <Input
+                          id="subject"
+                          value={editSubject}
+                          onChange={(e) => setEditSubject(e.target.value)}
+                          placeholder="Brief summary of the issue"
+                        />
+                      </div>
                       <div className="space-y-2">
                         <Label htmlFor="priority">Priority</Label>
                         <Select value={editPriority} onValueChange={setEditPriority}>
@@ -276,6 +291,18 @@ export default function TicketDetailsPage() {
                     </DialogContent>
                   </Dialog>
              )}
+
+             {ticket.status === 'RESOLVED' && !ticket.rating && (
+               <Button 
+                 variant="outline" 
+                 size="sm" 
+                 onClick={() => setIsRatingDialogOpen(true)}
+                 className="cursor-pointer border-green-200 text-green-700 hover:bg-green-50 dark:border-green-900 dark:text-green-400 dark:hover:bg-green-950/50"
+               >
+                 <Star className="mr-2 h-4 w-4" />
+                 Rate Ticket
+               </Button>
+             )}
           </div>
         </div>
 
@@ -338,10 +365,34 @@ export default function TicketDetailsPage() {
                            <span className="font-semibold text-sm">{ticket.createdByName}</span>
                            <span className="text-xs text-muted-foreground">opened this ticket on {new Date(ticket.createdAt).toLocaleString()}</span>
                         </div>
-                        <div className="bg-muted/30 rounded-lg p-4 text-sm border border-muted/50">
-                           <p className="whitespace-pre-wrap leading-relaxed">{ticket.description}</p>
-                        </div>
-                     </div>
+                         <div className="bg-muted/30 rounded-lg p-4 text-sm border border-muted/50">
+                            <p className="whitespace-pre-wrap leading-relaxed">{ticket.description}</p>
+                         </div>
+
+                         {/* Attachments */}
+                         {ticket.attachments && ticket.attachments.length > 0 && (
+                           <div className="mt-4 space-y-2">
+                             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Attachments</p>
+                             <div className="flex flex-wrap gap-2">
+                               {ticket.attachments.map((attachment, idx) => (
+                                 <a
+                                   key={idx}
+                                   href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/uploads/${attachment.filename}`}
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background hover:bg-muted/50 transition-colors text-sm"
+                                 >
+                                   <FileIcon className="h-4 w-4 text-muted-foreground" />
+                                   <span className="max-w-[200px] truncate">{attachment.originalName}</span>
+                                   <span className="text-xs text-muted-foreground">
+                                     ({(attachment.size / 1024).toFixed(1)} KB)
+                                   </span>
+                                 </a>
+                               ))}
+                             </div>
+                           </div>
+                         )}
+                      </div>
                  </div>
 
                  <Separator className="my-4" />
@@ -404,6 +455,16 @@ export default function TicketDetailsPage() {
 
         </div>
       </div>
+
+      {/* Rating Dialog */}
+      <RateTicketDialog
+        ticketId={id || ""}
+        isOpen={isRatingDialogOpen}
+        onClose={() => setIsRatingDialogOpen(false)}
+        onSuccess={() => {
+          fetchTicket()
+        }}
+      />
     </StudentLayout>
   )
 }

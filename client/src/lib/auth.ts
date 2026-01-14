@@ -40,7 +40,9 @@ export function clearAuthData() {
 /**
  * Logout and redirect to login
  */
-export function logout() {
-  clearAuthData()
+export async function logout() {
+  // Import dynamically to avoid circular dependency
+  const { logoutUser } = await import('@/services/authService')
+  await logoutUser()
   window.location.href = '/login'
 }

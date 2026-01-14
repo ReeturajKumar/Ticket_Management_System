@@ -126,6 +126,20 @@ export const getTicket = async (req: Request, res: Response): Promise<void> => {
             reason: history.reason,
             reopenedAt: history.reopenedAt,
           })),
+          rating: (ticket.rating && ticket.rating.stars) ? {
+            stars: ticket.rating.stars,
+            comment: ticket.rating.comment,
+            ratedBy: ticket.rating.ratedBy,
+            ratedByName: ticket.rating.ratedByName,
+            ratedAt: ticket.rating.ratedAt,
+          } : null,
+          attachments: ticket.attachments ? ticket.attachments.map((attachment: any) => ({
+            filename: attachment.filename,
+            originalName: attachment.originalName,
+            size: attachment.size,
+            mimeType: attachment.mimeType,
+            uploadedAt: attachment.uploadedAt,
+          })) : [],
           createdAt: ticket.createdAt,
           updatedAt: ticket.updatedAt,
         },
@@ -142,12 +156,12 @@ export const getTicket = async (req: Request, res: Response): Promise<void> => {
  */
 export const updateTicket = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { description, priority } = req.body;
+    const { subject, description, priority } = req.body;
     const ticket = (req as any).ticket;
 
     // Validate at least one field
-    if (!description && !priority) {
-      throw new AppError('Please provide description or priority to update', 400);
+    if (!subject && !description && !priority) {
+      throw new AppError('Please provide subject, description, or priority to update', 400);
     }
 
     // Check if ticket can be updated (only OPEN or REOPENED)
@@ -156,6 +170,7 @@ export const updateTicket = async (req: Request, res: Response): Promise<void> =
     }
 
     // Update fields
+    if (subject) ticket.subject = subject;
     if (description) ticket.description = description;
     if (priority) ticket.priority = priority;
 

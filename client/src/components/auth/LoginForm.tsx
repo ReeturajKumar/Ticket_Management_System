@@ -80,6 +80,14 @@ export function LoginForm({ onSubmit, isLoading, error }: LoginFormProps) {
         {errors.password && (
           <p className="text-xs text-destructive">{errors.password.message}</p>
         )}
+        <div className="text-right">
+          <Link
+            to="/forgot-password"
+            className="text-sm font-medium text-primary hover:underline cursor-pointer"
+          >
+            Forgot password?
+          </Link>
+        </div>
       </div>
 
       {/* Error Alert */}

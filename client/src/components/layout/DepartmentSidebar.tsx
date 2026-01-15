@@ -4,7 +4,6 @@ import { getCurrentDepartmentUser, logoutDepartmentUser } from "@/services/depar
 import {
   LayoutDashboard,
   Ticket,
-  Inbox,
   LogOut,
   UserCircle,
   FileText
@@ -42,11 +41,6 @@ export function DepartmentSidebar({ className, isOpen, onClose }: SidebarProps) 
       href: "/department/tickets",
       icon: Ticket,
     },
-    {
-      title: "Unassigned Tickets",
-      href: "/department/tickets/unassigned",
-      icon: Inbox,
-    },
   ]
 
   // Add Reports for Department Head
@@ -70,7 +64,7 @@ export function DepartmentSidebar({ className, isOpen, onClose }: SidebarProps) 
 
       <aside
         className={cn(
-          "fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] w-64 border-r bg-white transition-transform duration-300 ease-in-out dark:bg-slate-950",
+          "fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] w-56 border-r bg-white transition-transform duration-300 ease-in-out dark:bg-slate-950",
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
           className
         )}

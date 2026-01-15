@@ -377,7 +377,7 @@ export default function TicketDetailsPage() {
                                {ticket.attachments.map((attachment, idx) => (
                                  <a
                                    key={idx}
-                                   href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/uploads/${attachment.filename}`}
+                                   href={`${import.meta.env.VITE_API_URL}/uploads/${attachment.filename}`}
                                    target="_blank"
                                    rel="noopener noreferrer"
                                    className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background hover:bg-muted/50 transition-colors text-sm"

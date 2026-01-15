@@ -1,7 +1,7 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { refreshDepartmentToken } from './departmentAuthService'
 
-const API_BASE_URL = 'http://localhost:5000/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'
 
 // Create axios instance for department APIs
 const departmentAxios = axios.create({

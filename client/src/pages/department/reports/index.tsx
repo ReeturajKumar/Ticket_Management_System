@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getSummaryReport, exportReport } from "@/services/departmentHeadService"
 import { Loader2, FileText, Table, Calendar, TrendingUp, CheckCircle, AlertOctagon, Clock } from "lucide-react"
+import { toast } from 'react-toastify'
 
 export default function DepartmentReportsPage() {
   const [isLoading, setIsLoading] = useState(true)
@@ -64,10 +65,10 @@ export default function DepartmentReportsPage() {
       link.click();
       link.parentNode?.removeChild(link);
       
-      alert(`Report exported successfully as ${formatType.toUpperCase()}`)
+      toast.success(`Report exported successfully as ${formatType.toUpperCase()}`)
     } catch (error) {
       console.error("Export failed:", error)
-      alert("Failed to export report")
+      toast.error("Failed to export report")
     } finally {
       setIsExporting(false)
     }

@@ -67,19 +67,22 @@ export function TicketQuickActions({
   }
 
   if (compact) {
+    const currentStatusLabel = STATUS_OPTIONS.find(s => s.value === currentStatus)?.label || currentStatus
+    const currentPriorityLabel = PRIORITY_OPTIONS.find(p => p.value === currentPriority)?.label || currentPriority
+    
     return (
       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <Select value={currentStatus} onValueChange={handleStatusChange} disabled={isUpdatingStatus}>
-          <SelectTrigger className="h-8 w-[130px] text-xs">
+          <SelectTrigger className="h-7 w-[120px] text-[10px]">
             {isUpdatingStatus ? (
               <Loader2 className="h-3 w-3 animate-spin" />
             ) : (
-              <SelectValue />
+              <span className="truncate">{currentStatusLabel}</span>
             )}
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map((status) => (
-              <SelectItem key={status.value} value={status.value}>
+              <SelectItem key={status.value} value={status.value} className="text-xs">
                 <span className={status.color}>{status.label}</span>
               </SelectItem>
             ))}
@@ -87,16 +90,16 @@ export function TicketQuickActions({
         </Select>
 
         <Select value={currentPriority} onValueChange={handlePriorityChange} disabled={isUpdatingPriority}>
-          <SelectTrigger className="h-8 w-[110px] text-xs">
+          <SelectTrigger className="h-7 w-[100px] text-[10px]">
             {isUpdatingPriority ? (
               <Loader2 className="h-3 w-3 animate-spin" />
             ) : (
-              <SelectValue />
+              <span className="truncate">{currentPriorityLabel}</span>
             )}
           </SelectTrigger>
           <SelectContent>
             {PRIORITY_OPTIONS.map((priority) => (
-              <SelectItem key={priority.value} value={priority.value}>
+              <SelectItem key={priority.value} value={priority.value} className="text-xs">
                 <span className={priority.color}>{priority.label}</span>
               </SelectItem>
             ))}

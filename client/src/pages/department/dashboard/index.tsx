@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { getCurrentDepartmentUser } from "@/services/departmentAuthService"
-import { getDepartmentOverview, getAnalytics, getTeamPerformance } from "@/services/departmentHeadService"
-import { getStaffDashboardStats } from "@/services/departmentStaffService"
-import { Loader2, Ticket, CheckCircle, Clock, AlertCircle, TrendingUp, Users } from "lucide-react"
+import { getDepartmentOverview, getAnalytics, getTeamPerformance, exportReport } from "@/services/departmentHeadService"
+import { getStaffDashboardStats, getStaffPerformance } from "@/services/departmentStaffService"
+import { Loader2, Ticket, CheckCircle, Clock, AlertCircle, TrendingUp, TrendingDown, Users, Target, Zap, Activity, ArrowUpRight, ArrowDownRight, UserCheck } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ComposedChart, Line } from 'recharts'
+import { Progress } from "@/components/ui/progress"
+import { toast } from 'react-toastify'
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
 
@@ -19,7 +21,30 @@ export default function DepartmentDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [data, setData] = useState<any>(null)
   const [teamPerformance, setTeamPerformance] = useState<any>(null)
+  const [staffPerformance, setStaffPerformance] = useState<any>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [isExporting, setIsExporting] = useState(false)
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true)
+      const blob = await exportReport('pdf', 'summary')
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `department-report-${new Date().toISOString().split('T')[0]}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast.success("Report exported successfully")
+    } catch (error) {
+      console.error("Export failed:", error)
+      toast.error("Failed to export report")
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,7 +81,9 @@ export default function DepartmentDashboard() {
           setTeamPerformance(staffOnly)
         } else {
           const stats = await getStaffDashboardStats()
+          const performance = await getStaffPerformance()
           setData(stats.data)
+          setStaffPerformance(performance.data)
         }
       } catch (err) {
         console.error("Failed to fetch dashboard data", err)
@@ -251,6 +278,251 @@ export default function DepartmentDashboard() {
                 </Card>
               </div>
 
+              {/* Performance Overview Card */}
+              <Card className="border-t-4 border-t-indigo-500">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-indigo-600" />
+                    Performance Overview
+                  </CardTitle>
+                  <CardDescription>Key performance indicators for your department</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-6 md:grid-cols-4">
+                    {/* Team Performance Score */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Team Performance</span>
+                        <Zap className="h-4 w-4 text-yellow-500" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-3xl font-bold text-indigo-600">
+                          {Math.round((data.summary?.resolvedTickets || 0) / Math.max(data.summary?.totalTickets || 1, 1) * 100)}%
+                        </div>
+                        <Progress value={(data.summary?.resolvedTickets || 0) / Math.max(data.summary?.totalTickets || 1, 1) * 100} className="h-2" />
+                        <p className="text-xs text-muted-foreground">Resolution rate</p>
+                      </div>
+                    </div>
+
+                    {/* Avg Resolution Time */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Avg Resolution</span>
+                        <Clock className="h-4 w-4 text-blue-500" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-3xl font-bold text-blue-600">
+                          {data.analytics?.avgResolutionTime || '0h'}
+                        </div>
+                        {/* Calculate progress assuming 72h (3 days) target. Lower is better. */}
+                        <Progress 
+                          value={Math.min(100, (parseFloat(data.analytics?.avgResolutionTime) || 0) / 72 * 100)} 
+                          className="h-2" 
+                        />
+                        <p className="text-xs text-muted-foreground">Target: 3 days</p>
+                      </div>
+                    </div>
+
+                    {/* Active Workload */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Active Workload</span>
+                        <Activity className="h-4 w-4 text-green-500" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-3xl font-bold text-green-600">
+                          {(data.summary?.openTickets || 0) + (data.summary?.inProgressTickets || 0)}
+                        </div>
+                        <Progress 
+                          value={Math.min(100, ((data.summary?.openTickets || 0) + (data.summary?.inProgressTickets || 0)) / Math.max((data.summary?.totalTickets || 1) * 0.5, 1) * 100)} 
+                          className="h-2" 
+                        />
+                        <p className="text-xs text-muted-foreground">Active tickets</p>
+                      </div>
+                    </div>
+
+                    {/* SLA Compliance */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">SLA Compliance</span>
+                        <CheckCircle className="h-4 w-4 text-purple-500" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-3xl font-bold text-purple-600">
+                          {data.analytics?.slaCompliance || '0%'}
+                        </div>
+                        <Progress value={parseInt(data.analytics?.slaCompliance) || 0} className="h-2" />
+                        <p className="text-xs text-muted-foreground">Target: 90%</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Ticket Trends Chart */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Ticket Trends</CardTitle>
+                    <CardDescription>Created vs Resolved (Last 7 days)</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={data.analytics?.trends || []}>
+                          <defs>
+                            <linearGradient id="colorCreated" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="colorResolved" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="date" 
+                            tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          />
+                          <YAxis />
+                          <Tooltip 
+                            labelFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          />
+                          <Legend />
+                          <Area 
+                            type="monotone" 
+                            dataKey="created" 
+                            stroke="#3b82f6" 
+                            fillOpacity={1} 
+                            fill="url(#colorCreated)"
+                            name="Created"
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="resolved" 
+                            stroke="#10b981" 
+                            fillOpacity={1} 
+                            fill="url(#colorResolved)"
+                            name="Resolved"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Team Workload Distribution */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Team Workload</CardTitle>
+                    <CardDescription>Active tickets per team member</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {teamPerformance?.slice(0, 5).map((member: any, index: number) => (
+                        <div key={member.id || index} className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <UserCheck className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">{member.name}</span>
+                            </div>
+                            <span className="text-muted-foreground">{member.activeTickets || 0} tickets</span>
+                          </div>
+                          <Progress 
+                            value={Math.min((member.activeTickets || 0) * 10, 100)} 
+                            className="h-2"
+                          />
+                        </div>
+                      )) || (
+                        <p className="text-sm text-muted-foreground text-center py-8">No team data available</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Quick Stats Grid */}
+              <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Today</p>
+                        <p className="text-2xl font-bold">
+                          {data.analytics?.trends?.find((t: any) => t.date === new Date().toISOString().split('T')[0])?.created || 0}
+                        </p>
+                      </div>
+                      <Ticket className="h-8 w-8 text-blue-500 opacity-50" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-red-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Critical</p>
+                        <p className="text-2xl font-bold">{data.byPriority?.CRITICAL || 0}</p>
+                      </div>
+                      <AlertCircle className="h-8 w-8 text-red-500 opacity-50" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-orange-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Unassigned</p>
+                        <p className="text-2xl font-bold">{data.summary?.unassignedTickets || 0}</p>
+                      </div>
+                      <AlertCircle className="h-8 w-8 text-orange-500 opacity-50" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-purple-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Team Size</p>
+                        <p className="text-2xl font-bold">{teamPerformance?.length || 0}</p>
+                      </div>
+                      <Users className="h-8 w-8 text-purple-500 opacity-50" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-yellow-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Avg Load</p>
+                        <p className="text-2xl font-bold">
+                          {teamPerformance?.length ? Math.round(((data.summary?.inProgressTickets || 0) + (data.summary?.openTickets || 0)) / teamPerformance.length * 10) / 10 : 0}
+                        </p>
+                      </div>
+                      <Zap className="h-8 w-8 text-yellow-500 opacity-50" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-indigo-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Completion</p>
+                        <p className="text-2xl font-bold">
+                           {Math.round(((data.summary?.resolvedTickets || 0) + (data.summary?.closedTickets || 0)) / Math.max(data.summary?.totalTickets || 1, 1) * 100)}%
+                        </p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-indigo-500 opacity-50" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Recent Tickets</CardTitle>
@@ -282,292 +554,378 @@ export default function DepartmentDashboard() {
               </Card>
             </TabsContent>
             <TabsContent value="analytics" className="space-y-6">
+
+                {/* 1. Header & Quick Actions */}
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Performance Analytics</h3>
+                    <p className="text-muted-foreground text-sm">Detailed insights into your department's efficiency and workload.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Clock className="h-3.5 w-3.5" />
+                      Last 7 Days
+                    </Button>
+                    <Button size="sm" className="gap-2" onClick={handleExport} disabled={isExporting}>
+                      {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                      {isExporting ? 'Exporting...' : 'Export Report'}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 2. Enhanced KPI Cards Row */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <Card className="border-l-4 border-l-indigo-500">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">SLA Compliance</CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center">
-                        <TrendingUp className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                      </div>
+                  <Card className="hover:shadow-md transition-all border-l-4 border-l-indigo-500 overflow-hidden relative">
+                    <div className="absolute top-0 right-0 p-3 opacity-10">
+                      <TrendingUp className="h-16 w-16 text-indigo-500" />
+                    </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">SLA Compliance</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{data.analytics?.slaCompliance || '0%'}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        24-hour target
-                      </p>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+                          {data.analytics?.slaCompliance || '0%'}
+                        </span>
+                        <span className="text-xs text-emerald-600 font-medium flex items-center">
+                          <ArrowUpRight className="h-3 w-3 mr-0.5" />
+                          +2.5%
+                        </span>
+                      </div>
+                      <Progress value={parseInt(data.analytics?.slaCompliance) || 0} className="h-1.5 mt-3" />
+                      <p className="text-xs text-muted-foreground mt-2">Target: 95% within 24h</p>
                     </CardContent>
                   </Card>
-                  <Card className="border-l-4 border-l-blue-500">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Avg Resolution Time</CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
-                        <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      </div>
+
+                  <Card className="hover:shadow-md transition-all border-l-4 border-l-blue-500 overflow-hidden relative">
+                     <div className="absolute top-0 right-0 p-3 opacity-10">
+                      <Clock className="h-16 w-16 text-blue-500" />
+                    </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Avg Resolution Time</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{data.analytics?.avgResolutionTime || '0h'}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Per ticket
-                      </p>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                          {data.analytics?.avgResolutionTime || '0h'}
+                        </span>
+                        <span className="text-xs text-emerald-600 font-medium flex items-center">
+                          <TrendingDown className="h-3 w-3 mr-0.5" />
+                          -15%
+                        </span>
+                      </div>
+                      <Progress value={60} className="h-1.5 mt-3" />
+                      <p className="text-xs text-muted-foreground mt-2">Target: &lt; 24 hours</p>
                     </CardContent>
                   </Card>
-                  <Card className="border-l-4 border-l-green-500">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Total Resolved</CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center">
-                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                      </div>
+
+                  <Card className="hover:shadow-md transition-all border-l-4 border-l-green-500 overflow-hidden relative">
+                     <div className="absolute top-0 right-0 p-3 opacity-10">
+                      <CheckCircle className="h-16 w-16 text-green-500" />
+                    </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Total Resolved</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">{data.analytics?.totalResolved || 0}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        This period
-                      </p>
+                      <div className="flex items-baseline gap-2">
+                         <span className="text-3xl font-bold text-green-600 dark:text-green-400">
+                          {data.analytics?.totalResolved || 0}
+                        </span>
+                         <span className="text-xs text-emerald-600 font-medium flex items-center">
+                          <ArrowUpRight className="h-3 w-3 mr-0.5" />
+                          +5
+                        </span>
+                      </div>
+                      <div className="flex gap-1 mt-3">
+                         {[1,2,3,4,5,4,3].map((h, i) => (
+                           <div key={i} className="flex-1 bg-green-100 rounded-sm" style={{ height: '6px' }}>
+                             <div className="bg-green-500 rounded-sm w-full" style={{ height: `${h * 20}%` }}></div>
+                           </div>
+                         ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">Total resolved this week</p>
                     </CardContent>
                   </Card>
-                  <Card className="border-l-4 border-l-purple-500">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Performance Score</CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-950 flex items-center justify-center">
-                        <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                      </div>
+
+                  <Card className="hover:shadow-md transition-all border-l-4 border-l-purple-500 overflow-hidden relative">
+                     <div className="absolute top-0 right-0 p-3 opacity-10">
+                      <Zap className="h-16 w-16 text-purple-500" />
+                    </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Team Efficiency</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{data.analytics?.performanceScore || 'N/A'}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Team average
-                      </p>
+                      {(() => {
+                        const score = teamPerformance?.length 
+                          ? Math.round(teamPerformance.reduce((acc: number, m: any) => acc + (m.performance || 0), 0) / teamPerformance.length)
+                          : 0;
+                        const status = score >= 90 ? "Excellent" : score >= 70 ? "Good" : score >= 50 ? "Stable" : "Low";
+                        const statusColor = score >= 90 ? "text-emerald-600" : score >= 70 ? "text-blue-600" : score >= 50 ? "text-amber-600" : "text-red-600";
+                        
+                        return (
+                          <>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                                 {score}%
+                              </span>
+                              <span className={`text-xs ${statusColor} font-medium flex items-center`}>
+                                <Activity className="h-3 w-3 mr-0.5" />
+                                {status}
+                              </span>
+                            </div>
+                            <Progress value={score} className="h-1.5 mt-3" />
+                            <p className="text-xs text-muted-foreground mt-2">Avg performance score across {teamPerformance?.length || 0} members</p>
+                          </>
+                        )
+                      })()}
                     </CardContent>
                   </Card>
                 </div>
 
-                <Card className="shadow-sm">
-                  <CardHeader className="border-b bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20">
-                    <CardTitle className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-indigo-500" />
-                      Ticket Trends (7 Days)
-                    </CardTitle>
-                    <CardDescription>Daily ticket creation and resolution patterns</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="h-[320px]">
-                      {Array.isArray(data.analytics?.trends) && data.analytics.trends.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={data.analytics.trends}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                            <XAxis 
-                              dataKey="date" 
-                              tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              stroke="#6b7280"
-                              style={{ fontSize: '12px' }}
-                            />
-                            <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                            <Tooltip 
-                              labelFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                            />
-                            <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                            <Line 
-                              type="monotone" 
-                              dataKey="created" 
-                              stroke="#6366f1" 
-                              strokeWidth={3} 
-                              name="Created" 
-                              dot={{ fill: '#6366f1', r: 4 }}
-                              activeDot={{ r: 6 }}
-                            />
-                            <Line 
-                              type="monotone" 
-                              dataKey="resolved" 
-                              stroke="#10b981" 
-                              strokeWidth={3} 
-                              name="Resolved" 
-                              dot={{ fill: '#10b981', r: 4 }}
-                              activeDot={{ r: 6 }}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                          <TrendingUp className="h-12 w-12 mb-2 opacity-20" />
-                          <p className="text-sm">No trend data available</p>
+                {/* 3. Main Chart & Secondary Insights Row */}
+                <div className="grid gap-6 md:grid-cols-3">
+                   {/* Main Trend Chart (2/3 width) */}
+                  <Card className="md:col-span-2 shadow-sm border-t-4 border-t-indigo-500">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle>Ticket Volume Trends</CardTitle>
+                          <CardDescription>Created vs. Resolved tickets over time</CardDescription>
                         </div>
-                      )}
-                    </div>
-                  </CardContent>
+                        <div className="flex gap-2">
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200">Created</Badge>
+                            <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200">Resolved</Badge>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pl-0">
+                      <div className="h-[350px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={data.analytics?.trends || []} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorCreatedBig" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
+                              <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="colorResolvedBig" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                          <XAxis 
+                            dataKey="date" 
+                            tickLine={false}
+                            axisLine={false}
+                            tick={{ fill: '#6b7280', fontSize: 12 }}
+                            tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { weekday: 'short' })}
+                            className="text-xs"
+                          />
+                          <YAxis 
+                             tickLine={false}
+                             axisLine={false}
+                             tick={{ fill: '#6b7280', fontSize: 12 }}
+                             width={40}
+                          />
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                            labelFormatter={(value) => new Date(value).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="created" 
+                            stroke="#6366f1" 
+                            strokeWidth={3}
+                            fillOpacity={1} 
+                            fill="url(#colorCreatedBig)" 
+                            activeDot={{ r: 6, strokeWidth: 0 }}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="resolved" 
+                            stroke="#10b981" 
+                            strokeWidth={3}
+                            fillOpacity={1} 
+                            fill="url(#colorResolvedBig)" 
+                            activeDot={{ r: 6, strokeWidth: 0 }}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Top Issues Card (1/3 width) */}
+                  <Card className="shadow-sm border-t-4 border-t-orange-500">
+                    <CardHeader>
+                      <CardTitle>Top Issues</CardTitle>
+                      <CardDescription>Most frequent ticket categories</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-6">
+                        {data.analytics?.topIssues?.length > 0 ? (
+                            data.analytics.topIssues.map((issue: any, index: number) => (
+                                <div key={index} className="space-y-2">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="font-medium truncate max-w-[150px]">{issue.category}</span>
+                                    <span className="font-bold text-gray-700">{issue.count}</span>
+                                  </div>
+                                  <Progress 
+                                    value={(issue.count / Math.max(...data.analytics.topIssues.map((i: any) => i.count))) * 100} 
+                                    className={`h-2 ${index === 0 ? 'bg-orange-100 text-orange-500' : 'bg-gray-100'}`}
+                                  />
+                                  {index === 0 && <p className="text-xs text-orange-600">Top reported issue</p>}
+                                </div>
+                            ))
+                        ) : (
+                             <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                                <AlertCircle className="h-10 w-10 mb-2 opacity-20" />
+                                <p>No issue data available</p>
+                             </div>
+                        )}
+                        
+                        <div className="pt-4 border-t">
+                             <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3">Priority Distribution</h4>
+                             <div className="flex gap-2 text-xs">
+                                <div className="flex-1 bg-gray-100 rounded p-2 text-center">
+                                    <div className="font-bold text-gray-700">{data.byPriority?.LOW || 0}</div>
+                                    <div className="text-[10px] text-gray-500">Low</div>
+                                </div>
+                                <div className="flex-1 bg-blue-50 rounded p-2 text-center">
+                                    <div className="font-bold text-blue-700">{data.byPriority?.MEDIUM || 0}</div>
+                                    <div className="text-[10px] text-blue-500">Med</div>
+                                </div>
+                                <div className="flex-1 bg-orange-50 rounded p-2 text-center">
+                                    <div className="font-bold text-orange-700">{data.byPriority?.HIGH || 0}</div>
+                                    <div className="text-[10px] text-orange-500">High</div>
+                                </div>
+                                <div className="flex-1 bg-red-50 rounded p-2 text-center">
+                                    <div className="font-bold text-red-700">{data.byPriority?.CRITICAL || 0}</div>
+                                    <div className="text-[10px] text-red-500">Crit</div>
+                                </div>
+                             </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* 4. Day of Week Analysis Row */}
+                <Card className="shadow-sm">
+                    <CardHeader>
+                        <CardTitle>Total Volume by Day</CardTitle>
+                        <CardDescription>Ticket volume distribution across the last 7 days</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                         <div className="h-[200px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={data.analytics?.trends || []}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis 
+                                        dataKey="date" 
+                                        tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { weekday: 'short' })}
+                                        axisLine={false}
+                                        tickLine={false}
+                                    />
+                                    <Tooltip 
+                                        cursor={{ fill: 'transparent' }}
+                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    />
+                                    <Bar dataKey="created" name="Tickets" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={40} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                         </div>
+                    </CardContent>
                 </Card>
 
-                <div className="grid gap-6 md:grid-cols-2">
-                  <Card className="shadow-sm">
-                    <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20">
-                      <CardTitle className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-purple-500" />
-                        Top Issues
-                      </CardTitle>
-                      <CardDescription>Most common ticket categories</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <div className="h-[300px]">
-                        {Array.isArray(data.analytics?.topIssues) && data.analytics.topIssues.length > 0 ? (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data.analytics.topIssues}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                              <XAxis dataKey="category" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                              <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                              <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
-                              <Bar dataKey="count" fill="#8b5cf6" barSize={50} radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                            <AlertCircle className="h-12 w-12 mb-2 opacity-20" />
-                            <p className="text-sm">No issue data available</p>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="shadow-sm">
-                    <CardHeader className="border-b bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20">
-                      <CardTitle className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-green-500" />
-                        Performance Insights
-                      </CardTitle>
-                      <CardDescription>Key metrics and observations</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <div className="space-y-6">
-                        <div className="p-4 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950/30 dark:to-indigo-900/30 border border-indigo-200 dark:border-indigo-800">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm font-medium text-indigo-900 dark:text-indigo-100">Resolution Rate</p>
-                            <TrendingUp className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                          </div>
-                          <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{data.analytics?.resolutionRate || '0%'}</p>
-                          <p className="text-xs text-indigo-700 dark:text-indigo-300 mt-1">Tickets resolved vs created</p>
-                        </div>
-                        
-                        <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 border border-blue-200 dark:border-blue-800">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">First Response Time</p>
-                            <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          </div>
-                          <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{data.analytics?.firstResponseTime || 'N/A'}</p>
-                          <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">Average time to first reply</p>
-                        </div>
-                        
-                        <div className="p-4 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/30 border border-orange-200 dark:border-orange-800">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm font-medium text-orange-900 dark:text-orange-100">Backlog</p>
-                            <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                          </div>
-                          <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{data.summary?.unassignedTickets || 0}</p>
-                          <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">Unassigned tickets</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
             </TabsContent>
 
             {/* Team Performance Tab */}
-            <TabsContent value="team" className="space-y-4">
+            {/* Team Performance Tab */}
+            <TabsContent value="team" className="space-y-6">
               {teamPerformance && teamPerformance.length > 0 ? (
                 <>
-                  {/* Performance Charts */}
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {/* Performance Comparison Chart */}
-                    <Card>
+                  {/* 1. Advanced Performance Charts */}
+                  <div className="grid gap-6 md:grid-cols-3">
+                    {/* Main Comparison Chart (2 cols) */}
+                    <Card className="md:col-span-2 shadow-sm border-t-4 border-t-indigo-500">
                       <CardHeader>
-                        <CardTitle className="text-base">Performance Comparison</CardTitle>
-                        <CardDescription>Staff member performance percentages</CardDescription>
+                        <CardTitle>Team Output & Quality</CardTitle>
+                        <CardDescription>Comparison of resolved tickets vs efficiency score</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <ResponsiveContainer width="100%" height={250}>
-                          <BarChart data={teamPerformance.slice(0, 10)}>
-                            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                            <XAxis 
-                              dataKey="name" 
-                              className="text-xs"
-                              tick={{ fontSize: 12 }}
-                              angle={-45}
-                              textAnchor="end"
-                              height={80}
-                            />
-                            <YAxis className="text-xs" tick={{ fontSize: 12 }} />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: 'hsl(var(--background))', 
-                                border: '1px solid hsl(var(--border))',
-                                borderRadius: '6px'
-                              }}
-                            />
-                            <Bar dataKey="performance" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
+                        <div className="h-[300px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={teamPerformance}>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                              <XAxis dataKey="name" scale="point" padding={{ left: 10, right: 10 }} tick={{fontSize: 12}} />
+                              <YAxis yAxisId="left" orientation="left" stroke="#6b7280" fontSize={12} />
+                              <YAxis yAxisId="right" orientation="right" stroke="#8b5cf6" fontSize={12} unit="%" />
+                              <Tooltip 
+                                contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                              />
+                              <Legend />
+                              <Bar yAxisId="left" dataKey="resolvedTickets" name="Resolved" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
+                              <Bar yAxisId="left" dataKey="activeTickets" name="Active" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={20} />
+                              <Line yAxisId="right" type="monotone" dataKey="performance" name="Efficiency Score" stroke="#8b5cf6" strokeWidth={2} dot={{r: 4}} />
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                        </div>
                       </CardContent>
                     </Card>
 
-                    {/* Workload Distribution Chart */}
-                    <Card>
+                    {/* Workload Distribution (1 col) */}
+                    <Card className="shadow-sm border-t-4 border-t-pink-500">
                       <CardHeader>
-                        <CardTitle className="text-base">Workload Distribution</CardTitle>
-                        <CardDescription>Active tickets per staff member</CardDescription>
+                         <CardTitle>Current Workload</CardTitle>
+                         <CardDescription>Active tickets distribution</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {teamPerformance.some((m: any) => m.activeTickets > 0) ? (
-                          <ResponsiveContainer width="100%" height={250}>
-                            <PieChart>
-                              <Pie
-                                data={teamPerformance.filter((m: any) => m.activeTickets > 0).map((member: any) => ({
-                                  name: member.name,
-                                  value: member.activeTickets || 0
-                                }))}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={(entry) => `${entry.name}: ${entry.value}`}
-                                outerRadius={80}
-                                fill="#8884d8"
-                                dataKey="value"
-                              >
-                                {teamPerformance.map((_: any, index: number) => (
-                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip 
-                                contentStyle={{ 
-                                  backgroundColor: 'hsl(var(--background))', 
-                                  border: '1px solid hsl(var(--border))',
-                                  borderRadius: '6px'
-                                }}
-                              />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-[250px] text-center">
-                            <div className="rounded-full bg-muted p-3 mb-2">
-                              <CheckCircle className="h-6 w-6 text-green-500" />
-                            </div>
-                            <p className="text-sm font-medium">No Active Workload</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              All staff members have completed their assigned tickets
-                            </p>
-                          </div>
-                        )}
+                        <div className="h-[300px] flex items-center justify-center">
+                          {teamPerformance.some((m: any) => m.activeTickets > 0) ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                               <PieChart>
+                                  <Pie
+                                    data={teamPerformance.filter((m: any) => m.activeTickets > 0)}
+                                    dataKey="activeTickets"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                  >
+                                    {teamPerformance.map((_: any, index: number) => (
+                                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                  </Pie>
+                                  <Tooltip contentStyle={{ borderRadius: '8px' }} />
+                                  <Legend verticalAlign="bottom" height={36}/>
+                               </PieChart>
+                            </ResponsiveContainer>
+                          ) : (
+                             <div className="flex flex-col items-center justify-center text-muted-foreground">
+                               <CheckCircle className="h-12 w-12 mb-2 opacity-20" />
+                               <p className="text-sm">No active tickets</p>
+                             </div>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   </div>
 
-                  {/* Team Members Table with Pagination */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Team Members</CardTitle>
-                      <CardDescription>
-                        Detailed performance metrics for your department staff
-                      </CardDescription>
+                  {/* 2. Detailed Team Table */}
+                  <Card className="shadow-sm">
+                    <CardHeader className="border-b bg-muted/30">
+                       <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle>Team Roster</CardTitle>
+                            <CardDescription>Detailed metrics per staff member</CardDescription>
+                          </div>
+                          {/* <div className="flex gap-2"></div> */}
+                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0">
                       {(() => {
                         const itemsPerPage = 5
                         const totalPages = Math.ceil(teamPerformance.length / itemsPerPage)
@@ -577,64 +935,66 @@ export default function DepartmentDashboard() {
 
                         return (
                           <>
-                            <div className="rounded-md border">
+                            <div className="overflow-x-auto">
                               <table className="w-full">
                                 <thead>
-                                  <tr className="border-b bg-muted/50">
+                                  <tr className="bg-muted/50 text-xs uppercase text-muted-foreground">
                                     <th className="p-4 text-left font-medium">Staff Member</th>
-                                    <th className="p-4 text-left font-medium">Email</th>
-                                    <th className="p-4 text-center font-medium">Assigned</th>
-                                    <th className="p-4 text-center font-medium">Active</th>
+                                    <th className="p-4 text-center font-medium">Workload</th>
                                     <th className="p-4 text-center font-medium">Resolved</th>
-                                    <th className="p-4 text-center font-medium">Performance</th>
-                                    <th className="p-4 text-left font-medium">Joined</th>
+                                    <th className="p-4 text-center font-medium">Avg Time</th>
+                                    <th className="p-4 text-center font-medium">Efficiency</th>
+                                    <th className="p-4 text-right font-medium">Action</th>
                                   </tr>
                                 </thead>
-                                <tbody>
-                                  {currentMembers.map((member: any, index: number) => (
-                                    <tr key={member.id || member._id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                                <tbody className="divide-y">
+                                  {currentMembers.map((member: any) => (
+                                    <tr key={member.id} className="hover:bg-muted/20 transition-colors">
                                       <td className="p-4">
-                                        <div className="flex items-center gap-2">
-                                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                            <span className="text-sm font-medium text-primary">
-                                              {member.name?.charAt(0).toUpperCase()}
-                                            </span>
+                                        <div 
+                                          className="flex items-center gap-3 cursor-pointer group"
+                                          onClick={() => navigate(`/department/team/${member.id}`)}
+                                        >
+                                          <div className="h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-200 dark:border-indigo-800 transition-all group-hover:scale-105 group-hover:shadow-md">
+                                            {member.name?.charAt(0).toUpperCase()}
                                           </div>
-                                          <button
-                                            onClick={() => navigate(`/department/team/${member.id || member.userId}`)}
-                                            className="font-medium hover:text-primary hover:underline transition-colors text-left"
-                                          >
-                                            {member.name}
-                                          </button>
+                                          <div>
+                                            <p className="font-medium text-sm group-hover:text-primary transition-colors">{member.name}</p>
+                                            <p className="text-xs text-muted-foreground">{member.email}</p>
+                                          </div>
                                         </div>
                                       </td>
-                                      <td className="p-4 text-sm text-muted-foreground">{member.email}</td>
-                                      <td className="p-4 text-center">
-                                        <Badge variant="secondary">{member.assignedTickets || 0}</Badge>
+                                      <td className="p-4">
+                                        <div className="flex flex-col items-center gap-1">
+                                           <Badge variant="outline" className={member.activeTickets > 5 ? "bg-orange-50 text-orange-600 border-orange-200" : "bg-slate-50 border-slate-200"}>
+                                              {member.activeTickets} Active
+                                           </Badge>
+                                           <Progress value={Math.min(member.activeTickets * 10, 100)} className="h-1.5 w-20" />
+                                        </div>
                                       </td>
                                       <td className="p-4 text-center">
-                                        <Badge variant="outline">{member.activeTickets || 0}</Badge>
+                                         <div className="font-bold text-gray-700 dark:text-gray-300">{member.resolvedTickets}</div>
                                       </td>
-                                      <td className="p-4 text-center">
-                                        <Badge variant="default" className="bg-green-500">{member.resolvedTickets || 0}</Badge>
+                                      <td className="p-4 text-center text-sm text-muted-foreground">
+                                         {member.avgResolutionTime || 'N/A'}h
                                       </td>
-                                      <td className="p-4 text-center">
+                                      <td className="p-4">
                                         <div className="flex items-center justify-center gap-2">
-                                          <div className="h-2 w-24 bg-muted rounded-full overflow-hidden">
+                                          <div className="h-2 w-16 bg-muted rounded-full overflow-hidden">
                                             <div 
-                                              className="h-full bg-primary transition-all"
+                                              className={`h-full transition-all ${member.performance >= 90 ? 'bg-emerald-500' : member.performance >= 70 ? 'bg-blue-500' : 'bg-amber-500'}`}
                                               style={{ width: `${member.performance || 0}%` }}
                                             />
                                           </div>
-                                          <span className="text-sm font-medium">{member.performance || 0}%</span>
+                                          <span className={`text-sm font-bold ${member.performance >= 90 ? 'text-emerald-600' : member.performance >= 70 ? 'text-blue-600' : 'text-amber-600'}`}>
+                                            {member.performance}%
+                                          </span>
                                         </div>
                                       </td>
-                                      <td className="p-4 text-sm text-muted-foreground">
-                                        {new Date(member.joinedAt).toLocaleDateString('en-US', { 
-                                          month: 'short', 
-                                          day: 'numeric', 
-                                          year: 'numeric' 
-                                        })}
+                                      <td className="p-4 text-right">
+                                        <Button variant="ghost" size="sm" onClick={() => navigate(`/department/team/${member.id}`)}>
+                                           View Profile
+                                        </Button>
                                       </td>
                                     </tr>
                                   ))}
@@ -642,38 +1002,25 @@ export default function DepartmentDashboard() {
                               </table>
                             </div>
 
-                            {/* Pagination Controls */}
+                            {/* Pagination controls */}
                             {totalPages > 1 && (
-                              <div className="flex items-center justify-between mt-4">
+                              <div className="flex items-center justify-between p-4 border-t">
                                 <p className="text-sm text-muted-foreground">
-                                  Showing {startIndex + 1} to {Math.min(endIndex, teamPerformance.length)} of {teamPerformance.length} members
+                                  Page {currentPage} of {totalPages}
                                 </p>
-                                <div className="flex items-center gap-2">
+                                <div className="flex gap-2">
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
                                   >
                                     Previous
                                   </Button>
-                                  <div className="flex items-center gap-1">
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                                      <Button
-                                        key={page}
-                                        variant={currentPage === page ? "default" : "outline"}
-                                        size="sm"
-                                        onClick={() => setCurrentPage(page)}
-                                        className="w-8 h-8 p-0"
-                                      >
-                                        {page}
-                                      </Button>
-                                    ))}
-                                  </div>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
                                   >
                                     Next
@@ -714,7 +1061,7 @@ export default function DepartmentDashboard() {
                     <Ticket className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{data.stats?.assignedTickets || 0}</div>
+                    <div className="text-2xl font-bold">{data.summary?.totalAssigned || 0}</div>
                     <p className="text-xs text-muted-foreground">
                       Total assigned
                     </p>
@@ -726,7 +1073,7 @@ export default function DepartmentDashboard() {
                     <Clock className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{data.stats?.activeTickets || 0}</div>
+                    <div className="text-2xl font-bold">{(data.summary?.inProgress || 0) + (data.summary?.open || 0)}</div>
                     <p className="text-xs text-muted-foreground">
                       Open / In Progress
                     </p>
@@ -738,7 +1085,7 @@ export default function DepartmentDashboard() {
                     <CheckCircle className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{data.stats?.resolvedTickets || 0}</div>
+                    <div className="text-2xl font-bold">{data.summary?.resolved || 0}</div>
                     <p className="text-xs text-muted-foreground">
                       Successfully closed
                     </p>
@@ -750,7 +1097,7 @@ export default function DepartmentDashboard() {
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{data.stats?.avgResolutionTime || '0h'}</div>
+                    <div className="text-2xl font-bold">{data.summary?.avgResolutionTime || 'N/A'}</div>
                     <p className="text-xs text-muted-foreground">
                       Per ticket
                     </p>
@@ -758,21 +1105,288 @@ export default function DepartmentDashboard() {
                 </Card>
               </div>
               
-               <div className="grid gap-4 md:grid-cols-1">
-                 <Card>
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Status Distribution Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Ticket Status Distribution</CardTitle>
+                    <CardDescription>Breakdown of your assigned tickets by status</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[250px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Open', value: data.summary?.open || 0, color: '#ef4444' },
+                              { name: 'In Progress', value: data.summary?.inProgress || 0, color: '#3b82f6' },
+                              { name: 'Resolved', value: data.summary?.resolved || 0, color: '#10b981' },
+                              { name: 'Waiting', value: data.summary?.waiting || 0, color: '#f59e0b' },
+                            ].filter(item => item.value > 0)}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {[
+                              { name: 'Open', value: data.summary?.open || 0, color: '#ef4444' },
+                              { name: 'In Progress', value: data.summary?.inProgress || 0, color: '#3b82f6' },
+                              { name: 'Resolved', value: data.summary?.resolved || 0, color: '#10b981' },
+                              { name: 'Waiting', value: data.summary?.waiting || 0, color: '#f59e0b' },
+                            ].filter(item => item.value > 0).map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Performance Metrics */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Performance Metrics</CardTitle>
+                    <CardDescription>Your ticket resolution performance</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">Resolution Rate</span>
+                          <span className="text-2xl font-bold text-primary">{data.summary?.performance || '0%'}</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-3">
+                          <div 
+                            className="bg-primary h-3 rounded-full transition-all duration-500"
+                            style={{ width: data.summary?.performance || '0%' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">Completion Progress</span>
+                          <span className="text-sm font-semibold">
+                            {data.summary?.resolved || 0} / {data.summary?.totalAssigned || 0}
+                          </span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-3">
+                          <div 
+                            className="bg-green-500 h-3 rounded-full transition-all duration-500"
+                            style={{ 
+                              width: data.summary?.totalAssigned > 0 
+                                ? `${((data.summary?.resolved || 0) / data.summary.totalAssigned * 100).toFixed(0)}%` 
+                                : '0%' 
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 pt-2">
+                        <div className="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-950">
+                          <div className="text-2xl font-bold text-blue-600">{data.summary?.inProgress || 0}</div>
+                          <div className="text-xs text-muted-foreground">Active</div>
+                        </div>
+                        <div className="text-center p-3 rounded-lg bg-orange-50 dark:bg-orange-950">
+                          <div className="text-2xl font-bold text-orange-600">{data.summary?.waiting || 0}</div>
+                          <div className="text-xs text-muted-foreground">Waiting</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="text-sm text-muted-foreground">Avg Resolution Time</span>
+                        <span className="text-lg font-semibold">{data.summary?.avgResolutionTime || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Recent Tickets */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Recent Tickets</CardTitle>
+                    <CardDescription>Your latest assigned tickets</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {data.recentTickets && data.recentTickets.length > 0 ? (
+                      <div className="space-y-3">
+                        {data.recentTickets.slice(0, 5).map((ticket: any) => (
+                          <div 
+                            key={ticket._id} 
+                            className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                            onClick={() => navigate(`/department/tickets/${ticket._id}`)}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{ticket.subject}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {ticket.status.replace(/_/g, ' ')}
+                                </Badge>
+                                <Badge variant={ticket.priority === 'HIGH' || ticket.priority === 'CRITICAL' ? 'destructive' : 'secondary'} className="text-xs">
+                                  {ticket.priority}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-md border p-4 text-center text-muted-foreground">
+                        <p className="text-sm">No recent tickets</p>
+                        <Link to="/department/tickets" className="text-primary hover:underline text-sm mt-2 inline-block">
+                          View All Tickets
+                        </Link>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Quick Stats */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Quick Stats</CardTitle>
+                    <CardDescription>Overview of your workload</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-red-50 dark:bg-red-950/30">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                            <AlertCircle className="h-5 w-5 text-red-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Open Tickets</p>
+                            <p className="text-xs text-muted-foreground">Need attention</p>
+                          </div>
+                        </div>
+                        <span className="text-2xl font-bold text-red-600">{data.summary?.open || 0}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                            <Clock className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">In Progress</p>
+                            <p className="text-xs text-muted-foreground">Currently working</p>
+                          </div>
+                        </div>
+                        <span className="text-2xl font-bold text-blue-600">{data.summary?.inProgress || 0}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-green-50 dark:bg-green-950/30">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Resolved</p>
+                            <p className="text-xs text-muted-foreground">Successfully closed</p>
+                          </div>
+                        </div>
+                        <span className="text-2xl font-bold text-green-600">{data.summary?.resolved || 0}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                            <Clock className="h-5 w-5 text-orange-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Waiting</p>
+                            <p className="text-xs text-muted-foreground">For student response</p>
+                          </div>
+                        </div>
+                        <span className="text-2xl font-bold text-orange-600">{data.summary?.waiting || 0}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Performance Analytics */}
+              {staffPerformance && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Weekly & Monthly Performance */}
+                  <Card>
                     <CardHeader>
-                      <CardTitle>My Active Tickets</CardTitle>
-                      <CardDescription>Tickets currently assigned to you that need attention.</CardDescription>
+                      <CardTitle>Performance Trends</CardTitle>
+                      <CardDescription>Your weekly and monthly ticket statistics</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="rounded-md border p-4 text-center text-muted-foreground">
-                            <Link to="/department/tickets?status=IN_PROGRESS" className="text-primary hover:underline">
-                                Go to My Tickets
-                            </Link>
-                        </div>
+                      <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={[
+                            {
+                              period: 'This Week',
+                              assigned: staffPerformance.thisWeek?.assigned || 0,
+                              resolved: staffPerformance.thisWeek?.resolved || 0,
+                            },
+                            {
+                              period: 'This Month',
+                              assigned: staffPerformance.thisMonth?.assigned || 0,
+                              resolved: staffPerformance.thisMonth?.resolved || 0,
+                            }
+                          ]}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="period" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="assigned" fill="#3b82f6" name="Assigned" radius={[8, 8, 0, 0]} />
+                            <Bar dataKey="resolved" fill="#10b981" name="Resolved" radius={[8, 8, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
                     </CardContent>
-                 </Card>
-               </div>
+                  </Card>
+
+                  {/* Priority Breakdown */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Tickets by Priority</CardTitle>
+                      <CardDescription>Distribution of your assigned tickets</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart 
+                            data={[
+                              { priority: 'Low', count: staffPerformance.byPriority?.LOW || 0, color: '#10b981' },
+                              { priority: 'Medium', count: staffPerformance.byPriority?.MEDIUM || 0, color: '#f59e0b' },
+                              { priority: 'High', count: staffPerformance.byPriority?.HIGH || 0, color: '#ef4444' },
+                              { priority: 'Critical', count: staffPerformance.byPriority?.CRITICAL || 0, color: '#dc2626' },
+                            ]}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="priority" />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="count" radius={[8, 8, 0, 0]}>
+                              {[
+                                { priority: 'Low', count: staffPerformance.byPriority?.LOW || 0, color: '#10b981' },
+                                { priority: 'Medium', count: staffPerformance.byPriority?.MEDIUM || 0, color: '#f59e0b' },
+                                { priority: 'High', count: staffPerformance.byPriority?.HIGH || 0, color: '#ef4444' },
+                                { priority: 'Critical', count: staffPerformance.byPriority?.CRITICAL || 0, color: '#dc2626' },
+                              ].map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
            </div>
         )}
       </div>

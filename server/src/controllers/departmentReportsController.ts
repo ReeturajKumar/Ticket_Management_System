@@ -335,25 +335,22 @@ export const exportReport = async (req: Request, res: Response): Promise<void> =
       );
     }
 
-    // Get file stats
-    const stats = fs.statSync(filePath);
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1);
-
-    res.status(200).json({
-      success: true,
-      data: {
-        downloadUrl: `/downloads/${fileName}`,
-        fileName,
-        fileSize: `${(stats.size / 1024).toFixed(2)}KB`,
-        expiresAt: expiresAt.toISOString(),
-      },
+    // Stream the file for download
+    res.download(filePath, fileName, (err) => {
+      if (err) {
+        console.error('File download error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ success: false, message: 'Could not download file' });
+        }
+      }
+      
+      // Cleanup file after download is complete/failed to save space
+      try {
+        fs.unlinkSync(filePath);
+      } catch (cleanupErr) {
+        console.error('Error cleaning up export file:', cleanupErr);
+      }
     });
-
-    // Schedule cleanup (in production, use a cron job)
-    setTimeout(() => {
-      cleanupOldExports();
-    }, 1000);
   } catch (error: any) {
     throw error;
   }

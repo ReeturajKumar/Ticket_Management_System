@@ -221,8 +221,22 @@ export const exportReport = async (req: Request, res: Response): Promise<void> =
           priority: t.priority,
           createdBy: t.createdByName,
           assignedTo: t.assignedToName || 'Unassigned',
-          createdAt: t.createdAt.toISOString(),
-          resolvedAt: t.resolvedAt ? t.resolvedAt.toISOString() : 'N/A',
+          createdAt: new Date(t.createdAt).toLocaleString('en-GB', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+          }),
+          resolvedAt: t.resolvedAt ? new Date(t.resolvedAt).toLocaleString('en-GB', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+          }) : 'N/A',
         }));
 
         filePath = await generator(
@@ -275,7 +289,49 @@ export const exportReport = async (req: Request, res: Response): Promise<void> =
           fileName
         );
       } else {
-        throw new AppError(`${format.toString().toUpperCase()} export not supported for summary type. Use PDF instead.`, 400);
+        // Handle summary type for Excel/CSV
+        const tickets = await Ticket.find({
+          department: user.department,
+          createdAt: { $gte: start, $lte: end },
+        });
+
+        const summary = {
+          totalTickets: tickets.length,
+          resolved: tickets.filter((t) => t.status === TicketStatus.RESOLVED).length,
+          open: tickets.filter((t) => t.status === TicketStatus.OPEN).length,
+          inProgress: tickets.filter((t) => t.status === TicketStatus.IN_PROGRESS).length,
+        };
+
+        const byPriority: any = {};
+        Object.values(Priority).forEach((priority) => {
+          byPriority[priority] = tickets.filter((t) => t.priority === priority).length;
+        });
+
+        const byStatus: any = {};
+        Object.values(TicketStatus).forEach((status) => {
+          byStatus[status] = tickets.filter((t) => t.status === status).length;
+        });
+
+        const data = [
+          { category: 'General Summary', label: 'Total Tickets', count: summary.totalTickets },
+          { category: 'General Summary', label: 'Resolved', count: summary.resolved },
+          { category: 'General Summary', label: 'Open', count: summary.open },
+          { category: 'General Summary', label: 'In Progress', count: summary.inProgress },
+          { category: '', label: '', count: '' },
+          ...Object.entries(byPriority).map(([p, count]) => ({ category: 'By Priority', label: p, count })),
+          { category: '', label: '', count: '' },
+          ...Object.entries(byStatus).map(([s, count]) => ({ category: 'By Status', label: s, count }))
+        ];
+
+        filePath = await generator(
+          data,
+          [
+            { id: 'category', title: 'Category' },
+            { id: 'label', title: 'Metric' },
+            { id: 'count', title: 'Count' },
+          ],
+          fileName
+        );
       }
     } else {
       // Generate PDF

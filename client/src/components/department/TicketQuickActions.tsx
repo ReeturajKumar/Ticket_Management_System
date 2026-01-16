@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { updateTicketStatus, changeTicketPriority } from "@/services/departmentHeadService"
+import { updateTicketStatus as updateHeadStatus, changeTicketPriority } from "@/services/departmentHeadService"
+import { updateMyTicketStatus as updateStaffStatus } from "@/services/departmentStaffService"
+import { getCurrentDepartmentUser } from "@/services/departmentAuthService"
 import { Loader2 } from "lucide-react"
 
 interface TicketQuickActionsProps {
@@ -40,8 +42,13 @@ export function TicketQuickActions({
     if (newStatus === currentStatus) return
     
     setIsUpdatingStatus(true)
+    const user = getCurrentDepartmentUser()
     try {
-      await updateTicketStatus(ticketId, newStatus)
+      if (user?.isHead) {
+        await updateHeadStatus(ticketId, newStatus)
+      } else {
+        await updateStaffStatus(ticketId, newStatus)
+      }
       onUpdate()
     } catch (error) {
       console.error("Failed to update status:", error)

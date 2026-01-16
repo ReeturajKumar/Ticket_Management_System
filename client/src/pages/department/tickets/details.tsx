@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
+import { toast } from "react-toastify"
 import { useParams, useNavigate } from "react-router-dom"
 import { DepartmentLayout } from "@/components/layout/DepartmentLayout"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
@@ -25,8 +26,8 @@ import {
     addInternalNote,
     changeTicketPriority
 } from "@/services/departmentHeadService"
-import { Loader2, ArrowLeft, Send, CheckCircle, AlertTriangle, User as UserIcon, Calendar, Clock, MessageSquare, Shield } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Loader2, ArrowLeft, Send, User as UserIcon, Calendar, Clock, MessageSquare, Shield, FileIcon, Star } from "lucide-react"
+import { Avatar, AvatarFallback} from "@/components/ui/avatar"
 export default function DepartmentTicketDetailsPage() {
   const { id } = useParams()
   const user = getCurrentDepartmentUser()
@@ -74,12 +75,10 @@ export default function DepartmentTicketDetailsPage() {
         } else {
             await updateMyTicketStatus(id, newStatus)
         }
-        // toast({ title: "Success", description: "Status updated successfully." })
-        window.alert("Status updated successfully.")
+        toast.success("Status updated successfully.")
         fetchTicket()
     } catch (error) {
-        // toast({ title: "Error", description: "Failed to update status.", variant: "destructive" })
-        window.alert("Failed to update status.")
+        toast.error("Failed to update status.")
     }
   }
 
@@ -87,12 +86,10 @@ export default function DepartmentTicketDetailsPage() {
     if (!id || !user?.isHead) return
     try {
         await changeTicketPriority(id, newPriority)
-        // toast({ title: "Success", description: "Priority updated successfully." })
-        window.alert("Priority updated successfully.")
+        toast.success("Priority updated successfully.")
         fetchTicket()
     } catch (error) {
-        // toast({ title: "Error", description: "Failed to update priority.", variant: "destructive" })
-        window.alert("Failed to update priority.")
+        toast.error("Failed to update priority.")
     }
   }
 
@@ -105,12 +102,11 @@ export default function DepartmentTicketDetailsPage() {
         } else {
             await addCommentToMyTicket(id, newComment)
         }
-        // toast({ title: "Success", description: "Comment added successfully." })
+        toast.success("Comment added successfully.")
         setNewComment("")
         fetchTicket()
     } catch (error) {
-        // toast({ title: "Error", description: "Failed to add comment.", variant: "destructive" })
-        window.alert("Failed to add comment.")
+        toast.error("Failed to add comment.")
     } finally {
         setIsSubmitting(false)
     }
@@ -160,7 +156,7 @@ export default function DepartmentTicketDetailsPage() {
                         <SelectItem value="ASSIGNED">Assigned</SelectItem>
                         <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
                         <SelectItem value="RESOLVED">Resolved</SelectItem>
-                        {user?.isHead && <SelectItem value="CLOSED">Closed</SelectItem>}
+                        <SelectItem value="CLOSED">Closed</SelectItem>
                     </SelectContent>
                 </Select>
 
@@ -198,13 +194,40 @@ export default function DepartmentTicketDetailsPage() {
                     </CardContent>
                 </Card>
 
-                {/* Attachments Placeholder - if backend supports it */}
-                {/* 
-                <Card>
-                    <CardHeader><CardTitle>Attachments</CardTitle></CardHeader>
-                    <CardContent>...</CardContent>
-                </Card> 
-                */}
+                {/* Attachments Section */}
+                {ticket.attachments && ticket.attachments.length > 0 && (
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                <FileIcon className="h-4 w-4 text-blue-500" />
+                                Student Attachments
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-wrap gap-3">
+                                {ticket.attachments.map((attachment: any, idx: number) => (
+                                    <a
+                                        key={idx}
+                                        href={`${import.meta.env.VITE_API_URL}/uploads/${attachment.filename}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-3 px-3 py-2 rounded-lg border bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
+                                    >
+                                        <div className="p-2 bg-white dark:bg-slate-800 rounded border shadow-sm group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 transition-colors">
+                                            <FileIcon className="h-5 w-5 text-blue-500" />
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-sm font-medium truncate max-w-[180px]">{attachment.originalName}</span>
+                                            <span className="text-[10px] text-muted-foreground uppercase">
+                                                {(attachment.size / 1024).toFixed(1)} KB • {attachment.mimeType.split('/')[1]}
+                                            </span>
+                                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <Card>
                     <CardHeader>
@@ -295,6 +318,35 @@ export default function DepartmentTicketDetailsPage() {
                            )}
                       </CardContent>
                   </Card>
+
+                  {ticket.rating && (
+                      <Card className="border-yellow-200 dark:border-yellow-900/50 bg-yellow-50/30 dark:bg-yellow-950/20">
+                          <CardHeader className="pb-2">
+                             <CardTitle className="text-sm font-medium flex items-center gap-2 text-yellow-800 dark:text-yellow-400">
+                                 <Star className="h-4 w-4 fill-yellow-400" /> Client Satisfaction
+                             </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                               <div className="flex items-center gap-0.5">
+                                   {[1, 2, 3, 4, 5].map((s) => (
+                                       <Star 
+                                          key={s} 
+                                          className={`h-4 w-4 ${s <= ticket.rating.stars ? 'fill-yellow-400 text-yellow-400' : 'text-slate-300 dark:text-slate-700'}`} 
+                                       />
+                                   ))}
+                                   <span className="ml-2 text-sm font-bold text-yellow-900 dark:text-yellow-300">{ticket.rating.stars}/5</span>
+                               </div>
+                               {ticket.rating.comment && (
+                                   <p className="text-sm text-slate-700 dark:text-slate-300 italic leading-relaxed border-l-2 border-yellow-200 dark:border-yellow-900 pl-3">
+                                       "{ticket.rating.comment}"
+                                   </p>
+                               )}
+                               <p className="text-[10px] text-muted-foreground text-right">
+                                   Rated by {ticket.rating.ratedByName || 'Student'}
+                               </p>
+                          </CardContent>
+                      </Card>
+                  )}
                   
                   {user?.isHead && (
                       <Card className="bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900/50">

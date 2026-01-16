@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { toast } from "react-toastify"
 import { Link } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -27,7 +28,6 @@ type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>
 export default function DepartmentForgotPassword() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const form = useForm<ForgotPasswordData>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -38,17 +38,16 @@ export default function DepartmentForgotPassword() {
 
   async function onSubmit(data: ForgotPasswordData) {
     setIsLoading(true)
-    setError(null)
-
     try {
       const result = await forgotPasswordDepartment(data.email)
       if (result.success) {
+        toast.success(result.message || "Reset link sent successfully!")
         setIsSuccess(true)
       } else {
-        setError(result.message || "Failed to send reset email")
+        toast.error(result.message || "Failed to send reset email")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong")
+      toast.error(err instanceof Error ? err.message : "Something went wrong")
     } finally {
       setIsLoading(false)
     }
@@ -126,11 +125,6 @@ export default function DepartmentForgotPassword() {
             </div>
           ) : (
             <>
-              {error && (
-                <Alert variant="destructive" className="mb-6">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
 
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

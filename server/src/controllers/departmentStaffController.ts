@@ -111,6 +111,7 @@ export const updateMyTicketStatus = async (req: Request, res: Response): Promise
       TicketStatus.IN_PROGRESS,
       TicketStatus.WAITING_FOR_STUDENT,
       TicketStatus.RESOLVED,
+      TicketStatus.CLOSED,
     ];
 
     if (!allowedStatuses.includes(status)) {

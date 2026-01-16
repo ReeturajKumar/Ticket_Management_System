@@ -345,6 +345,35 @@ export default function TicketDetailsPage() {
                       </div>
                     </div>
                  </div>
+
+                 {/* Rating Section */}
+                 {ticket.rating && (
+                    <div className="pt-4 border-t border-dashed">
+                      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Rating & Feedback</div>
+                      <div className="bg-green-50/50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30 rounded-lg p-3">
+                        <div className="flex items-center gap-1 mb-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`h-3.5 w-3.5 ${
+                                star <= ticket.rating!.stars
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300 dark:text-gray-700"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        {ticket.rating.comment && (
+                          <p className="text-xs text-muted-foreground italic leading-relaxed">
+                            "{ticket.rating.comment}"
+                          </p>
+                        )}
+                        <p className="text-[10px] text-muted-foreground mt-2">
+                          Rated on {new Date(ticket.rating.ratedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                 )}
               </CardContent>
             </Card>
           </div>

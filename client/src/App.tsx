@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { ProtectedRoute } from "./components/ProtectedRoute"
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 import LoginPage from "./pages/auth/login"
 import SignUpPage from "./pages/auth/signup"
 import ForgotPassword from "./pages/auth/ForgotPassword"
@@ -156,6 +158,7 @@ function App() {
         {/* Catch all - redirect to login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+      <ToastContainer position="bottom-right" autoClose={3000} />
     </BrowserRouter>
   )
 }

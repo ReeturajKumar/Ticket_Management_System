@@ -5,13 +5,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { getCurrentDepartmentUser } from "@/services/departmentAuthService"
-import { getMyTickets, getUnassignedTickets, pickupTicket, updateMyTicketStatus } from "@/services/departmentStaffService"
+import { getMyTickets, getUnassignedTickets, updateMyTicketStatus } from "@/services/departmentStaffService"
 import { getAllTickets, updateTicketStatus } from "@/services/departmentHeadService"
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
+import { DndContext,  PointerSensor, useSensor, useSensors, useDroppable, useDraggable, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Loader2, Search, Filter, Clock, User as UserIcon, Calendar, Tag, LayoutGrid, List, UserPlus } from "lucide-react"
+import { Loader2, Search,  Clock, User as UserIcon, Calendar, Tag, LayoutGrid, List, UserPlus } from "lucide-react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { AssignTicketDialog } from "@/components/department/AssignTicketDialog"
 import { TicketQuickActions } from "@/components/department/TicketQuickActions"
@@ -32,6 +32,7 @@ export default function DepartmentTicketsPage() {
   })
   const [tickets, setTickets] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [unassignedCount, setUnassignedCount] = useState(0)
   const [searchTerm, setSearchTerm] = useState("")
   const [priorityFilter, setPriorityFilter] = useState("ALL")
   const [viewMode, setViewMode] = useState<"list" | "board">("board")
@@ -46,7 +47,7 @@ export default function DepartmentTicketsPage() {
   const [bulkCloseDialogOpen, setBulkCloseDialogOpen] = useState(false)
 
   // Drag and drop state
-  const [activeId, setActiveId] = useState<string | null>(null)
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -59,6 +60,11 @@ export default function DepartmentTicketsPage() {
   const fetchData = async () => {
     setIsLoading(true)
     try {
+      // Independently fetch unassigned count for the badge
+      const unassignedRes = await getUnassignedTickets()
+      const unassignedTickets = unassignedRes.data?.tickets || unassignedRes.data || []
+      setUnassignedCount(unassignedTickets.length)
+
       let data = []
       
       // Department Head: Show all tickets by default
@@ -67,8 +73,7 @@ export default function DepartmentTicketsPage() {
           const res = await getAllTickets()
           data = res.data?.tickets || []
         } else if (activeTab === "unassigned") {
-          const res = await getUnassignedTickets()
-          data = res.data?.tickets || res.data || []
+          data = unassignedTickets
         }
       } 
       // Department Staff: Show only assigned tickets
@@ -77,8 +82,7 @@ export default function DepartmentTicketsPage() {
           const res = await getMyTickets()
           data = res.data?.tickets || []
         } else if (activeTab === "unassigned") {
-          const res = await getUnassignedTickets()
-          data = res.data?.tickets || res.data || []
+          data = unassignedTickets
         }
       }
       
@@ -94,15 +98,6 @@ export default function DepartmentTicketsPage() {
     fetchData()
   }, [activeTab, user?.isHead])
 
-  const handlePickup = async (ticketId: string) => {
-    try {
-      await pickupTicket(ticketId)
-      toast.success("Ticket picked up successfully")
-      fetchData()
-    } catch (error) {
-      toast.error("Failed to pick up ticket")
-    }
-  }
 
   // Bulk operations handlers
   const handleToggleTicket = (ticketId: string) => {
@@ -113,13 +108,6 @@ export default function DepartmentTicketsPage() {
     )
   }
 
-  const handleSelectAll = () => {
-    if (selectedTicketIds.length === filteredTickets.length) {
-      setSelectedTicketIds([])
-    } else {
-      setSelectedTicketIds(filteredTickets.map(t => t._id || t.id))
-    }
-  }
 
   const handleBulkAssignSuccess = () => {
     setSelectedTicketIds([])
@@ -132,13 +120,12 @@ export default function DepartmentTicketsPage() {
   }
 
   // Drag and drop handlers
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
+  const handleDragStart = (_event: DragStartEvent) => {
+    // Drag start logic
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
-    setActiveId(null)
 
     if (!over || active.id === over.id) return
 
@@ -349,8 +336,8 @@ export default function DepartmentTicketsPage() {
             </div>
           </div>
 
-          {/* Quick Actions for Department Heads */}
-          {user?.isHead && ticket.assignedTo && (
+          {/* Quick Actions for Department Heads & Assigned Staff */}
+          {((user?.isHead && ticket.assignedTo) || (!user?.isHead && ticket.assignedTo === user?.id)) && (
             <div className="mt-2 pt-2 border-t">
               <TicketQuickActions
                 ticketId={ticket._id || ticket.id}
@@ -433,8 +420,8 @@ export default function DepartmentTicketsPage() {
                   </TabsTrigger>
                   <TabsTrigger value="unassigned">
                     Unassigned
-                    {activeTab === "unassigned" && tickets.length > 0 && (
-                      <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs">{tickets.length}</Badge>
+                    {unassignedCount > 0 && (
+                      <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs">{unassignedCount}</Badge>
                     )}
                   </TabsTrigger>
                 </>
@@ -445,6 +432,9 @@ export default function DepartmentTicketsPage() {
                   </TabsTrigger>
                   <TabsTrigger value="unassigned">
                     Unassigned
+                    {unassignedCount > 0 && (
+                      <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs">{unassignedCount}</Badge>
+                    )}
                   </TabsTrigger>
                 </>
               )}
@@ -490,24 +480,29 @@ export default function DepartmentTicketsPage() {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
               >
-                <div className={`grid gap-3 ${activeTab === 'unassigned' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-3 lg:grid-cols-5'}`}>
+                <div className={`grid gap-6 ${activeTab === 'unassigned' ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3 lg:grid-cols-5'}`}>
                   {statusColumns.map((column) => (
                     <div key={column.key} className="flex flex-col">
-                      <div className="mb-3 flex items-center gap-2">
-                        <div className={`h-2 w-2 rounded-full bg-${column.color}-500`} />
-                        <h3 className="font-semibold text-sm">{column.label}</h3>
-                        <Badge variant="secondary" className="ml-auto h-5 px-2 text-xs">
-                          {groupedTickets[column.key]?.length || 0}
-                        </Badge>
+                      <div className="mb-4 flex items-center justify-between border-b pb-2">
+                        <div className="flex items-center gap-2">
+                          <div className={`h-2.5 w-2.5 rounded-full ${column.color === 'blue' ? 'bg-blue-500' : column.color === 'yellow' ? 'bg-yellow-500' : column.color === 'orange' ? 'bg-orange-500' : column.color === 'purple' ? 'bg-purple-500' : column.color === 'green' ? 'bg-green-500' : 'bg-gray-500'}`} />
+                          <h3 className="font-bold text-sm tracking-tight">{column.label}</h3>
+                          <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-semibold">
+                            {groupedTickets[column.key]?.length || 0}
+                          </Badge>
+                        </div>
                       </div>
                       <DroppableColumn id={column.key}>
                         {groupedTickets[column.key]?.length > 0 ? (
-                          groupedTickets[column.key].map((ticket) => (
-                            <DraggableTicketCard key={ticket._id || ticket.id} ticket={ticket} />
-                          ))
+                          <div className={activeTab === 'unassigned' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "space-y-3"}>
+                            {groupedTickets[column.key].map((ticket) => (
+                              <DraggableTicketCard key={ticket._id || ticket.id} ticket={ticket} />
+                            ))}
+                          </div>
                         ) : (
-                          <div className="flex items-center justify-center h-32 text-xs text-muted-foreground">
-                            No tickets
+                          <div className="flex flex-col items-center justify-center h-40 bg-muted/20 border-2 border-dashed rounded-xl text-center p-4">
+                            <Clock className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                            <p className="text-xs font-medium text-muted-foreground">No {column.label.toLowerCase()} tickets</p>
                           </div>
                         )}
                       </DroppableColumn>
@@ -516,7 +511,7 @@ export default function DepartmentTicketsPage() {
                 </div>
               </DndContext>
             ) : (
-              <div className="grid gap-3">
+              <div className={`grid gap-4 ${activeTab === 'unassigned' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
                 {filteredTickets.length > 0 ? (
                   filteredTickets.map((ticket) => (
                     <Card 

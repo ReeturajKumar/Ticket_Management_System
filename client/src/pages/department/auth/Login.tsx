@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { toast } from "react-toastify"
 import { useNavigate, Link } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -15,7 +16,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { loginDepartmentUser, storeDepartmentTokens } from "@/services/departmentAuthService"
 
 const loginSchema = z.object({
@@ -29,7 +29,6 @@ export default function DepartmentLoginPage() {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -41,19 +40,19 @@ export default function DepartmentLoginPage() {
 
   async function onSubmit(data: LoginFormData) {
     setIsLoading(true)
-    setError(null)
 
     try {
       const result = await loginDepartmentUser(data.email, data.password)
       
       if (result.success && result.data?.accessToken && result.data?.refreshToken && result.data?.user) {
         storeDepartmentTokens(result.data.accessToken, result.data.refreshToken, result.data.user)
+        toast.success(result.message || "Welcome back! Accessing portal...")
         navigate("/department/dashboard", { replace: true })
       } else {
-        setError(result.message || "Login failed")
+        toast.error(result.message || "Login failed")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong")
+      toast.error(err instanceof Error ? err.message : "Something went wrong")
     } finally {
       setIsLoading(false)
     }
@@ -118,12 +117,6 @@ export default function DepartmentLoginPage() {
               Please enter your credentials to access the portal.
             </p>
           </div>
-
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

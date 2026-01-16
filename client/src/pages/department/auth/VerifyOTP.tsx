@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { toast } from "react-toastify"
 import { useNavigate, useLocation, Link } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -32,7 +33,6 @@ export default function DepartmentVerifyOTP() {
 
   const [isLoading, setIsLoading] = useState(false)
   const [isResending, setIsResending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(initialMessage || null)
   const [isVerified, setIsVerified] = useState(false)
 
@@ -53,20 +53,18 @@ export default function DepartmentVerifyOTP() {
     if (!email) return
 
     setIsLoading(true)
-    setError(null)
-    setSuccess(null)
-
     try {
       const result = await verifyDepartmentOTP(email, data.otp)
       
       if (result.success) {
+        toast.success(result.message || "Email verified successfully!")
         setIsVerified(true)
         setSuccess("Email verified successfully! Your account is pending admin approval.")
       } else {
-        setError(result.message || "Verification failed")
+        toast.error(result.message || "Verification failed")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid OTP")
+      toast.error(err instanceof Error ? err.message : "Invalid OTP")
     } finally {
       setIsLoading(false)
     }
@@ -76,18 +74,16 @@ export default function DepartmentVerifyOTP() {
     if (!email) return
 
     setIsResending(true)
-    setError(null)
-    setSuccess(null)
-
     try {
       const result = await resendDepartmentOTP(email)
       if (result.success) {
+        toast.success(result.message || "New OTP sent to your email.")
         setSuccess("New OTP sent to your email.")
       } else {
-        setError(result.message || "Failed to resend OTP")
+        toast.error(result.message || "Failed to resend OTP")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to resend OTP")
+      toast.error(err instanceof Error ? err.message : "Failed to resend OTP")
     } finally {
       setIsResending(false)
     }
@@ -148,11 +144,6 @@ export default function DepartmentVerifyOTP() {
              </Alert>
           )}
 
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
 
           {!isVerified ? (
             <>

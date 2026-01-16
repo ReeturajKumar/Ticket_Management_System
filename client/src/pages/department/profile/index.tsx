@@ -1,8 +1,9 @@
 import { useState } from "react"
+import { toast } from "react-toastify"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, User, Mail, Briefcase, Shield, Lock, Eye, EyeOff, Building2 } from "lucide-react"
+import { Loader2,Shield, Lock, Eye, EyeOff, Building2 } from "lucide-react"
 
 import { DepartmentLayout } from "@/components/layout/DepartmentLayout"
 import { Button } from "@/components/ui/button"
@@ -59,12 +60,15 @@ export default function DepartmentProfilePage() {
       const result = await changePasswordDepartment(data.currentPassword, data.newPassword)
       
       if (result.success) {
+        toast.success(result.message || "Password changed successfully.")
         setMessage({ type: 'success', text: "Password changed successfully." })
         form.reset()
       } else {
+        toast.error(result.message || "Failed to change password")
         setMessage({ type: 'error', text: result.message || "Failed to change password" })
       }
     } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong")
       setMessage({ type: 'error', text: err instanceof Error ? err.message : "Something went wrong" })
     } finally {
       setIsLoading(false)

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { toast } from "react-toastify"
 import { useNavigate, Link } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -22,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { registerDepartmentUser } from "@/services/departmentAuthService"
 
 const registerSchema = z.object({
@@ -43,7 +43,6 @@ export default function DepartmentRegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -58,8 +57,6 @@ export default function DepartmentRegisterPage() {
 
   async function onSubmit(data: RegisterFormData) {
     setIsLoading(true)
-    setError(null)
-
     try {
       const result = await registerDepartmentUser({
         name: data.name,
@@ -70,6 +67,7 @@ export default function DepartmentRegisterPage() {
       })
       
       if (result.success) {
+        toast.success(result.message || "Registration successful! Please verify your email.")
         // Redirect to OTP verification with email in state
         navigate("/department/verify-otp", { 
           state: { 
@@ -78,10 +76,10 @@ export default function DepartmentRegisterPage() {
           } 
         })
       } else {
-        setError(result.message || "Registration failed")
+        toast.error(result.message || "Registration failed")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong")
+      toast.error(err instanceof Error ? err.message : "Something went wrong")
     } finally {
       setIsLoading(false)
     }
@@ -132,11 +130,6 @@ export default function DepartmentRegisterPage() {
             </p>
           </div>
 
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

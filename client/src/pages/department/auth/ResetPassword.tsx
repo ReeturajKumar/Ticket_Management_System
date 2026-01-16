@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { toast } from "react-toastify"
 import { useNavigate, useSearchParams, Link } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -15,7 +16,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { resetPasswordDepartment } from "@/services/departmentAuthService"
 
 const resetPasswordSchema = z.object({
@@ -34,7 +34,6 @@ export default function DepartmentResetPassword() {
   const token = searchParams.get("token")
   
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
@@ -48,7 +47,7 @@ export default function DepartmentResetPassword() {
 
   useEffect(() => {
     if (!token) {
-      setError("Invalid or missing reset token")
+      toast.error("Invalid or missing reset token")
     }
   }, [token])
 
@@ -56,19 +55,18 @@ export default function DepartmentResetPassword() {
     if (!token) return
 
     setIsLoading(true)
-    setError(null)
-
     try {
       const result = await resetPasswordDepartment(token, data.password)
       if (result.success) {
+        toast.success(result.message || "Password reset successful! Please login.")
         navigate("/department/login", { 
           state: { message: "Password reset successful! Please login." } 
         })
       } else {
-        setError(result.message || "Failed to reset password")
+        toast.error(result.message || "Failed to reset password")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong")
+      toast.error(err instanceof Error ? err.message : "Something went wrong")
     } finally {
       setIsLoading(false)
     }
@@ -144,11 +142,6 @@ export default function DepartmentResetPassword() {
             </p>
           </div>
 
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

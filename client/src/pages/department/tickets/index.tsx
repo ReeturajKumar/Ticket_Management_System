@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { getCurrentDepartmentUser } from "@/services/departmentAuthService"
-import { getMyTickets, getUnassignedTickets, updateMyTicketStatus } from "@/services/departmentStaffService"
+import { getMyTickets, getUnassignedTickets, updateMyTicketStatus, getMyInternalRequests } from "@/services/departmentStaffService"
 import { getAllTickets, updateTicketStatus } from "@/services/departmentHeadService"
 import { DndContext,  PointerSensor, useSensor, useSensors, useDroppable, useDraggable, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { Loader2, Search,  Clock, User as UserIcon, Calendar, Tag, LayoutGrid, List, UserPlus } from "lucide-react"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom"
 import { AssignTicketDialog } from "@/components/department/AssignTicketDialog"
 import { TicketQuickActions } from "@/components/department/TicketQuickActions"
 import { BulkActionsToolbar } from "@/components/department/BulkActionsToolbar"
@@ -21,9 +21,12 @@ import { BulkCloseDialog } from "@/components/department/BulkCloseDialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from 'react-toastify'
 
+import { CreateInternalTicketDialog } from "@/components/department/CreateInternalTicketDialog"
+import { TicketDetailsDialog } from "@/components/department/TicketDetailsDialog"
+import { Plus } from "lucide-react"
+
 export default function DepartmentTicketsPage() {
   const user = getCurrentDepartmentUser()
-  const navigate = useNavigate()
   const location = useLocation()
   
   const [activeTab, setActiveTab] = useState(() => {
@@ -41,6 +44,11 @@ export default function DepartmentTicketsPage() {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<any>(null)
 
+  // Internal Ticket Dialog State
+  const [createInternalDialogOpen, setCreateInternalDialogOpen] = useState(false)
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
+  const [viewingTicketId, setViewingTicketId] = useState<string>("")
+
   // Bulk operations state (Department Head only)
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([])
   const [bulkAssignDialogOpen, setBulkAssignDialogOpen] = useState(false)
@@ -55,7 +63,6 @@ export default function DepartmentTicketsPage() {
       },
     })
   )
-
 
   const fetchData = async () => {
     setIsLoading(true)
@@ -74,6 +81,9 @@ export default function DepartmentTicketsPage() {
           data = res.data?.tickets || []
         } else if (activeTab === "unassigned") {
           data = unassignedTickets
+        } else if (activeTab === "my-requests") {
+          const res = await getMyInternalRequests()
+          data = res.data?.tickets || []
         }
       } 
       // Department Staff: Show only assigned tickets
@@ -83,6 +93,9 @@ export default function DepartmentTicketsPage() {
           data = res.data?.tickets || []
         } else if (activeTab === "unassigned") {
           data = unassignedTickets
+        } else if (activeTab === "my-requests") {
+          const res = await getMyInternalRequests()
+          data = res.data?.tickets || []
         }
       }
       
@@ -199,6 +212,14 @@ export default function DepartmentTicketsPage() {
     ? [
         { key: 'OPEN', label: 'Open', color: 'blue' },
       ]
+    : activeTab === 'my-requests'
+    ? [
+        { key: 'OPEN', label: 'Open', color: 'blue' },
+        { key: 'ASSIGNED', label: 'Assigned', color: 'yellow' },
+        { key: 'IN_PROGRESS', label: 'In Progress', color: 'orange' },
+        { key: 'RESOLVED', label: 'Resolved', color: 'green' },
+        { key: 'CLOSED', label: 'Closed', color: 'gray' },
+      ]
     : [
         { key: 'ASSIGNED', label: 'Assigned', color: 'yellow' },
         { key: 'IN_PROGRESS', label: 'In Progress', color: 'orange' },
@@ -250,11 +271,18 @@ export default function DepartmentTicketsPage() {
   const TicketCard = ({ ticket }: { ticket: any }) => {
     const ticketId = ticket._id || ticket.id
     const isSelected = selectedTicketIds.includes(ticketId)
+    // Identify if this is a ticket created by me (internal request)
+    const isMyRequest = ticket.createdBy === user?.id || ticket.createdBy?._id === user?.id
+
+    const handleTicketClick = () => {
+      setViewingTicketId(ticketId)
+      setDetailsDialogOpen(true)
+    }
 
     return (
       <Card 
-        className={`cursor-pointer hover:shadow-md transition-all mb-2.5 ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}`}
-        onClick={() => navigate(`/department/tickets/${ticketId}`)}
+        className={`cursor-pointer hover:shadow-md transition-all mb-2.5 ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''} ${isMyRequest ? 'border-r-4 border-r-indigo-500 bg-indigo-50/10' : ''}`}
+        onClick={handleTicketClick}
       >
         <CardContent className="p-2.5">
           <div className="space-y-1.5">
@@ -283,6 +311,11 @@ export default function DepartmentTicketsPage() {
                   <Badge variant={getPriorityColor(ticket.priority) as any} className="text-[9px] h-3.5 px-1.5">
                     {ticket.priority}
                   </Badge>
+                  {isMyRequest && (
+                    <Badge variant="outline" className="text-[9px] h-3.5 px-1.5 bg-indigo-100 text-indigo-700 border-indigo-200 uppercase">
+                      My Request
+                    </Badge>
+                  )}
                 </div>
                 <h4 className="font-medium text-xs line-clamp-1 mb-1">{ticket.subject}</h4>
               </div>
@@ -301,18 +334,30 @@ export default function DepartmentTicketsPage() {
             </div>
             
             <div className="space-y-1">
-              {/* Creator (Student) */}
-              {ticket.studentName && (
-                <div className="flex items-center gap-1 text-[10px]">
-                  <span className="text-muted-foreground font-medium">Creator:</span>
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/30">
-                    <UserIcon className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" />
-                    <span className="text-blue-600 dark:text-blue-400 font-medium truncate max-w-[100px]" title={ticket.studentName}>
-                      {ticket.studentName}
-                    </span>
-                  </div>
-                </div>
-              )}
+              {/* Creator or Target Department */}
+              <div className="flex items-center gap-1 text-[10px]">
+                {isMyRequest ? (
+                  <>
+                    <span className="text-muted-foreground font-medium">To:</span>
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/30">
+                      <Tag className="h-2.5 w-2.5 text-indigo-600 dark:text-indigo-400" />
+                      <span className="text-indigo-600 dark:text-indigo-400 font-medium truncate max-w-[100px]">
+                        {ticket.department}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-muted-foreground font-medium">Creator:</span>
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/30">
+                      <UserIcon className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" />
+                      <span className="text-blue-600 dark:text-blue-400 font-medium truncate max-w-[100px]" title={ticket.studentName || ticket.createdByName}>
+                        {ticket.studentName || ticket.createdByName || 'Student'}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
               
               {/* Assigned Staff */}
               <div className="flex items-center gap-1 text-[10px]">
@@ -337,7 +382,7 @@ export default function DepartmentTicketsPage() {
           </div>
 
           {/* Quick Actions for Department Heads & Assigned Staff */}
-          {((user?.isHead && ticket.assignedTo) || (!user?.isHead && ticket.assignedTo === user?.id)) && (
+          {((user?.isHead && ticket.assignedTo) || (!user?.isHead && ticket.assignedTo === user?.id)) && !isMyRequest && (
             <div className="mt-2 pt-2 border-t">
               <TicketQuickActions
                 ticketId={ticket._id || ticket.id}
@@ -350,7 +395,7 @@ export default function DepartmentTicketsPage() {
           )}
 
           {/* Assign Button for Unassigned Tickets */}
-          {user?.isHead && !ticket.assignedTo && (
+          {user?.isHead && !ticket.assignedTo && !isMyRequest && (
             <div className="mt-2 pt-2 border-t">
               <Button 
                 size="sm" 
@@ -388,21 +433,33 @@ export default function DepartmentTicketsPage() {
           </div>
           <div className="flex gap-2">
             <Button
-              variant={viewMode === "board" ? "default" : "outline"}
+              onClick={() => setCreateInternalDialogOpen(true)}
               size="sm"
-              onClick={() => setViewMode("board")}
+              className="gap-1.5"
             >
-              <LayoutGrid className="h-4 w-4 mr-2" />
-              Board
+              <Plus className="h-4 w-4" />
+              Create Internal Ticket
             </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-            >
-              <List className="h-4 w-4 mr-2" />
-              List
-            </Button>
+            {activeTab !== 'my-requests' && (
+              <>
+                <Button
+                  variant={viewMode === "board" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("board")}
+                >
+                  <LayoutGrid className="h-4 w-4 mr-2" />
+                  Board
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="h-4 w-4 mr-2" />
+                  List
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -412,17 +469,20 @@ export default function DepartmentTicketsPage() {
           onValueChange={setActiveTab}
         >
           <div className="flex items-center justify-between">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-lg grid-cols-3">
               {user?.isHead ? (
                 <>
                   <TabsTrigger value="all-tickets">
-                    Ticket Queue
+                    Queue
                   </TabsTrigger>
                   <TabsTrigger value="unassigned">
                     Unassigned
                     {unassignedCount > 0 && (
                       <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs">{unassignedCount}</Badge>
                     )}
+                  </TabsTrigger>
+                  <TabsTrigger value="my-requests">
+                    My Requests
                   </TabsTrigger>
                 </>
               ) : (
@@ -435,6 +495,9 @@ export default function DepartmentTicketsPage() {
                     {unassignedCount > 0 && (
                       <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs">{unassignedCount}</Badge>
                     )}
+                  </TabsTrigger>
+                  <TabsTrigger value="my-requests">
+                    My Requests
                   </TabsTrigger>
                 </>
               )}
@@ -473,6 +536,26 @@ export default function DepartmentTicketsPage() {
             {isLoading ? (
               <div className="flex justify-center p-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : activeTab === 'my-requests' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredTickets.length > 0 ? (
+                  filteredTickets.map((ticket) => (
+                    <TicketCard key={ticket._id || ticket.id} ticket={ticket} />
+                  ))
+                ) : (
+                  <Card className="border-dashed col-span-full">
+                    <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="rounded-full bg-muted p-3 mb-4">
+                        <Search className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                      <h3 className="font-semibold text-lg mb-1">No requests found</h3>
+                      <p className="text-sm text-muted-foreground max-w-sm">
+                        You haven't created any internal requests yet.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             ) : viewMode === "board" ? (
               <DndContext
@@ -513,53 +596,60 @@ export default function DepartmentTicketsPage() {
             ) : (
               <div className={`grid gap-4 ${activeTab === 'unassigned' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
                 {filteredTickets.length > 0 ? (
-                  filteredTickets.map((ticket) => (
-                    <Card 
-                      key={ticket._id || ticket.id} 
-                      className="cursor-pointer hover:shadow-md transition-all border-l-4"
-                      style={{ borderLeftColor: `var(--${getStatusColor(ticket.status).replace('bg-', '')})` }}
-                      onClick={() => navigate(`/department/tickets/${ticket._id || ticket.id}`)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="outline" className="text-xs">
-                                {ticket.status.replace(/_/g, ' ')}
-                              </Badge>
-                              <Badge variant={getPriorityColor(ticket.priority) as any} className="text-xs">
-                                {ticket.priority}
-                              </Badge>
-                              <h3 className="font-semibold text-base">{ticket.subject}</h3>
-                            </div>
-                            
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                              {ticket.studentName && (
+                  filteredTickets.map((ticket) => {
+                    const ticketId = ticket._id || ticket.id
+                    
+                    return (
+                        <Card 
+                        key={ticketId} 
+                        className="cursor-pointer hover:shadow-md transition-all border-l-4"
+                        style={{ borderLeftColor: `var(--${getStatusColor(ticket.status).replace('bg-', '')})` }}
+                        onClick={() => {
+                          setViewingTicketId(ticketId)
+                          setDetailsDialogOpen(true)
+                        }}
+                        >
+                        <CardContent className="p-4">
+                            <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="outline" className="text-xs">
+                                    {ticket.status.replace(/_/g, ' ')}
+                                </Badge>
+                                <Badge variant={getPriorityColor(ticket.priority) as any} className="text-xs">
+                                    {ticket.priority}
+                                </Badge>
+                                <h3 className="font-semibold text-base">{ticket.subject}</h3>
+                                </div>
+                                
+                                <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                                {ticket.studentName && (
+                                    <span className="flex items-center gap-1.5">
+                                    <UserIcon className="h-3.5 w-3.5" />
+                                    {ticket.studentName}
+                                    </span>
+                                )}
                                 <span className="flex items-center gap-1.5">
-                                  <UserIcon className="h-3.5 w-3.5" />
-                                  {ticket.studentName}
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    {new Date(ticket.createdAt).toLocaleDateString('en-US', { 
+                                    month: 'short', 
+                                    day: 'numeric', 
+                                    year: 'numeric' 
+                                    })}
                                 </span>
-                              )}
-                              <span className="flex items-center gap-1.5">
-                                <Calendar className="h-3.5 w-3.5" />
-                                {new Date(ticket.createdAt).toLocaleDateString('en-US', { 
-                                  month: 'short', 
-                                  day: 'numeric', 
-                                  year: 'numeric' 
-                                })}
-                              </span>
-                            </div>
+                                </div>
 
-                            {ticket.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {ticket.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                                {ticket.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                    {ticket.description}
+                                </p>
+                                )}
+                            </div>
+                            </div>
+                        </CardContent>
+                        </Card>
+                    )
+                  })
                 ) : (
                   <Card className="border-dashed">
                     <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -594,6 +684,21 @@ export default function DepartmentTicketsPage() {
           }}
         />
       )}
+      
+      {/* Create Internal Ticket Dialog */}
+      <CreateInternalTicketDialog
+        open={createInternalDialogOpen}
+        onOpenChange={setCreateInternalDialogOpen}
+        onSuccess={fetchData}
+      />
+
+      {/* Ticket Details Dialog for My Requests */}
+      <TicketDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        ticketId={viewingTicketId}
+        isHead={user?.isHead}
+      />
 
       {/* Bulk Operations (Department Head only) */}
       {user?.isHead && (

@@ -46,8 +46,8 @@ export const listDepartmentTickets = async (req: Request, res: Response): Promis
     // Transform tickets to include names directly
     const transformedTickets = tickets.map((ticket: any) => ({
       ...ticket,
-      studentName: ticket.createdBy?.name || ticket.createdByName || 'Unknown',
-      studentEmail: ticket.createdBy?.email || ticket.createdByEmail,
+      studentName: ticket.createdBy?.name || ticket.createdByName || ticket.contactName || 'Unknown',
+      studentEmail: ticket.createdBy?.email || ticket.contactEmail || 'Unknown',
       assignedToName: ticket.assignedTo?.name,
       assignedToEmail: ticket.assignedTo?.email,
     }));
@@ -80,14 +80,24 @@ export const getTicketDetails = async (req: Request, res: Response): Promise<voi
     const user = (req as any).user;
     const { id } = req.params;
 
-    const ticket = await Ticket.findById(id).select('-__v');
+    const ticket = await Ticket.findById(id)
+      .populate('createdBy', 'name email')
+      .populate('assignedTo', 'name email')
+      .select('-__v')
+      .lean();
 
     if (!ticket) {
       throw new AppError('Ticket not found', 404);
     }
 
-    // Verify ticket belongs to department
-    if (ticket.department !== user.department) {
+    // Verify permission: Must belong to Head's department OR be created by the Head
+    const isFromMyDepartment = ticket.department === user.department;
+    const isCreatedByMe = ticket.createdBy && (
+      (typeof ticket.createdBy === 'string' && ticket.createdBy === user._id.toString()) ||
+      (typeof ticket.createdBy === 'object' && (ticket.createdBy as any)._id?.toString() === user._id.toString())
+    );
+
+    if (!isFromMyDepartment && !isCreatedByMe) {
       throw new AppError('You do not have permission to view this ticket', 403);
     }
 

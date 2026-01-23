@@ -7,8 +7,6 @@ import { globalLimiter } from './middleware/rateLimiter';
 
 // Load environment variables
 dotenv.config();
-
-// Connect to Database
 connectDB();
 
 const app: Express = express();
@@ -16,8 +14,7 @@ const PORT = process.env.PORT || 5000;
 
 app.set('trust proxy', 1);
 const allowedOrigins = [
-  'http://localhost:5173', // Local development
-  'http://localhost:3000',
+  'http://localhost:5173',
   process.env.CLIENT_URL || 'https://ticket-management-system-nine.vercel.app/login', 
 ];
 
@@ -46,14 +43,14 @@ app.use('/api/v1/uploads', express.static('uploads'));
 
 // Basic Route
 app.get('/', (req: Request, res: Response) => {
-  res.send('Welcome to the Student Ticketing System API (TypeScript)');
+  res.send('Welcome to the EduDesk API - Your centralized support platform');
 });
 
 // API Routes
 import routes from './routes';
 app.use('/api/v1', routes);
 
-// Global Error Handler (must be last)
+// Global Error
 app.use(errorHandler);
 
 // Start Server

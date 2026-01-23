@@ -68,27 +68,14 @@ export const passwordResetLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Profile update limiter
-export const profileLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 10, // Limit each IP to 10 profile requests per minute
-  message: {
-    success: false,
-    message: 'Too many profile requests, please slow down.',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Ticket creation limiter (prevent spam tickets)
-export const ticketCreationLimiter = rateLimit({
+// Public ticket submission limiter (prevent spam)
+export const publicTicketLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // Limit each IP to 10 ticket creations per hour
+  max: 10, // Limit each IP to 10 ticket submissions per hour
   message: {
     success: false,
-    message: 'Too many tickets created, please try again after 1 hour.',
+    message: 'Too many ticket submissions. Please try again after 1 hour.',
   },
   standardHeaders: true,
   legacyHeaders: false,
 });
-

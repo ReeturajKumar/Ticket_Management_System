@@ -140,7 +140,7 @@ export default function DepartmentTicketDetailsPage() {
                      {ticket.priority === 'CRITICAL' && <Badge variant="destructive">CRITICAL</Badge>}
                 </div>
                 <p className="text-muted-foreground flex items-center gap-4 mt-1">
-                   <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" /> {ticket.studentName || ticket.createdBy?.name || 'Student'}</span>
+                   <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" /> {ticket.studentName || ticket.contactName || ticket.createdBy?.name || 'Student'}</span>
                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(ticket.createdAt).toLocaleDateString()}</span>
                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {new Date(ticket.createdAt).toLocaleTimeString()}</span>
                 </p>

@@ -3,6 +3,7 @@ import Ticket from '../models/Ticket';
 import User from '../models/User';
 import { TicketStatus, Priority, UserRole } from '../constants';
 import AppError from '../utils/AppError';
+import { sendTicketReplyEmail } from '../utils/email';
 
 /**
  * List my assigned tickets
@@ -13,7 +14,7 @@ export const listMyTickets = async (req: Request, res: Response): Promise<void> 
     const user = (req as any).user;
     const { status, priority, page = '1', limit = '20' } = req.query;
 
-    // Build filter - only tickets assigned to this staff member
+    // Build filter - tokens assigned to this staff member
     const filter: any = {
       assignedTo: user._id,
       department: user.department,
@@ -59,6 +60,51 @@ export const listMyTickets = async (req: Request, res: Response): Promise<void> 
 };
 
 /**
+ * List internal tickets created by me
+ * GET /api/v1/department/staff/my-requests
+ */
+export const listMyInternalRequests = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = (req as any).user;
+    const { status, priority, page = '1', limit = '20' } = req.query;
+
+    const filter: any = {
+      createdBy: user._id,
+    };
+
+    if (status) filter.status = status;
+    if (priority) filter.priority = priority;
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    const tickets = await Ticket.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .select('-__v');
+
+    const total = await Ticket.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        tickets,
+        pagination: {
+          total,
+          page: pageNum,
+          limit: limitNum,
+          pages: Math.ceil(total / limitNum),
+        },
+      },
+    });
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+/**
  * Get my ticket details
  * GET /api/v1/department/staff/my-tickets/:id
  */
@@ -73,14 +119,21 @@ export const getMyTicketDetails = async (req: Request, res: Response): Promise<v
       throw new AppError('Ticket not found', 404);
     }
 
-    // Verify ticket is assigned to this staff member
-    if (!ticket.assignedTo || ticket.assignedTo.toString() !== user._id.toString()) {
+    // Permission Check: 
+    // 1. User is the assignee
+    // 2. User is the creator
+    // 3. Ticket is unassigned AND belongs to the user's department
+    const isAssignee = ticket.assignedTo && ticket.assignedTo.toString() === user._id.toString();
+    const isCreator = ticket.createdBy && ticket.createdBy.toString() === user._id.toString();
+    const isUnassignedInDepartment = !ticket.assignedTo && ticket.department === user.department;
+
+    if (!isAssignee && !isCreator && !isUnassignedInDepartment) {
       throw new AppError('You do not have permission to view this ticket', 403);
     }
 
-    // Verify ticket belongs to department
-    if (ticket.department !== user.department) {
-      throw new AppError('You do not have permission to view this ticket', 403);
+    // If it's an assigned ticket (not created by them or for them), verify department
+    if (isAssignee && !isCreator && ticket.department !== user.department) {
+      throw new AppError('You do not have permission to access tickets from other departments', 403);
     }
 
     res.status(200).json({
@@ -187,14 +240,17 @@ export const addCommentToMyTicket = async (req: Request, res: Response): Promise
       throw new AppError('Ticket not found', 404);
     }
 
-    // Verify ticket is assigned to this staff member
-    if (!ticket.assignedTo || ticket.assignedTo.toString() !== user._id.toString()) {
-      throw new AppError('You can only comment on tickets assigned to you', 403);
+    // Permission Check: User must be the assignee OR the creator
+    const isAssignee = ticket.assignedTo && ticket.assignedTo.toString() === user._id.toString();
+    const isCreator = ticket.createdBy && ticket.createdBy.toString() === user._id.toString();
+
+    if (!isAssignee && !isCreator) {
+      throw new AppError('You do not have permission to comment on this ticket', 403);
     }
 
-    // Verify ticket belongs to department
-    if (ticket.department !== user.department) {
-      throw new AppError('You do not have permission to modify this ticket', 403);
+    // If it's an assigned ticket (not created by them), verify department
+    if (isAssignee && !isCreator && ticket.department !== user.department) {
+      throw new AppError('You do not have permission to modify tickets from other departments', 403);
     }
 
     // Add public comment (visible to student)
@@ -206,6 +262,18 @@ export const addCommentToMyTicket = async (req: Request, res: Response): Promise
     } as any);
 
     await ticket.save();
+
+    // Send email to student if it's a guest ticket
+    if (ticket.contactEmail) {
+      sendTicketReplyEmail(
+        ticket.contactEmail,
+        ticket.contactName || ticket.createdByName || 'Student',
+        ticket._id.toString(),
+        ticket.subject,
+        comment,
+        user.name
+      ).catch((err: any) => console.error('Failed to send reply email:', err));
+    }
 
     res.status(200).json({
       success: true,
@@ -246,8 +314,8 @@ export const listUnassignedTickets = async (req: Request, res: Response): Promis
     // Transform tickets to include student names directly
     const transformedTickets = tickets.map((ticket: any) => ({
       ...ticket,
-      studentName: ticket.createdBy?.name || ticket.createdByName || 'Unknown',
-      studentEmail: ticket.createdBy?.email || ticket.createdByEmail,
+      studentName: ticket.createdBy?.name || ticket.createdByName || ticket.contactName || 'Unknown',
+      studentEmail: ticket.createdBy?.email || ticket.contactEmail || 'Unknown',
     }));
 
     const total = await Ticket.countDocuments({
@@ -321,7 +389,23 @@ export const getMyDashboard = async (req: Request, res: Response): Promise<void>
     })
       .sort({ updatedAt: -1 })
       .limit(5)
-      .select('subject status priority updatedAt');
+      .populate('createdBy', 'name email')
+      .select('subject status priority updatedAt createdBy createdByName contactName contactEmail createdAt')
+      .lean();
+
+    const formattedRecentTickets = recentTickets.map((ticket: any) => ({
+      ...ticket,
+      studentName: ticket.createdBy?.name || ticket.createdByName || ticket.contactName || 'Unknown',
+      studentEmail: ticket.createdBy?.email || ticket.contactEmail || 'Unknown',
+    }));
+
+    // Get tickets created by this user (Internal Requests)
+    const myInternalRequests = await Ticket.find({
+      createdBy: user._id,
+    })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
 
     res.status(200).json({
       success: true,
@@ -335,7 +419,8 @@ export const getMyDashboard = async (req: Request, res: Response): Promise<void>
           avgResolutionTime,
           performance: `${performance}%`,
         },
-        recentTickets,
+        recentTickets: formattedRecentTickets,
+        myInternalRequests,
       },
     });
   } catch (error: any) {
@@ -426,6 +511,42 @@ export const getMyPerformance = async (req: Request, res: Response): Promise<voi
         },
         byPriority,
       },
+    });
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+/**
+ * Create an internal ticket
+ * POST /api/v1/department/staff/internal-ticket
+ */
+export const createInternalTicket = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = (req as any).user;
+    const { subject, description, department, priority } = req.body;
+
+    if (!subject || !description || !department || !priority) {
+      throw new AppError('Please provide all required fields: subject, description, department, priority', 400);
+    }
+
+    // Create ticket
+    const ticket = await Ticket.create({
+      subject,
+      description,
+      department, // Target department
+      priority,
+      status: TicketStatus.OPEN,
+      createdBy: user._id, // The staff member creating it
+      createdByName: user.name,
+      contactEmail: user.email,
+      contactName: user.name,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Internal ticket created successfully',
+      data: ticket,
     });
   } catch (error: any) {
     throw error;

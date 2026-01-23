@@ -38,7 +38,7 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
       .sort({ createdAt: -1 })
       .limit(10)
       .populate('createdBy', 'name email')
-      .select('subject status priority createdAt');
+      .select('subject status priority createdAt createdBy createdByName contactName contactEmail');
 
     const formattedRecentTickets = recentTickets.map(ticket => ({
       id: ticket._id,
@@ -46,8 +46,8 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
       status: ticket.status,
       priority: ticket.priority,
       createdAt: ticket.createdAt,
-      studentName: (ticket.createdBy as any)?.name || 'Unknown',
-      studentEmail: (ticket.createdBy as any)?.email || 'Unknown',
+      studentName: (ticket.createdBy as any)?.name || ticket.createdByName || ticket.contactName || 'Unknown',
+      studentEmail: (ticket.createdBy as any)?.email || ticket.contactEmail || 'Unknown',
     }));
 
     res.status(200).json({

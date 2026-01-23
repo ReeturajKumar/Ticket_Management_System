@@ -1,7 +1,7 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "Student Ticketing System API",
+  "description": "EduDesk API - Centralized support platform for educational institutions",
   "main": "index.js",
   "scripts": {
     "start": "node dist/index.js",

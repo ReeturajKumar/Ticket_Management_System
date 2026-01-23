@@ -1,3 +1,5 @@
+import axios from 'axios'
+
 const API_URL = import.meta.env.VITE_API_URL
 
 interface DepartmentAuthResponse {
@@ -21,24 +23,16 @@ interface DepartmentAuthResponse {
  * Login department user
  */
 export async function loginDepartmentUser(email: string, password: string): Promise<DepartmentAuthResponse> {
-  const response = await fetch(`${API_URL}/department-auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  try {
+    const response = await axios.post(`${API_URL}/department-auth/login`, {
       email,
       password,
-    }),
-  })
+    })
 
-  const result = await response.json()
-
-  if (!response.ok) {
-    throw new Error(result.message || 'Department login failed')
+    return response.data
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Department login failed')
   }
-
-  return result
 }
 
 /**
@@ -50,14 +44,15 @@ export async function logoutDepartmentUser(): Promise<void> {
   
   if (refreshToken && accessToken) {
     try {
-      await fetch(`${API_URL}/department-auth/logout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({ refreshToken }),
-      })
+      await axios.post(
+        `${API_URL}/department-auth/logout`,
+        { refreshToken },
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        }
+      )
     } catch (error) {
       console.error('Logout error:', error)
     }
@@ -73,42 +68,29 @@ export async function logoutDepartmentUser(): Promise<void> {
  * Request password reset email
  */
 export async function forgotPasswordDepartment(email: string): Promise<DepartmentAuthResponse> {
-  const response = await fetch(`${API_URL}/department-auth/forgot-password`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email }),
-  })
+  try {
+    const response = await axios.post(`${API_URL}/department-auth/forgot-password`, { email })
 
-  const result = await response.json()
-
-  if (!response.ok) {
-    throw new Error(result.message || 'Failed to send reset email')
+    return response.data
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to send reset email')
   }
-
-  return result
 }
 
 /**
  * Reset password with token
  */
 export async function resetPasswordDepartment(token: string, newPassword: string): Promise<DepartmentAuthResponse> {
-  const response = await fetch(`${API_URL}/department-auth/reset-password`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ token, newPassword }),
-  })
+  try {
+    const response = await axios.post(`${API_URL}/department-auth/reset-password`, {
+      token,
+      newPassword,
+    })
 
-  const result = await response.json()
-
-  if (!response.ok) {
-    throw new Error(result.message || 'Failed to reset password')
+    return response.data
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to reset password')
   }
-
-  return result
 }
 
 /**
@@ -146,77 +128,52 @@ export async function registerDepartmentUser(data: {
   department: string
   isHead: boolean
 }): Promise<DepartmentAuthResponse> {
-  const response = await fetch(`${API_URL}/department-auth/register`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  })
+  try {
+    const response = await axios.post(`${API_URL}/department-auth/register`, data)
 
-  const result = await response.json()
-
-  if (!response.ok) {
-    throw new Error(result.message || 'Registration failed')
+    return response.data
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Registration failed')
   }
-
-  return result
 }
 
 /**
  * Verify OTP
  */
 export async function verifyDepartmentOTP(email: string, otp: string): Promise<DepartmentAuthResponse> {
-  const response = await fetch(`${API_URL}/department-auth/verify-otp`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email, otp }),
-  })
+  try {
+    const response = await axios.post(`${API_URL}/department-auth/verify-otp`, { email, otp })
 
-  const result = await response.json()
-
-  if (!response.ok) {
-    throw new Error(result.message || 'OTP verification failed')
+    return response.data
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'OTP verification failed')
   }
-
-  return result
 }
 
 /**
  * Resend OTP
  */
 export async function resendDepartmentOTP(email: string): Promise<DepartmentAuthResponse> {
-  const response = await fetch(`${API_URL}/department-auth/resend-otp`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email }),
-  })
+  try {
+    const response = await axios.post(`${API_URL}/department-auth/resend-otp`, { email })
 
-  const result = await response.json()
-
-  if (!response.ok) {
-    throw new Error(result.message || 'Failed to resend OTP')
+    return response.data
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to resend OTP')
   }
-
-  return result
 }
 
 /**
  * Check Registration Status
  */
 export async function getRegistrationStatus(email: string): Promise<DepartmentAuthResponse> {
-  const response = await fetch(`${API_URL}/department-auth/status?email=${encodeURIComponent(email)}`)
-  const result = await response.json()
+  try {
+    const response = await axios.get(`${API_URL}/department-auth/status?email=${encodeURIComponent(email)}`)
 
-  if (!response.ok) {
-    throw new Error(result.message || 'Failed to check status')
+    return response.data
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to check status')
   }
-
-  return result
 }
 
 /**
@@ -227,22 +184,16 @@ export async function refreshDepartmentToken(): Promise<string | null> {
   if (!refreshToken) return null
 
   try {
-    const response = await fetch(`${API_URL}/department-auth/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ refreshToken }),
+    const response = await axios.post(`${API_URL}/department-auth/refresh`, {
+      refreshToken,
     })
 
-    const result = await response.json()
-
-    if (response.ok && result.success && result.data?.accessToken) {
-      localStorage.setItem('dept_accessToken', result.data.accessToken)
-      if (result.data.refreshToken) {
-        localStorage.setItem('dept_refreshToken', result.data.refreshToken)
+    if (response.data?.success && response.data?.data?.accessToken) {
+      localStorage.setItem('dept_accessToken', response.data.data.accessToken)
+      if (response.data.data.refreshToken) {
+        localStorage.setItem('dept_refreshToken', response.data.data.refreshToken)
       }
-      return result.data.accessToken
+      return response.data.data.accessToken
     }
   } catch (error) {
     console.error('Token refresh failed', error)
@@ -257,20 +208,19 @@ export async function refreshDepartmentToken(): Promise<string | null> {
 export async function changePasswordDepartment(currentPassword: string, newPassword: string): Promise<DepartmentAuthResponse> {
   const accessToken = localStorage.getItem('dept_accessToken')
   
-  const response = await fetch(`${API_URL}/department-auth/change-password`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`
-    },
-    body: JSON.stringify({ currentPassword, newPassword }),
-  })
+  try {
+    const response = await axios.patch(
+      `${API_URL}/department-auth/change-password`,
+      { currentPassword, newPassword },
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    )
 
-  const result = await response.json()
-
-  if (!response.ok) {
-    throw new Error(result.message || 'Failed to change password')
+    return response.data
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to change password')
   }
-
-  return result
 }

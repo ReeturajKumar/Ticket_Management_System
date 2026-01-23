@@ -12,6 +12,8 @@ export enum Department {
   OPERATIONS = 'OPERATIONS',
   TRAINING = 'TRAINING',
   FINANCE = 'FINANCE',
+  TECHNICAL_SUPPORT = 'TECHNICAL_SUPPORT',
+  HR = 'HR',
 }
 
 // Ticket Status

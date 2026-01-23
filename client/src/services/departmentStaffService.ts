@@ -66,3 +66,13 @@ export const pickupTicket = async (id: string) => {
     const response = await departmentAxios.post(`${API_URL}/unassigned-tickets/${id}/pickup`, {})
     return response.data
 }
+
+export const createInternalTicket = async (data: { subject: string; description: string; department: string; priority: string }) => {
+    const response = await departmentAxios.post(`${API_URL}/internal-ticket`, data)
+    return response.data
+}
+
+export const getMyInternalRequests = async () => {
+    const response = await departmentAxios.get(`${API_URL}/my-requests`)
+    return response.data
+}

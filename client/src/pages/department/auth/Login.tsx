@@ -61,45 +61,76 @@ export default function DepartmentLoginPage() {
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Left: Illustration/Info */}
-      <div className="hidden lg:w-[60%] flex-col justify-between relative p-12 text-white lg:flex bg-indigo-900 overflow-hidden">
-        {/* Background Image & Overlay */}
+      <div className="hidden lg:w-[60%] flex-col justify-between relative p-16 text-white lg:flex bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 overflow-hidden">
+        {/* Decorative Background Elements */}
         <div className="absolute inset-0 z-0">
-          <img 
-            src="/images/department-hero.png" 
-            alt="University Administration" 
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/40 via-indigo-900/20 to-indigo-950/40" />
+          {/* Animated gradient orbs */}
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-500/30 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute top-1/3 -right-32 w-80 h-80 bg-violet-500/20 rounded-full blur-3xl animate-pulse delay-700" />
+          <div className="absolute bottom-0 left-1/4 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+          
+          {/* Grid pattern overlay */}
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-40" />
         </div>
 
         {/* Content */}
-        <div className="relative z-10">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 backdrop-blur-md border border-white/20">
-            <Building2 className="h-6 w-6" />
+        <div className="relative z-10 space-y-8">
+          <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+              <Building2 className="h-5 w-5" />
+            </div>
+            <span className="text-lg font-bold tracking-wide">Department Portal</span>
           </div>
-          <h1 className="mb-4 text-3xl font-bold tracking-tight">Department Portal</h1>
-          <p className="max-w-md text-indigo-100 text-lg leading-relaxed">
-            Access the centralized management system to handle tickets, view analytics, and optimize team performance.
-          </p>
+          
+          <div className="space-y-6 max-w-xl">
+            <h1 className="text-5xl font-bold tracking-tight leading-tight bg-gradient-to-r from-white via-indigo-50 to-white bg-clip-text text-transparent">
+              Welcome to Your Management Hub
+            </h1>
+            <p className="text-xl text-indigo-100/90 leading-relaxed font-light">
+              Access the centralized management system to handle tickets, view analytics, and optimize team performance with powerful tools at your fingertips.
+            </p>
+          </div>
         </div>
         
-        <div className="relative z-10 grid gap-6">
-          <div className="rounded-xl bg-white/10 p-6 backdrop-blur-md border border-white/10 hover:bg-white/15 transition-colors">
-            <h3 className="mb-2 font-semibold text-white">Department Head Access</h3>
-            <p className="text-sm text-indigo-100/80 leading-relaxed">
-              Full oversight of department operations, team management, and strategic reporting.
-            </p>
+        {/* Feature Cards */}
+        <div className="relative z-10 grid gap-5">
+          <div className="group rounded-2xl bg-white/[0.08] p-7 backdrop-blur-xl border border-white/[0.15] hover:bg-white/[0.12] hover:border-white/25 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/20 group-hover:bg-indigo-500/30 transition-colors">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="mb-2 text-lg font-bold text-white">Department Head Access</h3>
+                <p className="text-sm text-indigo-100/70 leading-relaxed">
+                  Full oversight of department operations, team management, strategic reporting, and performance analytics.
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="rounded-xl bg-white/10 p-6 backdrop-blur-md border border-white/10 hover:bg-white/15 transition-colors">
-            <h3 className="mb-2 font-semibold text-white">Staff Access</h3>
-            <p className="text-sm text-indigo-100/80 leading-relaxed">
-              Manage assigned tickets, track resolution times, and process requests efficiently.
-            </p>
+          
+          <div className="group rounded-2xl bg-white/[0.08] p-7 backdrop-blur-xl border border-white/[0.15] hover:bg-white/[0.12] hover:border-white/25 transition-all duration-300 hover:shadow-2xl hover:shadow-violet-500/10 hover:-translate-y-1">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/20 group-hover:bg-violet-500/30 transition-colors">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="mb-2 text-lg font-bold text-white">Staff Access</h3>
+                <p className="text-sm text-indigo-100/70 leading-relaxed">
+                  Manage assigned tickets, track resolution times, process requests efficiently, and collaborate seamlessly.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="relative z-10 text-sm text-indigo-200/60 font-medium">
-          University Ticket Management System &copy; 2024
+        {/* Footer */}
+        <div className="relative z-10 flex items-center justify-between text-sm text-indigo-200/50 font-medium">
+          <span>University Ticket Management System</span>
+          <span>&copy; 2024</span>
         </div>
       </div>
 
@@ -206,13 +237,6 @@ export default function DepartmentLoginPage() {
             Don't have an account?{" "}
             <Link to="/department/register" className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline dark:text-indigo-400">
               Register here
-            </Link>
-          </div>
-
-          <div className="mt-2 text-center text-sm text-muted-foreground">
-            Are you a student?{" "}
-            <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline dark:text-indigo-400">
-              Go to Student Login
             </Link>
           </div>
         </div>

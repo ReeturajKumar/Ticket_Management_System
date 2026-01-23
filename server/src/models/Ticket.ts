@@ -45,8 +45,13 @@ export interface ITicket extends Document {
   status: TicketStatus;
   priority: Priority;
   department: Department;
-  createdBy: mongoose.Types.ObjectId;
-  createdByName: string;
+  // Auth user fields (optional for public tickets)
+  createdBy?: mongoose.Types.ObjectId;
+  createdByName?: string;
+  // Guest fields (for public tickets)
+  contactEmail?: string;
+  contactName?: string;
+  
   assignedTo?: mongoose.Types.ObjectId;
   assignedToName?: string;
   attachments: IAttachment[];
@@ -88,15 +93,28 @@ const TicketSchema = new Schema<ITicket>(
       enum: Object.values(Department),
       required: [true, 'Please specify a department'],
     },
+    // Authentication user reference (optional)
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false, 
     },
     createdByName: {
       type: String,
-      required: true,
+      required: false,
     },
+    // Guest contact info (required if createdBy is missing)
+    contactEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      required: false,
+    },
+    contactName: {
+      type: String,
+      required: false,
+    },
+    
     assignedTo: {
       type: Schema.Types.ObjectId,
       ref: 'User',

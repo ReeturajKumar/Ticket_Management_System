@@ -1,10 +1,6 @@
 import { Router } from 'express';
-import authRoutes from './authRoutes';
-import testRoutes from './testRoutes';
-import profileRoutes from './profileRoutes';
-import ticketRoutes from './ticketRoutes';
-import dashboardRoutes from './dashboardRoutes';
 import departmentRoutes from './departmentRoutes';
+import publicRoutes from './publicRoutes';
 import departmentAuthRoutes from './departmentAuthRoutes';
 import adminRoutes from './adminRoutes';
 import departmentDashboardRoutes from './departmentDashboardRoutes';
@@ -16,13 +12,12 @@ import departmentStaffRoutes from './departmentStaffRoutes';
 const router = Router();
 
 // Mount route modules
-router.use('/auth', authRoutes);
-router.use('/test', testRoutes);
-router.use('/profile', profileRoutes);
-router.use('/tickets', ticketRoutes);
-router.use('/dashboard', dashboardRoutes);
+// Note: Student authentication and ticket routes have been removed
+// A new public ticket submission endpoint will be added
+
 router.use('/departments', departmentRoutes);
 router.use('/department-auth', departmentAuthRoutes);
+router.use('/public', publicRoutes);
 router.use('/admin', adminRoutes);
 router.use('/department/dashboard', departmentDashboardRoutes);
 router.use('/department/tickets', departmentTicketRoutes);

@@ -129,6 +129,15 @@
   [type="reset"] {
     cursor: pointer;
   }
+
+  /* Animation delays for pulse effects */
+  .delay-700 {
+    animation-delay: 700ms;
+  }
+
+  .delay-1000 {
+    animation-delay: 1000ms;
+  }
 }
 
 /* React-Toastify Custom Styling */

@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { getCurrentDepartmentUser } from "@/services/departmentAuthService"
 import { getDepartmentOverview, getAnalytics, getTeamPerformance, exportReport } from "@/services/departmentHeadService"
 import { getStaffDashboardStats, getStaffPerformance } from "@/services/departmentStaffService"
-import { Loader2, Ticket, CheckCircle, Clock, AlertCircle, TrendingUp, TrendingDown, Users, Target, Zap, Activity, ArrowUpRight, ArrowDownRight, UserCheck } from "lucide-react"
+import { Loader2, Ticket, CheckCircle, Clock, AlertCircle, TrendingUp, TrendingDown, Users, Target, Zap, Activity, ArrowUpRight, ArrowDownRight, UserCheck, Calendar } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ComposedChart, Line } from 'recharts'
 import { Progress } from "@/components/ui/progress"
 import { toast } from 'react-toastify'
+import { TicketDetailsDialog } from "@/components/department/TicketDetailsDialog"
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
 
@@ -24,6 +25,8 @@ export default function DepartmentDashboard() {
   const [staffPerformance, setStaffPerformance] = useState<any>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [isExporting, setIsExporting] = useState(false)
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
+  const [viewingTicketId, setViewingTicketId] = useState<string>("")
 
   const handleExport = async () => {
     try {
@@ -113,7 +116,6 @@ export default function DepartmentDashboard() {
     { name: 'In Progress', value: data.summary.inProgressTickets || 0, color: '#3b82f6' },
     { name: 'Resolved', value: data.summary.resolvedTickets || 0, color: '#10b981' },
     { name: 'Closed', value: data.summary.closedTickets || 0, color: '#6b7280' },
-    { name: 'Unassigned', value: data.summary.unassignedTickets || 0, color: '#f59e0b' },
   ].filter(item => item.value > 0) : []
 
   const priorityChartData = data?.byPriority ? [
@@ -534,7 +536,14 @@ export default function DepartmentDashboard() {
                   <div className="space-y-8">
                     {data.recentTickets?.length > 0 ? (
                       data.recentTickets.map((ticket: any) => (
-                        <div key={ticket.id} className="flex items-center">
+                        <div 
+                          key={ticket.id} 
+                          className="flex items-center cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors"
+                          onClick={() => {
+                            setViewingTicketId(ticket.id)
+                            setDetailsDialogOpen(true)
+                          }}
+                        >
                           <div className="space-y-1">
                             <p className="text-sm font-medium leading-none">{ticket.subject}</p>
                             <p className="text-sm text-muted-foreground">
@@ -1221,7 +1230,10 @@ export default function DepartmentDashboard() {
                           <div 
                             key={ticket._id} 
                             className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
-                            onClick={() => navigate(`/department/tickets/${ticket._id}`)}
+                            onClick={() => {
+                              setViewingTicketId(ticket._id)
+                              setDetailsDialogOpen(true)
+                            }}
                           >
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">{ticket.subject}</p>
@@ -1312,6 +1324,57 @@ export default function DepartmentDashboard() {
                 </Card>
               </div>
 
+              {/* My Internal Requests */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Internal Requests</CardTitle>
+                  <CardDescription>Tickets you created for other departments</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {data.myInternalRequests && data.myInternalRequests.length > 0 ? (
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {data.myInternalRequests.map((ticket: any) => (
+                          <div 
+                            key={ticket._id} 
+                            className="p-4 rounded-xl border bg-card hover:shadow-md transition-all cursor-pointer group"
+                            onClick={() => {
+                              setViewingTicketId(ticket._id)
+                              setDetailsDialogOpen(true)
+                            }}
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <Badge 
+                                variant="outline" 
+                                className={`
+                                  ${ticket.status === 'OPEN' ? 'bg-blue-50 text-blue-600 border-blue-200' : ''}
+                                  ${ticket.status === 'RESOLVED' ? 'bg-green-50 text-green-600 border-green-200' : ''}
+                                  ${ticket.status === 'CLOSED' ? 'bg-gray-50 text-gray-600 border-gray-200' : ''}
+                                `}
+                              >
+                                {ticket.status}
+                              </Badge>
+                              <Badge variant="secondary" className="text-[10px] font-mono">
+                                {ticket.department}
+                              </Badge>
+                            </div>
+                            <h4 className="font-semibold text-sm mb-1 group-hover:text-primary transition-colors line-clamp-1">
+                              {ticket.subject}
+                            </h4>
+                            <div className="text-xs text-muted-foreground flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(ticket.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
+                        <p className="text-sm">You haven't created any internal requests yet.</p>
+                      </div>
+                    )}
+                </CardContent>
+              </Card>
+
               {/* Performance Analytics */}
               {staffPerformance && (
                 <div className="grid gap-4 md:grid-cols-2">
@@ -1390,6 +1453,13 @@ export default function DepartmentDashboard() {
            </div>
         )}
       </div>
+
+      <TicketDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        ticketId={viewingTicketId}
+        isHead={user?.isHead}
+      />
     </DepartmentLayout>
   )
 }

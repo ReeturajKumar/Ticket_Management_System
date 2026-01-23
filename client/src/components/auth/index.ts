@@ -1,6 +1,0 @@
-export { RegistrationForm } from "./RegistrationForm"
-export { OTPVerificationModal } from "./OTPVerificationModal"
-export { SignUpIllustration } from "./SignUpIllustration"
-export { FormHeader } from "./FormHeader"
-export { LoginForm } from "./LoginForm"
-export { LoginHeader } from "./LoginHeader"

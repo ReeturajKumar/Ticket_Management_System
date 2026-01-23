@@ -180,7 +180,7 @@ export default function DepartmentTicketsPage() {
   const filteredTickets = tickets.filter(ticket => {
     const matchesSearch = ticket.subject?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (ticket.ticketId && ticket.ticketId.includes(searchTerm)) ||
-                          (ticket.studentName && ticket.studentName.toLowerCase().includes(searchTerm.toLowerCase()))
+                          (ticket.userName && ticket.userName.toLowerCase().includes(searchTerm.toLowerCase()))
     const matchesPriority = priorityFilter === "ALL" || ticket.priority === priorityFilter
     return matchesSearch && matchesPriority
   })
@@ -200,7 +200,7 @@ export default function DepartmentTicketsPage() {
       case 'OPEN': return 'bg-blue-500'
       case 'ASSIGNED': return 'bg-yellow-500'
       case 'IN_PROGRESS': return 'bg-orange-500'
-      case 'WAITING_FOR_STUDENT': return 'bg-purple-500'
+      case 'WAITING_FOR_USER': return 'bg-purple-500'
       case 'RESOLVED': return 'bg-green-500'
       case 'CLOSED': return 'bg-gray-500'
       default: return 'bg-gray-500'
@@ -223,7 +223,7 @@ export default function DepartmentTicketsPage() {
     : [
         { key: 'ASSIGNED', label: 'Assigned', color: 'yellow' },
         { key: 'IN_PROGRESS', label: 'In Progress', color: 'orange' },
-        { key: 'WAITING_FOR_STUDENT', label: 'Waiting', color: 'purple' },
+        { key: 'WAITING_FOR_USER', label: 'Waiting', color: 'purple' },
         { key: 'RESOLVED', label: 'Resolved', color: 'green' },
         { key: 'CLOSED', label: 'Closed', color: 'gray' },
       ]
@@ -351,8 +351,8 @@ export default function DepartmentTicketsPage() {
                     <span className="text-muted-foreground font-medium">Creator:</span>
                     <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/30">
                       <UserIcon className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" />
-                      <span className="text-blue-600 dark:text-blue-400 font-medium truncate max-w-[100px]" title={ticket.studentName || ticket.createdByName}>
-                        {ticket.studentName || ticket.createdByName || 'Student'}
+                      <span className="text-blue-600 dark:text-blue-400 font-medium truncate max-w-[100px]" title={ticket.userName || ticket.createdByName}>
+                        {ticket.userName || ticket.createdByName || 'User'}
                       </span>
                     </div>
                   </>
@@ -623,10 +623,10 @@ export default function DepartmentTicketsPage() {
                                 </div>
                                 
                                 <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                                {ticket.studentName && (
+                                {ticket.userName && (
                                     <span className="flex items-center gap-1.5">
                                     <UserIcon className="h-3.5 w-3.5" />
-                                    {ticket.studentName}
+                                    {ticket.userName}
                                     </span>
                                 )}
                                 <span className="flex items-center gap-1.5">

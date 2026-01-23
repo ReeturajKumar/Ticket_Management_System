@@ -3,7 +3,7 @@ import User from '../models/User';
 import { hashPassword } from '../utils/password';
 import { generateTokens, verifyRefreshToken } from '../utils/jwt';
 import { sendOTPEmail, sendPasswordResetEmail } from '../utils/email';
-import { UserRole } from '../constants';
+import { UserRole, Department } from '../constants';
 import AppError from '../utils/AppError';
 
 /**
@@ -20,7 +20,7 @@ export const registerDepartmentUser = async (req: Request, res: Response): Promi
     }
 
     // Validate department
-    const validDepartments = ['PLACEMENT', 'OPERATIONS', 'TRAINING', 'FINANCE'];
+    const validDepartments = Object.values(Department);
     if (!validDepartments.includes(department)) {
       throw new AppError('Invalid department', 400);
     }

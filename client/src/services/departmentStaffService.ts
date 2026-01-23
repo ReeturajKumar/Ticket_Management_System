@@ -16,7 +16,7 @@ export interface TicketSummary {
     status: 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
     priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     createdAt: string;
-    studentName?: string;
+    userName?: string;
 }
 
 // === Dashboard & Performance ===

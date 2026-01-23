@@ -1,6 +1,6 @@
 // User Roles
 export enum UserRole {
-  STUDENT = 'STUDENT',
+  USER = 'USER',
   DEPARTMENT_USER = 'DEPARTMENT_USER',
   ADMIN = 'ADMIN',
   SUPER_ADMIN = 'SUPER_ADMIN',
@@ -16,12 +16,26 @@ export enum Department {
   HR = 'HR',
 }
 
+// Public-facing departments (visible to employees/guests)
+export const PUBLIC_DEPARTMENTS = [
+  Department.OPERATIONS,
+  Department.FINANCE,
+  Department.PLACEMENT,
+  Department.TRAINING,
+];
+
+// Internal-only departments (visible only to staff for restricted/internal requests)
+export const INTERNAL_DEPARTMENTS = [
+  Department.TECHNICAL_SUPPORT,
+  Department.HR,
+];
+
 // Ticket Status
 export enum TicketStatus {
   OPEN = 'OPEN',
   ASSIGNED = 'ASSIGNED',
   IN_PROGRESS = 'IN_PROGRESS',
-  WAITING_FOR_STUDENT = 'WAITING_FOR_STUDENT',
+  WAITING_FOR_USER = 'WAITING_FOR_USER',
   RESOLVED = 'RESOLVED',
   CLOSED = 'CLOSED',
   REOPENED = 'REOPENED',

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import Ticket from '../models/Ticket';
-import { Department, Priority, TicketStatus } from '../constants';
+import { Department, Priority, TicketStatus, PUBLIC_DEPARTMENTS } from '../constants';
 import { sendTicketConfirmationEmail } from '../utils/email';
 import AppError from '../utils/AppError';
 
@@ -30,9 +30,9 @@ export const createPublicTicket = async (req: Request, res: Response): Promise<v
       throw new AppError('Please provide a valid email address', 400);
     }
 
-    // Validate department
-    if (!Object.values(Department).includes(department as Department)) {
-      throw new AppError('Invalid department', 400);
+    // Validate department (must be public)
+    if (!PUBLIC_DEPARTMENTS.includes(department as Department)) {
+      throw new AppError('Invalid department selection', 400);
     }
 
     // Create ticket
@@ -82,7 +82,7 @@ export const getPublicConfig = async (req: Request, res: Response): Promise<void
   res.status(200).json({
     success: true,
     data: {
-      departments: Object.values(Department),
+      departments: PUBLIC_DEPARTMENTS,
       priorities: Object.values(Priority),
     }
   });

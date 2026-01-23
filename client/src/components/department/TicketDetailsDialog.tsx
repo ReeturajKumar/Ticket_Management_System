@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, Calendar, Clock, User, Tag, MessageSquare } from "lucide-react"
+import { Loader2, Tag, MessageSquare } from "lucide-react"
 import { getMyTicketDetails } from "@/services/departmentStaffService"
 import { getTicketDetails } from "@/services/departmentHeadService"
 

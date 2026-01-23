@@ -53,7 +53,7 @@ const UserSchema: Schema = new Schema(
       type: String,
       enum: Object.values(UserRole),
       required: [true, 'Role is required'],
-      default: UserRole.STUDENT,
+      default: UserRole.USER,
     },
     department: {
       type: String,

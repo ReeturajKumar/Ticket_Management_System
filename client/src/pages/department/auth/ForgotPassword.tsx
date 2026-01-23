@@ -79,7 +79,7 @@ export default function DepartmentForgotPassword() {
         </div>
         
         <div className="relative z-10 text-sm text-indigo-200/60 font-medium">
-          University Ticket Management System &copy; 2024
+          EduDesk - Student Support Platform &copy; {new Date().getFullYear()}
         </div>
       </div>
 
@@ -138,7 +138,7 @@ export default function DepartmentForgotPassword() {
                           <div className="relative">
                             <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                             <Input
-                              placeholder="name@university.edu"
+                              placeholder="name@company.com"
                               className="pl-9"
                               {...field}
                               disabled={isLoading}

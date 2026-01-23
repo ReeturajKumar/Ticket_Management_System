@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2, Send, CheckCircle2, GraduationCap } from 'lucide-react'
+import { Loader2, Send, CheckCircle2, LifeBuoy } from 'lucide-react'
 
 // Helper to format enum strings nicely (e.g. "PLACEMENT_CELL" -> "Placement Cell")
 const formatEnumString = (str: string) => {
@@ -111,7 +111,7 @@ export default function CreatePublicTicketPage() {
         <div className="absolute inset-0 z-0">
           <img 
             src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=2070&auto=format&fit=crop" 
-            alt="University Campus" 
+            alt="Modern Corporate Office" 
             className="h-full w-full object-cover opacity-60"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
@@ -121,7 +121,7 @@ export default function CreatePublicTicketPage() {
         <div className="relative z-10 p-12 h-full flex flex-col justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 backdrop-blur-md border border-indigo-500/30">
-              <GraduationCap className="h-6 w-6 text-indigo-200" />
+              <LifeBuoy className="h-6 w-6 text-indigo-200" />
             </div>
             <span className="text-xl font-bold tracking-wide">EduDesk</span>
           </div>
@@ -131,12 +131,12 @@ export default function CreatePublicTicketPage() {
               Here to Help You Succeed
             </h1>
             <p className="text-xl text-slate-300 font-light leading-relaxed">
-              Facing an issue? Submit your query and our department teams will resolve it as quickly as possible. We are dedicated to supporting your academic journey.
+              Facing an issue? Submit your query and our department teams will resolve it as quickly as possible. We are dedicated to supporting your success.
             </p>
           </div>
           
           <div className="text-sm text-slate-500">
-            &copy; {new Date().getFullYear()} EduDesk Student Support. All rights reserved.
+            &copy; {new Date().getFullYear()} EduDesk Support. All rights reserved.
           </div>
         </div>
       </div>
@@ -214,7 +214,7 @@ export default function CreatePublicTicketPage() {
                               <FormItem className="space-y-1">
                               <FormLabel className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Email Address</FormLabel>
                               <FormControl>
-                                  <Input placeholder="student@university.edu" {...field} className="h-9 bg-slate-50/50" />
+                                  <Input placeholder="name@company.com" {...field} className="h-9 bg-slate-50/50" />
                               </FormControl>
                               <FormMessage />
                               </FormItem>
@@ -283,7 +283,7 @@ export default function CreatePublicTicketPage() {
                         <FormItem className="space-y-1">
                           <FormLabel className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Subject</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g., Issue with Semester Fee Payment" {...field} className="h-9 bg-slate-50/50" />
+                            <Input placeholder="e.g., Issue with VPN access or HR policy query" {...field} className="h-9 bg-slate-50/50" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -330,9 +330,6 @@ export default function CreatePublicTicketPage() {
                   </form>
                 </Form>
               </div>
-              <p className="text-center text-xs text-slate-500">
-                Are you a staff member? <a href="/department/login" className="font-medium text-indigo-600 hover:text-indigo-500 underline underline-offset-4">Login to Portal</a>
-              </p>
             </div>
           )}
         </div>

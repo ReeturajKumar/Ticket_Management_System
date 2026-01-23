@@ -16,7 +16,7 @@ interface TicketQuickActionsProps {
 const STATUS_OPTIONS = [
   { value: "OPEN", label: "Open", color: "text-blue-600" },
   { value: "IN_PROGRESS", label: "In Progress", color: "text-yellow-600" },
-  { value: "WAITING_FOR_STUDENT", label: "Waiting", color: "text-orange-600" },
+  { value: "WAITING_FOR_USER", label: "Waiting", color: "text-orange-600" },
   { value: "RESOLVED", label: "Resolved", color: "text-green-600" },
   { value: "CLOSED", label: "Closed", color: "text-gray-600" },
 ]

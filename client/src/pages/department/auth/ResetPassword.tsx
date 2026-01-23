@@ -115,7 +115,7 @@ export default function DepartmentResetPassword() {
         </div>
         
         <div className="relative z-10 text-sm text-indigo-200/60 font-medium">
-          University Ticket Management System &copy; 2024
+          EduDesk - Student Support Platform &copy; {new Date().getFullYear()}
         </div>
       </div>
 

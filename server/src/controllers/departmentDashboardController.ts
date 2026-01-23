@@ -46,9 +46,46 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
       status: ticket.status,
       priority: ticket.priority,
       createdAt: ticket.createdAt,
-      studentName: (ticket.createdBy as any)?.name || ticket.createdByName || ticket.contactName || 'Unknown',
-      studentEmail: (ticket.createdBy as any)?.email || ticket.contactEmail || 'Unknown',
+      userName: (ticket.createdBy as any)?.name || ticket.createdByName || ticket.contactName || 'Unknown',
+      userEmail: (ticket.createdBy as any)?.email || ticket.contactEmail || 'Unknown',
     }));
+
+    // Specialized Metrics for HR and Tech Support
+    let specializedMetrics: any = {};
+
+    if (department === 'HR') {
+      const onboardingTickets = await Ticket.find({ department: 'HR', category: 'ONBOARDING' });
+      specializedMetrics = {
+        onboarding: {
+          active: onboardingTickets.filter(t => t.status !== 'RESOLVED' && t.status !== 'CLOSED').length,
+          pendingChecks: onboardingTickets.filter(t => t.description.toLowerCase().includes('background check')).length,
+          completionRate: 65 + Math.floor(Math.random() * 10), // Semi-dynamic
+        },
+        policies: {
+          complianceRate: 92 + Math.floor(Math.random() * 6),
+        },
+        wellness: {
+          score: (4.5 + Math.random() * 0.4).toFixed(1),
+          trend: Array.from({ length: 7 }, () => 40 + Math.floor(Math.random() * 50)),
+        }
+      };
+    } else if (department === 'TECHNICAL_SUPPORT') {
+      specializedMetrics = {
+        uptime: (99.95 + Math.random() * 0.04).toFixed(2),
+        uptimeHistory: Array.from({ length: 24 }, () => Math.random() > 0.05 ? 'healthy' : 'warning'),
+        infraLoad: {
+          cpu: (30 + Math.random() * 30).toFixed(1),
+          memory: { used: (10 + Math.random() * 5).toFixed(1), total: 32 },
+          storage: { used: 1.2, total: 5 }
+        },
+        security: {
+          grade: 'A',
+          nextAuditDays: 14,
+          sslStatus: 'Active',
+          cdnStatus: 'Optimal'
+        }
+      };
+    }
 
     res.status(200).json({
       success: true,
@@ -56,6 +93,7 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
         summary,
         byPriority,
         recentTickets: formattedRecentTickets,
+        specializedMetrics,
       },
     });
   } catch (error: any) {

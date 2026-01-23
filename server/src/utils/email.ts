@@ -175,7 +175,7 @@ export const sendWelcomeEmail = async (
     const transporter = createTransporter();
 
     const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'Student Ticketing System'}" <${process.env.EMAIL_USER}>`,
+      from: `"${process.env.EMAIL_FROM_NAME || 'EduDesk Support'}" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Welcome to EduDesk!',
       html: `
@@ -248,7 +248,7 @@ export const sendPasswordResetEmail = async (
     const resetLink = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
 
     const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'Student Ticketing System'}" <${process.env.EMAIL_USER}>`,
+      from: `"${process.env.EMAIL_FROM_NAME || 'EduDesk Support'}" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Password Reset Request',
       html: `

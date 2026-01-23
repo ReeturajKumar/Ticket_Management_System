@@ -52,6 +52,7 @@ export interface ITicket extends Document {
   contactEmail?: string;
   contactName?: string;
   
+  category?: string;
   assignedTo?: mongoose.Types.ObjectId;
   assignedToName?: string;
   attachments: IAttachment[];
@@ -113,6 +114,11 @@ const TicketSchema = new Schema<ITicket>(
     contactName: {
       type: String,
       required: false,
+    },
+    category: {
+      type: String,
+      required: false,
+      trim: true,
     },
     
     assignedTo: {

@@ -61,7 +61,7 @@ export default function DepartmentLoginPage() {
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Left: Illustration/Info */}
-      <div className="hidden lg:w-[60%] flex-col justify-between relative p-16 text-white lg:flex bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 overflow-hidden">
+      <div className="hidden lg:w-[60%] flex-col justify-between relative p-10 text-white lg:flex bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 overflow-hidden">
         {/* Decorative Background Elements */}
         <div className="absolute inset-0 z-0">
           {/* Animated gradient orbs */}
@@ -74,19 +74,19 @@ export default function DepartmentLoginPage() {
         </div>
 
         {/* Content */}
-        <div className="relative z-10 space-y-8">
+        <div className="relative z-10 space-y-6">
           <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
               <Building2 className="h-5 w-5" />
             </div>
-            <span className="text-lg font-bold tracking-wide">Department Portal</span>
+            <span className="text-base font-bold tracking-wide">Department Portal</span>
           </div>
           
-          <div className="space-y-6 max-w-xl">
-            <h1 className="text-5xl font-bold tracking-tight leading-tight bg-gradient-to-r from-white via-indigo-50 to-white bg-clip-text text-transparent">
+          <div className="space-y-3 max-w-xl">
+            <h1 className="text-4xl font-bold tracking-tight leading-tight bg-gradient-to-r from-white via-indigo-50 to-white bg-clip-text text-transparent">
               Welcome to Your Management Hub
             </h1>
-            <p className="text-xl text-indigo-100/90 leading-relaxed font-light">
+            <p className="text-lg text-indigo-100/90 leading-relaxed font-light">
               Access the centralized management system to handle tickets, view analytics, and optimize team performance with powerful tools at your fingertips.
             </p>
           </div>
@@ -94,32 +94,32 @@ export default function DepartmentLoginPage() {
         
         {/* Feature Cards */}
         <div className="relative z-10 grid gap-5">
-          <div className="group rounded-2xl bg-white/[0.08] p-7 backdrop-blur-xl border border-white/[0.15] hover:bg-white/[0.12] hover:border-white/25 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/20 group-hover:bg-indigo-500/30 transition-colors">
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="group rounded-2xl bg-white/[0.08] p-4 backdrop-blur-xl border border-white/[0.15] hover:bg-white/[0.12] hover:border-white/25 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 group-hover:bg-indigo-500/30 transition-colors">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
               <div className="flex-1">
-                <h3 className="mb-2 text-lg font-bold text-white">Department Head Access</h3>
-                <p className="text-sm text-indigo-100/70 leading-relaxed">
+                <h3 className="mb-1 text-base font-bold text-white">Department Head Access</h3>
+                <p className="text-xs text-indigo-100/70 leading-relaxed">
                   Full oversight of department operations, team management, strategic reporting, and performance analytics.
                 </p>
               </div>
             </div>
           </div>
           
-          <div className="group rounded-2xl bg-white/[0.08] p-7 backdrop-blur-xl border border-white/[0.15] hover:bg-white/[0.12] hover:border-white/25 transition-all duration-300 hover:shadow-2xl hover:shadow-violet-500/10 hover:-translate-y-1">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/20 group-hover:bg-violet-500/30 transition-colors">
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="group rounded-2xl bg-white/[0.08] p-4 backdrop-blur-xl border border-white/[0.15] hover:bg-white/[0.12] hover:border-white/25 transition-all duration-300 hover:shadow-2xl hover:shadow-violet-500/10 hover:-translate-y-1">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/20 group-hover:bg-violet-500/30 transition-colors">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
               </div>
               <div className="flex-1">
-                <h3 className="mb-2 text-lg font-bold text-white">Staff Access</h3>
-                <p className="text-sm text-indigo-100/70 leading-relaxed">
+                <h3 className="mb-1 text-base font-bold text-white">Staff Access</h3>
+                <p className="text-xs text-indigo-100/70 leading-relaxed">
                   Manage assigned tickets, track resolution times, process requests efficiently, and collaborate seamlessly.
                 </p>
               </div>
@@ -128,20 +128,20 @@ export default function DepartmentLoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="relative z-10 flex items-center justify-between text-sm text-indigo-200/50 font-medium">
-          <span>University Ticket Management System</span>
-          <span>&copy; 2024</span>
+        <div className="relative z-10 flex items-center justify-between text-xs text-indigo-200/50 font-medium">
+          <span>EduDesk - Student Support Platform</span>
+          <span>&copy; {new Date().getFullYear()}</span>
         </div>
       </div>
 
       {/* Right: Login Form */}
-      <div className="flex w-full flex-col justify-center p-8 lg:w-[40%] lg:p-12">
+      <div className="flex w-full flex-col justify-center p-5 lg:w-[40%] lg:p-8">
         <div className="mx-auto w-full max-w-[400px]">
-          <div className="mb-8 text-center lg:text-left">
+          <div className="mb-6 text-center lg:text-left">
             <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 lg:hidden">
               <Building2 className="h-6 w-6" />
             </div>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
               Welcome back
             </h2>
             <p className="mt-2 text-slate-600 dark:text-slate-400">
@@ -150,7 +150,7 @@ export default function DepartmentLoginPage() {
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2.5">
               <FormField
                 control={form.control}
                 name="email"
@@ -161,8 +161,8 @@ export default function DepartmentLoginPage() {
                       <div className="relative">
                         <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="name@university.edu"
-                          className="pl-9"
+                          placeholder="name@company.com"
+                          className="pl-9 h-9 text-sm"
                           {...field}
                           disabled={isLoading}
                         />
@@ -192,7 +192,7 @@ export default function DepartmentLoginPage() {
                         <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           type={showPassword ? "text" : "password"}
-                          className="pl-9 pr-10"
+                          className="pl-9 pr-10 h-9 text-sm"
                           {...field}
                           disabled={isLoading}
                         />
@@ -218,7 +218,7 @@ export default function DepartmentLoginPage() {
 
               <Button 
                 type="submit" 
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white" 
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-10 mt-1" 
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -233,7 +233,7 @@ export default function DepartmentLoginPage() {
             </form>
           </Form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="mt-4 text-center text-sm text-muted-foreground">
             Don't have an account?{" "}
             <Link to="/department/register" className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline dark:text-indigo-400">
               Register here

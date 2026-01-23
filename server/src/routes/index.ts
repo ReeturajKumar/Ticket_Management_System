@@ -12,7 +12,7 @@ import departmentStaffRoutes from './departmentStaffRoutes';
 const router = Router();
 
 // Mount route modules
-// Note: Student authentication and ticket routes have been removed
+// Note: User authentication and ticket routes have been removed
 // A new public ticket submission endpoint will be added
 
 router.use('/departments', departmentRoutes);

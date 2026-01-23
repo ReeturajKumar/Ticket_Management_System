@@ -162,14 +162,14 @@ export const updateMyTicketStatus = async (req: Request, res: Response): Promise
     // Validate status
     const allowedStatuses = [
       TicketStatus.IN_PROGRESS,
-      TicketStatus.WAITING_FOR_STUDENT,
+      TicketStatus.WAITING_FOR_USER,
       TicketStatus.RESOLVED,
       TicketStatus.CLOSED,
     ];
 
     if (!allowedStatuses.includes(status)) {
       throw new AppError(
-        'Invalid status. Staff can only set: IN_PROGRESS, WAITING_FOR_STUDENT, RESOLVED',
+        'Invalid status. Staff can only set: IN_PROGRESS, WAITING_FOR_USER, RESOLVED',
         400
       );
     }
@@ -253,7 +253,7 @@ export const addCommentToMyTicket = async (req: Request, res: Response): Promise
       throw new AppError('You do not have permission to modify tickets from other departments', 403);
     }
 
-    // Add public comment (visible to student)
+    // Add public comment (visible to user)
     ticket.comments.push({
       user: user._id as any,
       userName: user.name,
@@ -263,11 +263,11 @@ export const addCommentToMyTicket = async (req: Request, res: Response): Promise
 
     await ticket.save();
 
-    // Send email to student if it's a guest ticket
+    // Send email to user if it's a guest ticket
     if (ticket.contactEmail) {
       sendTicketReplyEmail(
         ticket.contactEmail,
-        ticket.contactName || ticket.createdByName || 'Student',
+        ticket.contactName || ticket.createdByName || 'User',
         ticket._id.toString(),
         ticket.subject,
         comment,
@@ -298,7 +298,7 @@ export const listUnassignedTickets = async (req: Request, res: Response): Promis
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    // Get unassigned tickets in department with populated student data
+    // Get unassigned tickets in department with populated user data
     const tickets = await Ticket.find({
       department: user.department,
       assignedTo: null,
@@ -311,11 +311,11 @@ export const listUnassignedTickets = async (req: Request, res: Response): Promis
       .select('-__v')
       .lean();
 
-    // Transform tickets to include student names directly
+    // Transform tickets to include user names directly
     const transformedTickets = tickets.map((ticket: any) => ({
       ...ticket,
-      studentName: ticket.createdBy?.name || ticket.createdByName || ticket.contactName || 'Unknown',
-      studentEmail: ticket.createdBy?.email || ticket.contactEmail || 'Unknown',
+      userName: ticket.createdBy?.name || ticket.createdByName || ticket.contactName || 'Unknown',
+      userEmail: ticket.createdBy?.email || ticket.contactEmail || 'Unknown',
     }));
 
     const total = await Ticket.countDocuments({
@@ -358,7 +358,7 @@ export const getMyDashboard = async (req: Request, res: Response): Promise<void>
     const totalAssigned = allTickets.length;
     const resolved = allTickets.filter((t) => t.status === TicketStatus.RESOLVED).length;
     const inProgress = allTickets.filter((t) => t.status === TicketStatus.IN_PROGRESS).length;
-    const waiting = allTickets.filter((t) => t.status === TicketStatus.WAITING_FOR_STUDENT).length;
+    const waiting = allTickets.filter((t) => t.status === TicketStatus.WAITING_FOR_USER).length;
     const open = allTickets.filter(
       (t) => t.status === TicketStatus.OPEN || t.status === TicketStatus.ASSIGNED
     ).length;
@@ -395,8 +395,8 @@ export const getMyDashboard = async (req: Request, res: Response): Promise<void>
 
     const formattedRecentTickets = recentTickets.map((ticket: any) => ({
       ...ticket,
-      studentName: ticket.createdBy?.name || ticket.createdByName || ticket.contactName || 'Unknown',
-      studentEmail: ticket.createdBy?.email || ticket.contactEmail || 'Unknown',
+      userName: ticket.createdBy?.name || ticket.createdByName || ticket.contactName || 'Unknown',
+      userEmail: ticket.createdBy?.email || ticket.contactEmail || 'Unknown',
     }));
 
     // Get tickets created by this user (Internal Requests)

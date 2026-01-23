@@ -46,8 +46,8 @@ export const listDepartmentTickets = async (req: Request, res: Response): Promis
     // Transform tickets to include names directly
     const transformedTickets = tickets.map((ticket: any) => ({
       ...ticket,
-      studentName: ticket.createdBy?.name || ticket.createdByName || ticket.contactName || 'Unknown',
-      studentEmail: ticket.createdBy?.email || ticket.contactEmail || 'Unknown',
+      userName: ticket.createdBy?.name || ticket.createdByName || ticket.contactName || 'Unknown',
+      userEmail: ticket.createdBy?.email || ticket.contactEmail || 'Unknown',
       assignedToName: ticket.assignedTo?.name,
       assignedToEmail: ticket.assignedTo?.email,
     }));

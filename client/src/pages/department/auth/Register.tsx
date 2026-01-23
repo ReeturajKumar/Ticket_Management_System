@@ -88,7 +88,7 @@ export default function DepartmentRegisterPage() {
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Left: Illustration/Info */}
-      <div className="hidden lg:w-[60%] flex-col justify-between relative p-16 text-white lg:flex bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 overflow-hidden">
+      <div className="hidden lg:w-[60%] flex-col justify-between relative p-12 text-white lg:flex bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 overflow-hidden">
         {/* Decorative Background Elements */}
         <div className="absolute inset-0 z-0">
           {/* Animated gradient orbs */}
@@ -101,7 +101,7 @@ export default function DepartmentRegisterPage() {
         </div>
 
         {/* Content */}
-        <div className="relative z-10 space-y-8">
+        <div className="relative z-10 space-y-6">
           <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
               <Building2 className="h-5 w-5" />
@@ -109,9 +109,9 @@ export default function DepartmentRegisterPage() {
             <span className="text-lg font-bold tracking-wide">Department Portal</span>
           </div>
           
-          <div className="space-y-6 max-w-xl">
+          <div className="space-y-4 max-w-xl">
             <h1 className="text-5xl font-bold tracking-tight leading-tight bg-gradient-to-r from-white via-indigo-50 to-white bg-clip-text text-transparent">
-              Join Our Department Team
+              Join Our Department
             </h1>
             <p className="text-xl text-indigo-100/90 leading-relaxed font-light">
               Create your account to start managing tickets, collaborating with team members, and streamlining department workflows.
@@ -121,7 +121,7 @@ export default function DepartmentRegisterPage() {
         
         {/* Feature Cards */}
         <div className="relative z-10 grid gap-5">
-          <div className="group rounded-2xl bg-white/[0.08] p-7 backdrop-blur-xl border border-white/[0.15] hover:bg-white/[0.12] hover:border-white/25 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
+          <div className="group rounded-2xl bg-white/[0.08] p-5 backdrop-blur-xl border border-white/[0.15] hover:bg-white/[0.12] hover:border-white/25 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/20 group-hover:bg-indigo-500/30 transition-colors">
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,7 +137,7 @@ export default function DepartmentRegisterPage() {
             </div>
           </div>
           
-          <div className="group rounded-2xl bg-white/[0.08] p-7 backdrop-blur-xl border border-white/[0.15] hover:bg-white/[0.12] hover:border-white/25 transition-all duration-300 hover:shadow-2xl hover:shadow-violet-500/10 hover:-translate-y-1">
+          <div className="group rounded-2xl bg-white/[0.08] p-5 backdrop-blur-xl border border-white/[0.15] hover:bg-white/[0.12] hover:border-white/25 transition-all duration-300 hover:shadow-2xl hover:shadow-violet-500/10 hover:-translate-y-1">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/20 group-hover:bg-violet-500/30 transition-colors">
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -156,15 +156,15 @@ export default function DepartmentRegisterPage() {
 
         {/* Footer */}
         <div className="relative z-10 flex items-center justify-between text-sm text-indigo-200/50 font-medium">
-          <span>University Ticket Management System</span>
-          <span>&copy; 2024</span>
+          <span>EduDesk - Student Support Platform</span>
+          <span>&copy; {new Date().getFullYear()}</span>
         </div>
       </div>
 
       {/* Right: Register Form */}
-      <div className="flex w-full flex-col justify-center p-8 lg:w-[40%] lg:p-12">
+      <div className="flex w-full flex-col justify-center p-6 lg:w-[40%] lg:p-8">
         <div className="mx-auto w-full max-w-[400px]">
-          <div className="mb-8 text-center lg:text-left">
+          <div className="mb-6 text-center lg:text-left">
             <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 lg:hidden">
               <Building2 className="h-6 w-6" />
             </div>
@@ -178,72 +178,78 @@ export default function DepartmentRegisterPage() {
 
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="John Doe"
-                          className="pl-9"
-                          {...field}
-                          disabled={isLoading}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2.5">
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <User className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            placeholder="John Doe"
+                            className="pl-9 h-9 text-sm"
+                            {...field}
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-[10px]" />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="name@university.edu"
-                          className="pl-9"
-                          {...field}
-                          disabled={isLoading}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            placeholder="name@company.com"
+                            className="pl-9 h-9 text-sm"
+                            {...field}
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-[10px]" />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
                 name="department"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="space-y-1">
                     <FormLabel>Department</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                       <FormControl>
-                        <SelectTrigger className="pl-9 relative">
-                           <Briefcase className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                           <SelectValue placeholder="Select your department" />
-                        </SelectTrigger>
+                        <div className="relative">
+                           <Briefcase className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground z-10" />
+                           <SelectTrigger className="pl-9 h-9 text-sm">
+                              <SelectValue placeholder="Select your department" />
+                           </SelectTrigger>
+                        </div>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="PLACEMENT">Placement</SelectItem>
                         <SelectItem value="OPERATIONS">Operations</SelectItem>
                         <SelectItem value="TRAINING">Training</SelectItem>
                         <SelectItem value="FINANCE">Finance</SelectItem>
+                        <SelectItem value="HR">HR Department</SelectItem>
+                        <SelectItem value="TECHNICAL_SUPPORT">Technical Support</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormMessage />
+                    <FormMessage className="text-[10px]" />
                   </FormItem>
                 )}
               />
@@ -252,14 +258,14 @@ export default function DepartmentRegisterPage() {
                 control={form.control}
                 name="password"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="space-y-1">
                     <FormLabel>Password</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Lock className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                         <Input
                           type={showPassword ? "text" : "password"}
-                          className="pl-9 pr-10"
+                          className="pl-9 pr-10 h-9 text-sm"
                           {...field}
                           disabled={isLoading}
                         />
@@ -271,14 +277,14 @@ export default function DepartmentRegisterPage() {
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? (
-                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
                           ) : (
-                            <Eye className="h-4 w-4 text-muted-foreground" />
+                            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                           )}
                         </Button>
                       </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-[10px]" />
                   </FormItem>
                 )}
               />
@@ -287,14 +293,14 @@ export default function DepartmentRegisterPage() {
                 control={form.control}
                 name="confirmPassword"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="space-y-1">
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Lock className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                         <Input
                           type={showConfirmPassword ? "text" : "password"}
-                          className="pl-9 pr-10"
+                          className="pl-9 pr-10 h-9 text-sm"
                           {...field}
                           disabled={isLoading}
                         />
@@ -306,21 +312,21 @@ export default function DepartmentRegisterPage() {
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         >
                           {showConfirmPassword ? (
-                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
                           ) : (
-                            <Eye className="h-4 w-4 text-muted-foreground" />
+                            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                           )}
                         </Button>
                       </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-[10px]" />
                   </FormItem>
                 )}
               />
 
               <Button 
                 type="submit" 
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white" 
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-10 mt-2" 
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -335,7 +341,7 @@ export default function DepartmentRegisterPage() {
             </form>
           </Form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link to="/department/login" className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline dark:text-indigo-400">
               Sign in

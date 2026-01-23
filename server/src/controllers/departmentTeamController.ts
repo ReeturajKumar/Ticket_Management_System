@@ -30,7 +30,7 @@ export const listTeamMembers = async (req: Request, res: Response): Promise<void
         const activeTickets = await Ticket.countDocuments({
           assignedTo: member._id,
           department: user.department,
-          status: { $in: [TicketStatus.ASSIGNED, TicketStatus.IN_PROGRESS, TicketStatus.WAITING_FOR_STUDENT] },
+          status: { $in: [TicketStatus.ASSIGNED, TicketStatus.IN_PROGRESS, TicketStatus.WAITING_FOR_USER] },
         });
 
         return {

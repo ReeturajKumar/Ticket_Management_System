@@ -76,7 +76,7 @@ export default function TeamMemberDetailPage() {
     const colors: Record<string, string> = {
       OPEN: "secondary",
       IN_PROGRESS: "default",
-      WAITING_FOR_STUDENT: "outline",
+      WAITING_FOR_USER: "outline",
       RESOLVED: "default",
       CLOSED: "secondary"
     }

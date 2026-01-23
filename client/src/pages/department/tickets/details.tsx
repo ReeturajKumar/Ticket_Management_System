@@ -140,7 +140,7 @@ export default function DepartmentTicketDetailsPage() {
                      {ticket.priority === 'CRITICAL' && <Badge variant="destructive">CRITICAL</Badge>}
                 </div>
                 <p className="text-muted-foreground flex items-center gap-4 mt-1">
-                   <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" /> {ticket.studentName || ticket.contactName || ticket.createdBy?.name || 'Student'}</span>
+                   <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" /> {ticket.userName || ticket.contactName || ticket.createdBy?.name || 'User'}</span>
                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(ticket.createdAt).toLocaleDateString()}</span>
                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {new Date(ticket.createdAt).toLocaleTimeString()}</span>
                 </p>
@@ -200,7 +200,7 @@ export default function DepartmentTicketDetailsPage() {
                         <CardHeader className="pb-3">
                             <CardTitle className="text-sm font-medium flex items-center gap-2">
                                 <FileIcon className="h-4 w-4 text-blue-500" />
-                                Student Attachments
+                                User Attachments
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -342,7 +342,7 @@ export default function DepartmentTicketDetailsPage() {
                                    </p>
                                )}
                                <p className="text-[10px] text-muted-foreground text-right">
-                                   Rated by {ticket.rating.ratedByName || 'Student'}
+                                   Rated by {ticket.rating.ratedByName || 'User'}
                                </p>
                           </CardContent>
                       </Card>

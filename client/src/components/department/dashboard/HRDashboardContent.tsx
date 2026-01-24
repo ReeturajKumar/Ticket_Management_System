@@ -9,8 +9,8 @@ interface HRDashboardContentProps {
 
 export function HRDashboardContent({ data, teamMembers }: HRDashboardContentProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-      <Card className="bg-gradient-to-br from-rose-50/50 to-white dark:from-rose-950/10 border-rose-100 dark:border-rose-900/30">
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-6">
+      <Card className="bg-linear-to-br from-rose-50/50 to-white dark:from-rose-950/10 border-rose-100 dark:border-rose-900/30">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium text-rose-900 dark:text-rose-100">Employee Onboarding</CardTitle>
           <div className="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-lg">
@@ -18,7 +18,7 @@ export function HRDashboardContent({ data, teamMembers }: HRDashboardContentProp
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{data?.onboarding?.active || 0} Active</div>
+          <div className="text-xl sm:text-2xl font-bold">{data?.onboarding?.active || 0} Active</div>
           <p className="text-xs text-muted-foreground mt-1">{data?.onboarding?.pendingChecks || 0} pending background checks</p>
           <div className="mt-4 space-y-2">
             <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-rose-600">
@@ -30,7 +30,7 @@ export function HRDashboardContent({ data, teamMembers }: HRDashboardContentProp
         </CardContent>
       </Card>
 
-      <Card className="bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 border-amber-100 dark:border-amber-900/30">
+      <Card className="bg-linear-to-br from-amber-50/50 to-white dark:from-amber-950/10 border-amber-100 dark:border-amber-900/30">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100">Staff Policies</CardTitle>
           <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
@@ -38,7 +38,7 @@ export function HRDashboardContent({ data, teamMembers }: HRDashboardContentProp
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{data?.policies?.complianceRate || 0}% Compliant</div>
+          <div className="text-xl sm:text-2xl font-bold">{data?.policies?.complianceRate || 0}% Compliant</div>
           <p className="text-xs text-muted-foreground mt-1">Annual handbook acknowledgement</p>
           <div className="mt-4 flex -space-x-2 overflow-hidden">
             {teamMembers?.slice(0, 5).map((member) => (
@@ -55,7 +55,7 @@ export function HRDashboardContent({ data, teamMembers }: HRDashboardContentProp
         </CardContent>
       </Card>
 
-      <Card className="bg-gradient-to-br from-emerald-50/50 to-white dark:from-emerald-950/10 border-emerald-100 dark:border-emerald-900/30">
+      <Card className="bg-linear-to-br from-emerald-50/50 to-white dark:from-emerald-950/10 border-emerald-100 dark:border-emerald-900/30">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium text-emerald-900 dark:text-emerald-100">Staff Wellness</CardTitle>
           <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">

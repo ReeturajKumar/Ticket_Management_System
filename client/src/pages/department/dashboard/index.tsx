@@ -192,24 +192,24 @@ export default function DepartmentDashboard() {
 
   return (
     <DepartmentLayout>
-      <div className="flex-1 p-8 pt-6 space-y-8">
-        <div className="flex items-center justify-between space-y-2">
+      <div className="flex-1 p-4 sm:p-6 lg:p-8 pt-4 sm:pt-6 space-y-6 sm:space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-2">
            <div>
-            <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h2>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
               Welcome back, {user?.name}. Here's what's happening in the {user?.department} department.
             </p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-2">
             {/* Real-time connection indicator */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-sm">
+            <div className="flex items-center justify-center sm:justify-start gap-2 px-3 py-1.5 rounded-full bg-muted text-sm">
               <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
               <span className="text-muted-foreground">
                 {isConnected ? 'Live' : 'Offline'}
               </span>
             </div>
-            <Link to="/department/tickets">
-              <Button>View All Tickets</Button>
+            <Link to="/department/tickets" className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto">View All Tickets</Button>
             </Link>
           </div>
         </div>
@@ -225,7 +225,7 @@ export default function DepartmentDashboard() {
             <TabsContent value="overview" className="space-y-4">
               {user?.department === 'HR' && <HRDashboardContent data={data?.specializedMetrics} teamMembers={teamPerformance} />}
               {user?.department === 'TECHNICAL_SUPPORT' && <TechSupportDashboardContent data={data?.specializedMetrics} />}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
@@ -278,8 +278,8 @@ export default function DepartmentDashboard() {
                 </Card>
               </div>
               
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="col-span-4">
+              <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+                <Card className="lg:col-span-4">
                   <CardHeader>
                     <CardTitle>Ticket Status Distribution</CardTitle>
                     <CardDescription>
@@ -290,7 +290,7 @@ export default function DepartmentDashboard() {
                     {statusChartData.length > 0 ? (
                       <ChartErrorBoundary>
                         <div className="space-y-4">
-                          <div className="h-[250px]">
+                          <div className="h-[200px] sm:h-[250px]">
                             <ResponsiveContainer width="100%" height="100%">
                               <PieChart>
                                 <Pie
@@ -299,7 +299,7 @@ export default function DepartmentDashboard() {
                                   cy="50%"
                                   labelLine={false}
                                   label={({ percent }) => `${((percent || 0) * 100).toFixed(0)}%`}
-                                  outerRadius={80}
+                                  outerRadius={70}
                                   fill="#8884d8"
                                   dataKey="value"
                                 >
@@ -311,7 +311,7 @@ export default function DepartmentDashboard() {
                               </PieChart>
                             </ResponsiveContainer>
                           </div>
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {statusChartData.map((item) => (
                               <div key={item.name} className="flex items-center gap-2">
                                 <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
@@ -329,14 +329,14 @@ export default function DepartmentDashboard() {
                     )}
                   </CardContent>
                 </Card>
-                <Card className="col-span-3">
+                <Card className="lg:col-span-3">
                   <CardHeader>
                     <CardTitle>Priority Breakdown</CardTitle>
                     <CardDescription>
                       Tickets by priority level
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="h-[300px]">
+                  <CardContent className="h-[250px] sm:h-[300px]">
                     {priorityChartData.length > 0 ? (
                       <ChartErrorBoundary message="Failed to load priority chart">
                         <ResponsiveContainer width="100%" height="100%">
@@ -368,7 +368,7 @@ export default function DepartmentDashboard() {
                   <CardDescription>Key performance indicators for your department</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-6 md:grid-cols-4">
+                  <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                     {/* Team Performance Score */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -376,7 +376,7 @@ export default function DepartmentDashboard() {
                         <Zap className="h-4 w-4 text-yellow-500" />
                       </div>
                       <div className="space-y-1">
-                        <div className="text-3xl font-bold text-indigo-600">
+                        <div className="text-2xl sm:text-3xl font-bold text-indigo-600">
                           {Math.round((data.summary?.resolvedTickets || 0) / Math.max(data.summary?.totalTickets || 1, 1) * 100)}%
                         </div>
                         <Progress value={(data.summary?.resolvedTickets || 0) / Math.max(data.summary?.totalTickets || 1, 1) * 100} className="h-2" />
@@ -391,7 +391,7 @@ export default function DepartmentDashboard() {
                         <Clock className="h-4 w-4 text-blue-500" />
                       </div>
                       <div className="space-y-1">
-                        <div className="text-3xl font-bold text-blue-600">
+                        <div className="text-2xl sm:text-3xl font-bold text-blue-600">
                           {data.analytics?.avgResolutionTime || '0h'}
                         </div>
                         {/* Calculate progress assuming 72h (3 days) target. Lower is better. */}
@@ -410,7 +410,7 @@ export default function DepartmentDashboard() {
                         <Activity className="h-4 w-4 text-green-500" />
                       </div>
                       <div className="space-y-1">
-                        <div className="text-3xl font-bold text-green-600">
+                        <div className="text-2xl sm:text-3xl font-bold text-green-600">
                           {(data.summary?.openTickets || 0) + (data.summary?.inProgressTickets || 0)}
                         </div>
                         <Progress 
@@ -428,7 +428,7 @@ export default function DepartmentDashboard() {
                         <CheckCircle className="h-4 w-4 text-purple-500" />
                       </div>
                       <div className="space-y-1">
-                        <div className="text-3xl font-bold text-purple-600">
+                        <div className="text-2xl sm:text-3xl font-bold text-purple-600">
                           {data.analytics?.slaCompliance || '0%'}
                         </div>
                         <Progress value={parseInt(data.analytics?.slaCompliance) || 0} className="h-2" />
@@ -440,14 +440,14 @@ export default function DepartmentDashboard() {
               </Card>
 
               {/* Ticket Trends Chart */}
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
                 <Card>
                   <CardHeader>
                     <CardTitle>Ticket Trends</CardTitle>
                     <CardDescription>Created vs Resolved (Last 7 days)</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-[300px]">
+                    <div className="h-[250px] sm:h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={data.analytics?.trends || []}>
                           <defs>
@@ -523,13 +523,13 @@ export default function DepartmentDashboard() {
               </div>
 
               {/* Quick Stats Grid */}
-              <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
                 <Card className="border-l-4 border-l-blue-500">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium text-muted-foreground">Today</p>
-                        <p className="text-2xl font-bold">
+                        <p className="text-xl sm:text-2xl font-bold">
                           {data.analytics?.trends?.find((t: any) => t.date === new Date().toISOString().split('T')[0])?.created || 0}
                         </p>
                       </div>
@@ -543,7 +543,7 @@ export default function DepartmentDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium text-muted-foreground">Critical</p>
-                        <p className="text-2xl font-bold">{data.byPriority?.CRITICAL || 0}</p>
+                        <p className="text-xl sm:text-2xl font-bold">{data.byPriority?.CRITICAL || 0}</p>
                       </div>
                       <AlertCircle className="h-8 w-8 text-red-500 opacity-50" />
                     </div>
@@ -555,7 +555,7 @@ export default function DepartmentDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium text-muted-foreground">Unassigned</p>
-                        <p className="text-2xl font-bold">{data.summary?.unassignedTickets || 0}</p>
+                        <p className="text-xl sm:text-2xl font-bold">{data.summary?.unassignedTickets || 0}</p>
                       </div>
                       <AlertCircle className="h-8 w-8 text-orange-500 opacity-50" />
                     </div>
@@ -567,7 +567,7 @@ export default function DepartmentDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium text-muted-foreground">Team Size</p>
-                        <p className="text-2xl font-bold">{teamPerformance?.length || 0}</p>
+                        <p className="text-xl sm:text-2xl font-bold">{teamPerformance?.length || 0}</p>
                       </div>
                       <Users className="h-8 w-8 text-purple-500 opacity-50" />
                     </div>
@@ -579,7 +579,7 @@ export default function DepartmentDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium text-muted-foreground">Avg Load</p>
-                        <p className="text-2xl font-bold">
+                        <p className="text-xl sm:text-2xl font-bold">
                           {teamPerformance?.length ? Math.round(((data.summary?.inProgressTickets || 0) + (data.summary?.openTickets || 0)) / teamPerformance.length * 10) / 10 : 0}
                         </p>
                       </div>
@@ -593,7 +593,7 @@ export default function DepartmentDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium text-muted-foreground">Completion</p>
-                        <p className="text-2xl font-bold">
+                        <p className="text-xl sm:text-2xl font-bold">
                            {Math.round(((data.summary?.resolvedTickets || 0) + (data.summary?.closedTickets || 0)) / Math.max(data.summary?.totalTickets || 1, 1) * 100)}%
                         </p>
                       </div>
@@ -661,7 +661,7 @@ export default function DepartmentDashboard() {
                 </div>
 
                 {/* 2. Enhanced KPI Cards Row */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                   <Card className="hover:shadow-md transition-all border-l-4 border-l-indigo-500 overflow-hidden relative">
                     <div className="absolute top-0 right-0 p-3 opacity-10">
                       <TrendingUp className="h-16 w-16 text-indigo-500" />
@@ -904,7 +904,7 @@ export default function DepartmentDashboard() {
                         <CardDescription>Ticket volume distribution across the last 7 days</CardDescription>
                     </CardHeader>
                     <CardContent>
-                         <div className="h-[200px]">
+                         <div className="h-[180px] sm:h-[200px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={data.analytics?.trends || []}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -933,19 +933,19 @@ export default function DepartmentDashboard() {
               {teamPerformance && teamPerformance.length > 0 ? (
                 <>
                   {/* 1. Advanced Performance Charts */}
-                  <div className="grid gap-6 md:grid-cols-3">
+                  <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
                     {/* Main Comparison Chart (2 cols) */}
-                    <Card className="md:col-span-2 shadow-sm border-t-4 border-t-indigo-500">
+                    <Card className="lg:col-span-2 shadow-sm border-t-4 border-t-indigo-500">
                       <CardHeader>
                         <CardTitle>Team Output & Quality</CardTitle>
                         <CardDescription>Comparison of resolved tickets vs efficiency score</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-[300px]">
+                        <div className="h-[250px] sm:h-[300px]">
                           <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={teamPerformance}>
                               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                              <XAxis dataKey="name" scale="point" padding={{ left: 10, right: 10 }} tick={{fontSize: 12}} />
+                              <XAxis dataKey="name" scale="point" padding={{ left: 10, right: 10 }} tick={{fontSize: 10}} angle={-45} textAnchor="end" height={60} />
                               <YAxis yAxisId="left" orientation="left" stroke="#6b7280" fontSize={12} />
                               <YAxis yAxisId="right" orientation="right" stroke="#8b5cf6" fontSize={12} unit="%" />
                               <Tooltip 
@@ -968,7 +968,7 @@ export default function DepartmentDashboard() {
                          <CardDescription>Active tickets distribution</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-[300px] flex items-center justify-center">
+                        <div className="h-[250px] sm:h-[300px] flex items-center justify-center">
                           {teamPerformance.some((m: any) => m.activeTickets > 0) ? (
                             <ResponsiveContainer width="100%" height="100%">
                                <PieChart>
@@ -979,7 +979,7 @@ export default function DepartmentDashboard() {
                                     cx="50%"
                                     cy="50%"
                                     innerRadius={60}
-                                    outerRadius={80}
+                                    outerRadius={70}
                                     paddingAngle={5}
                                   >
                                     {teamPerformance.map((_: any, index: number) => (
@@ -1143,7 +1143,7 @@ export default function DepartmentDashboard() {
            <div className="space-y-4">
               {user?.department === 'HR' && <HRDashboardContent data={data?.specializedMetrics} teamMembers={teamPerformance} />}
               {user?.department === 'TECHNICAL_SUPPORT' && <TechSupportDashboardContent data={data?.specializedMetrics} />}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">My Assigned Tickets</CardTitle>
@@ -1194,7 +1194,7 @@ export default function DepartmentDashboard() {
                 </Card>
               </div>
               
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
                 {/* Status Distribution Chart */}
                 <Card>
                   <CardHeader>
@@ -1202,7 +1202,7 @@ export default function DepartmentDashboard() {
                     <CardDescription>Breakdown of your assigned tickets by status</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-[250px]">
+                    <div className="h-[200px] sm:h-[250px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
@@ -1216,7 +1216,7 @@ export default function DepartmentDashboard() {
                             cy="50%"
                             labelLine={false}
                             label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                            outerRadius={80}
+                            outerRadius={70}
                             fill="#8884d8"
                             dataKey="value"
                           >
@@ -1296,7 +1296,7 @@ export default function DepartmentDashboard() {
                 </Card>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
                 {/* Recent Tickets */}
                 <Card>
                   <CardHeader>
@@ -1457,7 +1457,7 @@ export default function DepartmentDashboard() {
 
               {/* Performance Analytics */}
               {staffPerformance && (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
                   {/* Weekly & Monthly Performance */}
                   <Card>
                     <CardHeader>
@@ -1465,7 +1465,7 @@ export default function DepartmentDashboard() {
                       <CardDescription>Your weekly and monthly ticket statistics</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="h-[300px]">
+                      <div className="h-[250px] sm:h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={[
                             {
@@ -1499,7 +1499,7 @@ export default function DepartmentDashboard() {
                       <CardDescription>Distribution of your assigned tickets</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="h-[300px]">
+                      <div className="h-[250px] sm:h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart 
                             data={[

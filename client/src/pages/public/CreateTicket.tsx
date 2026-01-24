@@ -156,7 +156,7 @@ export default function CreatePublicTicketPage() {
                   Your support request has been successfully submitted.
                 </p>
               </div>
-              <div className="rounded-lg bg-white p-6 shadow-sm border border-slate-200 w-full text-left space-y-4">
+              <div className="rounded-lg bg-transparent p-6 border border-slate-200 w-full text-left space-y-4">
                 <p className="text-sm text-slate-500">
                   We have sent a confirmation email to the address you provided. Please check your inbox (and spam folder) for your Ticket ID and updates.
                 </p>
@@ -188,7 +188,7 @@ export default function CreatePublicTicketPage() {
                  </div>
               )}
 
-              <div className="rounded-xl bg-white p-5 shadow-sm border border-slate-100">
+              <div className="rounded-xl bg-transparent p-5 border border-slate-100">
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     

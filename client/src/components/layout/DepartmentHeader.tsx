@@ -11,9 +11,9 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { getCurrentDepartmentUser, logoutDepartmentUser } from "@/services/departmentAuthService"
+import { NotificationBell } from "@/components/notifications"
 import {
   Building2,
-  Bell,
   LogOut,
   Menu,
 } from "lucide-react"
@@ -68,14 +68,8 @@ export function DepartmentHeader({ onMenuClick }: DepartmentHeaderProps) {
 
         {/* Right Section */}
         <div className="flex items-center gap-2">
-          {/* Notifications - Placeholder for now */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative cursor-pointer"
-          >
-            <Bell className="size-5" />
-          </Button>
+          {/* Notifications */}
+          <NotificationBell />
 
           {/* User Menu */}
           <DropdownMenu>

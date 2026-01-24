@@ -1,10 +1,21 @@
 import { Request, Response } from 'express';
 import User from '../models/User';
-import { hashPassword } from '../utils/password';
-import { generateTokens, verifyRefreshToken } from '../utils/jwt';
+import { hashPassword, comparePassword } from '../utils/password';
+import { generateTokens, verifyRefreshToken, getTokenExpiry } from '../utils/jwt';
 import { sendOTPEmail, sendPasswordResetEmail } from '../utils/email';
 import { UserRole, Department } from '../constants';
-import AppError from '../utils/AppError';
+import AppError, { ErrorCode } from '../utils/AppError';
+import { generateOTP, getOTPExpiry, getOTPExpiryFormatted, OTP_CONFIG } from '../middleware/rateLimiter';
+import {
+  createSession,
+  addSessionToUser,
+  findSessionByToken,
+  updateSession,
+  removeSession,
+  removeAllSessions,
+  getActiveSessions as getUserActiveSessions,
+  cleanExpiredSessions,
+} from '../utils/session';
 
 /**
  * Register Department User
@@ -16,24 +27,33 @@ export const registerDepartmentUser = async (req: Request, res: Response): Promi
 
     // Validate required fields
     if (!name || !email || !password || !department) {
-      throw new AppError('Please provide name, email, password, and department', 400);
+      throw new AppError({
+        code: ErrorCode.MISSING_REQUIRED_FIELD,
+        message: 'Please provide name, email, password, and department',
+      }, 400);
     }
 
     // Validate department
     const validDepartments = Object.values(Department);
     if (!validDepartments.includes(department)) {
-      throw new AppError('Invalid department', 400);
+      throw new AppError({
+        code: ErrorCode.INVALID_DEPARTMENT,
+        message: 'Invalid department',
+      }, 400);
     }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      throw new AppError('User with this email already exists', 409);
+      throw new AppError({
+        code: ErrorCode.EMAIL_ALREADY_EXISTS,
+        message: 'User with this email already exists',
+      }, 409);
     }
 
-    // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
+    // Generate OTP with extended expiry (5 minutes)
+    const otp = generateOTP();
+    const otpExpiry = getOTPExpiry();
 
     // Hash password
     const hashedPassword = await hashPassword(password);
@@ -51,6 +71,7 @@ export const registerDepartmentUser = async (req: Request, res: Response): Promi
       isVerified: false,
       approvalStatus: 'PENDING',
       isApproved: false,
+      sessions: [],
     });
 
     // Send OTP email
@@ -63,7 +84,9 @@ export const registerDepartmentUser = async (req: Request, res: Response): Promi
         email: user.email,
         department: user.department,
         approvalStatus: user.approvalStatus,
-        otpExpiresIn: '2 minutes',
+        otpExpiresIn: getOTPExpiryFormatted(),
+        otpExpiresAt: otpExpiry.toISOString(),
+        timeRemainingSeconds: OTP_CONFIG.EXPIRY_MS / 1000,
       },
     });
   } catch (error: any) {
@@ -80,38 +103,55 @@ export const verifyDepartmentOTP = async (req: Request, res: Response): Promise<
     const { email, otp } = req.body;
 
     if (!email || !otp) {
-      throw new AppError('Please provide email and OTP', 400);
+      throw new AppError({
+        code: ErrorCode.MISSING_REQUIRED_FIELD,
+        message: 'Please provide email and OTP',
+      }, 400);
     }
 
     // Find user
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      throw new AppError('User not found', 404);
+      throw AppError.notFound('User');
     }
 
     // Check if user is department user
     if (user.role !== UserRole.DEPARTMENT_USER) {
-      throw new AppError('Invalid verification endpoint. Please use the correct verification page.', 403);
+      throw AppError.forbidden('Invalid verification endpoint. Please use the correct verification page.');
     }
 
     // Check if already verified
     if (user.isVerified) {
-      throw new AppError('Email is already verified', 400);
+      throw new AppError({
+        code: ErrorCode.VALIDATION_FAILED,
+        message: 'Email is already verified',
+      }, 400);
     }
 
     // Check if OTP exists
     if (!user.verificationOTP) {
-      throw new AppError('No OTP found. Please request a new one.', 400);
+      throw new AppError({
+        code: ErrorCode.OTP_INVALID,
+        message: 'No OTP found. Please request a new one.',
+      }, 400);
     }
 
     // Check if OTP is expired
     if (!user.otpExpiry || user.otpExpiry < new Date()) {
-      throw new AppError('OTP has expired. Please request a new one.', 400);
+      throw new AppError({
+        code: ErrorCode.OTP_EXPIRED,
+        message: 'OTP has expired. Please request a new one.',
+        userMessage: 'Your verification code has expired. Please request a new one.',
+      }, 400);
     }
 
     // Verify OTP
     if (user.verificationOTP !== otp) {
-      throw new AppError('Invalid OTP', 400);
+      throw new AppError({
+        code: ErrorCode.OTP_INVALID,
+        message: 'Invalid OTP',
+        userMessage: 'The verification code you entered is incorrect.',
+      }, 400);
     }
 
     // Mark as verified
@@ -143,28 +183,34 @@ export const resendDepartmentOTP = async (req: Request, res: Response): Promise<
     const { email } = req.body;
 
     if (!email) {
-      throw new AppError('Please provide email', 400);
+      throw new AppError({
+        code: ErrorCode.MISSING_REQUIRED_FIELD,
+        message: 'Please provide email',
+      }, 400);
     }
 
     // Find user
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      throw new AppError('User not found', 404);
+      throw AppError.notFound('User');
     }
 
     // Check if user is department user
     if (user.role !== UserRole.DEPARTMENT_USER) {
-      throw new AppError('Invalid endpoint. Please use the correct page.', 403);
+      throw AppError.forbidden('Invalid endpoint. Please use the correct page.');
     }
 
     // Check if already verified
     if (user.isVerified) {
-      throw new AppError('Email is already verified', 400);
+      throw new AppError({
+        code: ErrorCode.VALIDATION_FAILED,
+        message: 'Email is already verified',
+      }, 400);
     }
 
-    // Generate new OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
+    // Generate new OTP with extended expiry (5 minutes)
+    const otp = generateOTP();
+    const otpExpiry = getOTPExpiry();
 
     user.verificationOTP = otp;
     user.otpExpiry = otpExpiry;
@@ -178,7 +224,9 @@ export const resendDepartmentOTP = async (req: Request, res: Response): Promise<
       message: 'OTP sent successfully',
       data: {
         email: user.email,
-        otpExpiresIn: '2 minutes',
+        otpExpiresIn: getOTPExpiryFormatted(),
+        otpExpiresAt: otpExpiry.toISOString(),
+        timeRemainingSeconds: OTP_CONFIG.EXPIRY_MS / 1000,
       },
     });
   } catch (error: any) {
@@ -189,60 +237,99 @@ export const resendDepartmentOTP = async (req: Request, res: Response): Promise<
 /**
  * Login Department User
  * POST /api/v1/department-auth/login
+ * 
+ * Supports "Remember Me" functionality:
+ * - rememberMe: true -> 30 day session
+ * - rememberMe: false (default) -> 1 day session
  */
 export const loginDepartmentUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe = false } = req.body;
 
     // Validate required fields
     if (!email || !password) {
-      throw new AppError('Please provide email and password', 400);
+      throw new AppError({
+        code: ErrorCode.MISSING_REQUIRED_FIELD,
+        message: 'Please provide email and password',
+      }, 400);
     }
 
     // Find user by email
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      throw new AppError('Invalid email or password', 401);
+      throw new AppError({
+        code: ErrorCode.INVALID_CREDENTIALS,
+        message: 'Invalid email or password',
+      }, 401);
     }
 
     // Check if user is department user
     if (user.role !== UserRole.DEPARTMENT_USER) {
       console.log('Login failed: Role mismatch', { userRole: user.role, expected: UserRole.DEPARTMENT_USER });
-      throw new AppError(`Invalid login endpoint. Role mistmatch. Got: '${user.role}', Expected: '${UserRole.DEPARTMENT_USER}'`, 403);
+      throw AppError.forbidden(`Invalid login endpoint. Role mismatch.`);
     }
 
     // Check if email is verified
     if (!user.isVerified) {
-      throw new AppError('Please verify your email before logging in. Check your inbox for the OTP.', 403);
+      throw new AppError({
+        code: ErrorCode.ACCOUNT_NOT_VERIFIED,
+        message: 'Please verify your email before logging in.',
+        userMessage: 'Please verify your email first. Check your inbox for the verification code.',
+      }, 403);
     }
 
     // Check approval status
     if (user.approvalStatus === 'PENDING') {
-      throw new AppError('Your account is pending admin approval. Please wait for approval.', 403);
+      throw new AppError({
+        code: ErrorCode.ACCOUNT_NOT_APPROVED,
+        message: 'Your account is pending admin approval.',
+        userMessage: 'Your account is awaiting approval. Please wait for admin confirmation.',
+      }, 403);
     }
 
     if (user.approvalStatus === 'REJECTED') {
       const reason = user.rejectionReason || 'No reason provided';
-      throw new AppError(`Your registration was rejected. Reason: ${reason}`, 403);
+      throw new AppError({
+        code: ErrorCode.ACCOUNT_REJECTED,
+        message: `Your registration was rejected. Reason: ${reason}`,
+        userMessage: `Your registration was not approved. Reason: ${reason}`,
+      }, 403);
     }
 
-    // Compare passwords
-    const bcrypt = require('bcryptjs');
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    // Compare passwords using utility function
+    const isPasswordValid = await comparePassword(password, user.password);
     if (!isPasswordValid) {
-      throw new AppError('Invalid email or password', 401);
+      throw new AppError({
+        code: ErrorCode.INVALID_CREDENTIALS,
+        message: 'Invalid email or password',
+      }, 401);
     }
 
-    // Generate tokens
-    const { accessToken, refreshToken } = generateTokens({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    });
+    // Clean expired sessions
+    cleanExpiredSessions(user);
 
-    // Save refresh token to database
-    user.refreshToken = refreshToken;
+    // Generate tokens with Remember Me option
+    const { accessToken, refreshToken } = generateTokens(
+      {
+        userId: user._id.toString(),
+        email: user.email,
+        role: user.role,
+      },
+      { rememberMe }
+    );
+
+    // Create and add session with device info
+    const session = createSession(refreshToken, rememberMe, {
+      userAgent: req.headers['user-agent'],
+      ip: req.ip || req.socket.remoteAddress,
+    });
+    
+    addSessionToUser(user, session);
     await user.save();
+
+    // Get token expiry for frontend
+    const accessTokenExpiry = getTokenExpiry(accessToken);
+    const refreshTokenExpiry = getTokenExpiry(refreshToken);
 
     res.status(200).json({
       success: true,
@@ -258,6 +345,12 @@ export const loginDepartmentUser = async (req: Request, res: Response): Promise<
         },
         accessToken,
         refreshToken,
+        sessionId: session.sessionId,
+        expiresAt: {
+          accessToken: accessTokenExpiry?.toISOString(),
+          refreshToken: refreshTokenExpiry?.toISOString(),
+        },
+        rememberMe,
       },
     });
   } catch (error: any) {
@@ -274,7 +367,10 @@ export const refreshDepartmentToken = async (req: Request, res: Response): Promi
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      throw new AppError('Please provide refresh token', 400);
+      throw new AppError({
+        code: ErrorCode.MISSING_REQUIRED_FIELD,
+        message: 'Please provide refresh token',
+      }, 400);
     }
 
     // Verify refresh token signature and expiry
@@ -283,41 +379,120 @@ export const refreshDepartmentToken = async (req: Request, res: Response): Promi
       decoded = verifyRefreshToken(refreshToken);
     } catch (error: any) {
       console.error('Token verification failed:', error.message);
-      throw new AppError('Invalid or expired refresh token', 401);
+      throw new AppError({
+        code: ErrorCode.TOKEN_EXPIRED,
+        message: 'Invalid or expired refresh token',
+        userMessage: 'Your session has expired. Please log in again.',
+      }, 401);
     }
 
     // Find user
     const user = await User.findById(decoded.userId);
     if (!user) {
       console.error('User not found for userId:', decoded.userId);
-      throw new AppError('User not found', 401);
+      throw new AppError({
+        code: ErrorCode.USER_NOT_FOUND,
+        message: 'User not found',
+      }, 401);
     }
 
     // Check if user is department user
     if (user.role !== UserRole.DEPARTMENT_USER) {
-      throw new AppError('Invalid refresh endpoint. Please use the correct endpoint.', 403);
+      throw AppError.forbidden('Invalid refresh endpoint. Please use the correct endpoint.');
     }
 
-    // Verify refresh token matches the one in database
-    if (user.refreshToken !== refreshToken) {
-      console.error('Token mismatch!');
-      console.error('Sent token length:', refreshToken.length);
-      console.error('DB token length:', user.refreshToken?.length);
-      console.error('Sent token (last 50 chars):', refreshToken.substring(refreshToken.length - 50));
-      console.error('DB token (last 50 chars):', user.refreshToken?.substring(user.refreshToken.length - 50));
-      throw new AppError('Invalid refresh token. This token has been replaced. Please login again.', 401);
+    // Find session by refresh token
+    const session = findSessionByToken(user, refreshToken);
+    
+    if (!session) {
+      // Fallback to legacy token check
+      if (user.refreshToken !== refreshToken) {
+        console.error('Token mismatch - no matching session found');
+        throw new AppError({
+          code: ErrorCode.TOKEN_INVALID,
+          message: 'Invalid refresh token. Please login again.',
+          userMessage: 'Your session is no longer valid. Please log in again.',
+        }, 401);
+      }
     }
 
-    // Generate new tokens
-    const tokens = generateTokens({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    });
+    // Determine if this was a "remember me" session
+    const rememberMe = session?.rememberMe ?? false;
 
-    // Update refresh token in database
-    user.refreshToken = tokens.refreshToken;
-    await user.save();
+    // Generate new tokens with same remember me setting
+    const tokens = generateTokens(
+      {
+        userId: user._id.toString(),
+        email: user.email,
+        role: user.role,
+      },
+      { 
+        rememberMe,
+        sessionId: session?.sessionId 
+      }
+    );
+
+    // Update session or legacy token using atomic operation to handle race conditions
+    try {
+      if (session) {
+        // Atomic update for session-based refresh
+        const updateResult = await User.findOneAndUpdate(
+          { 
+            _id: user._id,
+            'sessions.sessionId': session.sessionId,
+          },
+          {
+            $set: {
+              'sessions.$.refreshToken': tokens.refreshToken,
+              'sessions.$.lastActive': new Date(),
+            },
+          },
+          { new: true }
+        );
+
+        if (!updateResult) {
+          throw new AppError({
+            code: ErrorCode.TOKEN_INVALID,
+            message: 'Session no longer valid. Please login again.',
+            userMessage: 'Your session has changed. Please log in again.',
+          }, 401);
+        }
+      } else {
+        // Atomic update for legacy token refresh
+        const updateResult = await User.findOneAndUpdate(
+          { 
+            _id: user._id,
+            refreshToken: refreshToken, // Ensure token hasn't changed
+          },
+          {
+            $set: { refreshToken: tokens.refreshToken },
+          },
+          { new: true }
+        );
+
+        if (!updateResult) {
+          throw new AppError({
+            code: ErrorCode.TOKEN_INVALID,
+            message: 'Token already refreshed. Please use the new token.',
+            userMessage: 'Your session was already refreshed. Please try again.',
+          }, 401);
+        }
+      }
+    } catch (error: any) {
+      // Handle race condition - token was already refreshed by another request
+      if (error.name === 'VersionError' || error.code === ErrorCode.TOKEN_INVALID) {
+        throw new AppError({
+          code: ErrorCode.TOKEN_INVALID,
+          message: 'Token refresh conflict. Please retry.',
+          userMessage: 'Please try again.',
+        }, 409);
+      }
+      throw error;
+    }
+
+    // Get token expiry for frontend
+    const accessTokenExpiry = getTokenExpiry(tokens.accessToken);
+    const refreshTokenExpiry = getTokenExpiry(tokens.refreshToken);
 
     console.log('Token refreshed successfully for department user:', user.email);
 
@@ -327,6 +502,11 @@ export const refreshDepartmentToken = async (req: Request, res: Response): Promi
       data: {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
+        sessionId: session?.sessionId,
+        expiresAt: {
+          accessToken: accessTokenExpiry?.toISOString(),
+          refreshToken: refreshTokenExpiry?.toISOString(),
+        },
       },
     });
   } catch (error: any) {
@@ -386,29 +566,137 @@ export const getRegistrationStatus = async (req: Request, res: Response): Promis
 /**
  * Logout Department User
  * POST /api/v1/department-auth/logout
+ * 
+ * Supports:
+ * - Logout from current session (default)
+ * - Logout from specific session by sessionId
+ * - Logout from all devices (allDevices: true)
  */
 export const logoutDepartmentUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user!.userId;
+    const { sessionId, allDevices = false } = req.body;
 
     // Find user
     const user = await User.findById(userId);
     if (!user) {
-      throw new AppError('User not found', 404);
+      throw AppError.notFound('User');
     }
 
     // Check if user is department user
     if (user.role !== UserRole.DEPARTMENT_USER) {
-      throw new AppError('Invalid logout endpoint. Please use the correct endpoint.', 403);
+      throw AppError.forbidden('Invalid logout endpoint. Please use the correct endpoint.');
     }
 
-    // Clear refresh token
-    user.refreshToken = null;
+    let sessionsRemoved = 0;
+
+    if (allDevices) {
+      // Logout from all devices
+      sessionsRemoved = removeAllSessions(user);
+    } else if (sessionId) {
+      // Logout from specific session
+      const removed = removeSession(user, sessionId);
+      sessionsRemoved = removed ? 1 : 0;
+    } else {
+      // Logout current session (clear legacy token)
+      user.refreshToken = null;
+      sessionsRemoved = 1;
+    }
+
     await user.save();
 
     res.status(200).json({
       success: true,
-      message: 'Logged out successfully',
+      message: allDevices 
+        ? `Logged out from all devices (${sessionsRemoved} session${sessionsRemoved !== 1 ? 's' : ''})` 
+        : 'Logged out successfully',
+      data: {
+        sessionsRemoved,
+      },
+    });
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+/**
+ * Get Active Sessions
+ * GET /api/v1/department-auth/sessions
+ */
+export const getActiveSessions = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const currentSessionId = req.body.sessionId; // Optional - to mark current session
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      throw AppError.notFound('User');
+    }
+
+    // Check if user is department user
+    if (user.role !== UserRole.DEPARTMENT_USER) {
+      throw AppError.forbidden('Invalid endpoint.');
+    }
+
+    // Clean expired sessions first
+    cleanExpiredSessions(user);
+    await user.save();
+
+    // Get active sessions
+    const sessions = getUserActiveSessions(user);
+
+    // Mark current session if sessionId provided
+    if (currentSessionId) {
+      sessions.forEach((session: any) => {
+        session.isCurrent = session.sessionId === currentSessionId;
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        sessions,
+        count: sessions.length,
+      },
+    });
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+/**
+ * Revoke a specific session
+ * DELETE /api/v1/department-auth/sessions/:sessionId
+ */
+export const revokeSession = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const { sessionId } = req.params;
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      throw AppError.notFound('User');
+    }
+
+    // Check if user is department user
+    if (user.role !== UserRole.DEPARTMENT_USER) {
+      throw AppError.forbidden('Invalid endpoint.');
+    }
+
+    // Remove session
+    const removed = removeSession(user, sessionId as string);
+    
+    if (!removed) {
+      throw AppError.notFound('Session');
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Session revoked successfully',
     });
   } catch (error: any) {
     throw error;
@@ -534,9 +822,8 @@ export const changePasswordDepartment = async (req: Request, res: Response): Pro
       throw new AppError('Invalid endpoint. Please use the correct endpoint.', 403);
     }
 
-    // Verify current password
-    const bcrypt = require('bcryptjs');
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    // Verify current password using utility function
+    const isPasswordValid = await comparePassword(currentPassword, user.password);
     if (!isPasswordValid) {
       throw new AppError('Current password is incorrect', 401);
     }

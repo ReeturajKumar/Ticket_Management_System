@@ -6,6 +6,7 @@ import 'react-toastify/dist/ReactToastify.css'
 
 import { cn } from "@/lib/utils"
 import { DepartmentSidebar } from "./DepartmentSidebar"
+import { useNotificationSocket } from "@/hooks/useNotificationSocket"
 
 interface DepartmentLayoutProps {
   children: React.ReactNode
@@ -13,6 +14,10 @@ interface DepartmentLayoutProps {
 
 export function DepartmentLayout({ children }: DepartmentLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
+  // Initialize socket-to-notification bridge
+  // This listens to socket events and adds them to the notification store
+  useNotificationSocket()
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">

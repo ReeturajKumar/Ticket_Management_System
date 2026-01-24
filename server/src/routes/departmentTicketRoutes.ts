@@ -6,6 +6,7 @@ import {
   updateTicketStatus,
   addInternalNote,
   changeTicketPriority,
+  searchTickets,
 } from '../controllers/departmentTicketController';
 import { bulkAssignTickets, bulkUpdateStatus } from '../controllers/bulkOperationsController';
 import { authenticate, requireDepartmentHead } from '../middleware/auth';
@@ -23,7 +24,11 @@ router.post('/bulk-assign', bulkAssignTickets);
 // POST /api/v1/department/tickets/bulk-status - Bulk update status
 router.post('/bulk-status', bulkUpdateStatus);
 
+// GET /api/v1/department/tickets/search - Search tickets (must be before /:id)
+router.get('/search', searchTickets);
+
 // GET /api/v1/department/tickets - List all department tickets
+// Supports filters: status, priority, assignedTo, startDate, endDate, resolvedStartDate, resolvedEndDate
 router.get('/', listDepartmentTickets);
 
 // GET /api/v1/department/tickets/:id - Get ticket details

@@ -3,6 +3,8 @@ import Ticket from '../models/Ticket';
 import { Department, Priority, TicketStatus, PUBLIC_DEPARTMENTS } from '../constants';
 import { sendTicketConfirmationEmail } from '../utils/email';
 import AppError from '../utils/AppError';
+import { invalidateDepartmentCache, cacheGet, cacheSet, CACHE_KEYS, CACHE_TTL } from '../utils/cache';
+import { emitTicketCreated } from '../utils/socket';
 
 /**
  * Public Endpoint: Create a ticket without authentication
@@ -50,6 +52,12 @@ export const createPublicTicket = async (req: Request, res: Response): Promise<v
       createdByName: name, 
     });
 
+    // Invalidate department cache since a new ticket was created
+    invalidateDepartmentCache(department);
+
+    // Emit real-time notification to department dashboard
+    emitTicketCreated(department, ticket);
+
     // Send confirmation email
     // We don't await this to prevent blocking the response
     sendTicketConfirmationEmail(email, name, ticket._id.toString(), subject)
@@ -75,16 +83,32 @@ export const createPublicTicket = async (req: Request, res: Response): Promise<v
 };
 
 /**
- * Public Endpoint: Get configuration (departments, priorities)
+ * Public Endpoint: Get configuration (departments, priorities) - CACHED
  * GET /api/v1/public/config
  */
 export const getPublicConfig = async (req: Request, res: Response): Promise<void> => {
+  // Check cache first (this rarely changes)
+  const cachedConfig = cacheGet(CACHE_KEYS.PUBLIC_CONFIG);
+  if (cachedConfig) {
+    res.status(200).json({
+      success: true,
+      data: cachedConfig,
+      cached: true,
+    });
+    return;
+  }
+
+  const configData = {
+    departments: PUBLIC_DEPARTMENTS,
+    priorities: Object.values(Priority),
+  };
+
+  // Cache for 1 hour
+  cacheSet(CACHE_KEYS.PUBLIC_CONFIG, configData, CACHE_TTL.PUBLIC_CONFIG);
+
   res.status(200).json({
     success: true,
-    data: {
-      departments: PUBLIC_DEPARTMENTS,
-      priorities: Object.values(Priority),
-    }
+    data: configData,
   });
 };
 

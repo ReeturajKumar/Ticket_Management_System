@@ -21,9 +21,6 @@ const createTransporter = () => {
       user: user,
       pass: pass,
     },
-    // Helpful for debugging
-    debug: true,
-    logger: true 
   };
 
   // Use the built-in 'service' option if specified or for Gmail (unless using port 587 explicitly)
@@ -38,12 +35,9 @@ const createTransporter = () => {
   return nodemailer.createTransport(config);
 };
 
-/**
- * Generate 4-digit OTP
- */
-export const generateOTP = (): string => {
-  return Math.floor(1000 + Math.random() * 9000).toString();
-};
+// NOTE: OTP generation is handled by generateOTP() from rateLimiter.ts
+// which generates 6-digit OTPs as expected by validation schemas.
+// Do NOT add generateOTP here - use the centralized version.
 
 /**
  * Send OTP email to user
@@ -59,15 +53,7 @@ export const sendOTPEmail = async (
     // Verify SMTP connection configuration
     try {
       await transporter.verify();
-      console.log('SMTP connection verified successfully');
     } catch (verifyError: any) {
-      console.error('SMTP verification failed:', {
-        message: verifyError.message,
-        code: verifyError.code,
-        command: verifyError.command,
-        responseCode: verifyError.responseCode,
-        response: verifyError.response
-      });
       throw new Error(`SMTP connection failed: ${verifyError.message}`);
     }
 
@@ -157,9 +143,7 @@ export const sendOTPEmail = async (
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`OTP email sent to ${email}`);
   } catch (error) {
-    console.error('Error sending OTP email:', error);
     throw new Error('Failed to send verification email');
   }
 };
@@ -226,10 +210,10 @@ export const sendWelcomeEmail = async (
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Welcome email sent to ${email}`);
   } catch (error) {
-    console.error('Error sending welcome email:', error);
     // Don't throw error for welcome email, it's not critical
+    // But log for debugging purposes
+    console.warn('[Email] Failed to send welcome email:', email, error instanceof Error ? error.message : 'Unknown error');
   }
 };
 
@@ -331,9 +315,7 @@ export const sendPasswordResetEmail = async (
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Password reset email sent to ${email}`);
-  } catch (error) {
-    console.error('Error sending password reset email:', error);
+  } catch {
     throw new Error('Failed to send password reset email');
   }
 };
@@ -416,10 +398,9 @@ export const sendTicketConfirmationEmail = async (
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Ticket confirmation email sent to ${email}`);
   } catch (error) {
-    console.error('Error sending ticket confirmation email:', error);
-    // Don't throw error, just log it
+    // Don't throw error for confirmation email, but log for debugging
+    console.warn('[Email] Failed to send ticket confirmation email:', email, error instanceof Error ? error.message : 'Unknown error');
   }
 };
 
@@ -504,8 +485,25 @@ export const sendTicketReplyEmail = async (
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Ticket reply email sent to ${email}`);
   } catch (error) {
-    console.error('Error sending ticket reply email:', error);
+    // Don't throw error for reply email, but log for debugging
+    console.warn('[Email] Failed to send ticket reply email:', email, error instanceof Error ? error.message : 'Unknown error');
+  }
+};
+
+/**
+ * Verify SMTP connection is working
+ * @returns Promise<boolean> - true if SMTP is connected and working
+ */
+export const verifySMTPConnection = async (): Promise<{ connected: boolean; error?: string }> => {
+  try {
+    const transporter = createTransporter();
+    await transporter.verify();
+    return { connected: true };
+  } catch (error) {
+    return { 
+      connected: false, 
+      error: error instanceof Error ? error.message : 'Unknown SMTP error' 
+    };
   }
 };

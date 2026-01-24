@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { DepartmentLayout } from "@/components/layout/DepartmentLayout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,161 +10,19 @@ import { getStaffDashboardStats, getStaffPerformance } from "@/services/departme
 import { 
   Loader2, Ticket, CheckCircle, Clock, AlertCircle, TrendingUp, TrendingDown, 
   Users, Target, Zap, Activity, ArrowUpRight, ArrowDownRight, UserCheck, 
-  Calendar, Cpu, Shield, UserPlus, HeartHandshake, FileText, 
-  Globe
+  Calendar
 } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ComposedChart, Line } from 'recharts'
 import { Progress } from "@/components/ui/progress"
 import { toast } from 'react-toastify'
 import { TicketDetailsDialog } from "@/components/department/TicketDetailsDialog"
+import { HRDashboardContent, TechSupportDashboardContent } from "@/components/department/dashboard"
+import { useSocketConnection, useRealTimeTickets } from "@/hooks/useSocket"
+import { useDebouncedCallback } from "@/hooks/useDebounce"
+import { ChartErrorBoundary } from "@/components/ChartErrorBoundary"
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
-
-// Specialized Content for HR Department
-const HRDashboardContent = ({ data, teamMembers }: { data: any, teamMembers?: any[] }) => (
-  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-     <Card className="bg-gradient-to-br from-rose-50/50 to-white dark:from-rose-950/10 border-rose-100 dark:border-rose-900/30">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-           <CardTitle className="text-sm font-medium text-rose-900 dark:text-rose-100">Employee Onboarding</CardTitle>
-           <div className="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-lg">
-              <UserPlus className="h-4 w-4 text-rose-600" />
-           </div>
-        </CardHeader>
-        <CardContent>
-           <div className="text-2xl font-bold">{data?.onboarding?.active || 0} Active</div>
-           <p className="text-xs text-muted-foreground mt-1">{data?.onboarding?.pendingChecks || 0} pending background checks</p>
-           <div className="mt-4 space-y-2">
-              <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-rose-600">
-                 <span>Batch A Completion</span>
-                 <span>{data?.onboarding?.completionRate || 0}%</span>
-              </div>
-              <Progress value={data?.onboarding?.completionRate || 0} className="h-1.5 bg-rose-100" />
-           </div>
-        </CardContent>
-     </Card>
-
-     <Card className="bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 border-amber-100 dark:border-amber-900/30">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-           <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100">Staff Policies</CardTitle>
-           <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-              <FileText className="h-4 w-4 text-amber-600" />
-           </div>
-        </CardHeader>
-        <CardContent>
-           <div className="text-2xl font-bold">{data?.policies?.complianceRate || 0}% Compliant</div>
-           <p className="text-xs text-muted-foreground mt-1">Annual handbook acknowledgement</p>
-           <div className="mt-4 flex -space-x-2 overflow-hidden">
-              {teamMembers?.slice(0, 5).map((member, i) => (
-                <div key={i} className="h-8 w-8 rounded-full border-2 border-white dark:border-slate-900 bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-700">
-                  {member.name?.charAt(0).toUpperCase()}
-                </div>
-              ))}
-              {teamMembers && teamMembers.length > 5 && (
-                <div className="h-8 w-8 rounded-full border-2 border-white dark:border-slate-900 bg-amber-100 flex items-center justify-center text-[10px] font-bold text-amber-600 underline">
-                  +{teamMembers.length - 5}
-                </div>
-              )}
-           </div>
-        </CardContent>
-     </Card>
-
-     <Card className="bg-gradient-to-br from-emerald-50/50 to-white dark:from-emerald-950/10 border-emerald-100 dark:border-emerald-900/30">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-           <CardTitle className="text-sm font-medium text-emerald-900 dark:text-emerald-100">Staff Wellness</CardTitle>
-           <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-              <HeartHandshake className="h-4 w-4 text-emerald-600" />
-           </div>
-        </CardHeader>
-        <CardContent>
-           <div className="text-2xl font-bold">{data?.wellness?.score || 0} / 5.0</div>
-           <p className="text-xs text-muted-foreground mt-1">Internal engagement score</p>
-           <div className="mt-4 flex items-end gap-1.5 h-10">
-              {(data?.wellness?.trend || [40, 60, 45, 80, 75, 90, 85]).map((h: number, i: number) => (
-                <div key={i} style={{ height: `${h}%` }} className="flex-1 bg-emerald-500/20 dark:bg-emerald-500/10 rounded-t-sm hover:bg-emerald-500 transition-colors cursor-help" />
-              ))}
-           </div>
-        </CardContent>
-     </Card>
-  </div>
-)
-
-// Specialized Content for Technical Support Department
-const TechSupportDashboardContent = ({ data }: { data: any }) => (
-  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-     <Card className="bg-slate-900 text-white border-slate-800">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-           <CardTitle className="text-sm font-medium text-slate-400">System Uptime</CardTitle>
-           <Globe className="h-4 w-4 text-indigo-400 animate-pulse" />
-        </CardHeader>
-        <CardContent>
-           <div className="text-3xl font-bold tracking-tight">{data?.uptime || '0.00'}%</div>
-           <p className="text-[10px] text-emerald-400 font-medium uppercase mt-1 tracking-wider">All clusters operational</p>
-           <div className="mt-4 flex gap-1 h-3">
-              {(data?.uptimeHistory || Array.from({length: 24}).map(() => 'healthy')).map((status: string, i: number) => (
-                <div key={i} className={`flex-1 rounded-full ${status === 'warning' ? 'bg-amber-400' : 'bg-emerald-500'} opacity-80`} />
-              ))}
-           </div>
-           <p className="text-[10px] text-slate-500 mt-2 text-right">Last 24 Hours</p>
-        </CardContent>
-     </Card>
-
-     <Card className="bg-gradient-to-br from-indigo-50/50 to-white dark:from-indigo-950/10 border-indigo-100 dark:border-indigo-900/30">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-           <CardTitle className="text-sm font-medium text-indigo-900 dark:text-indigo-100">Infra Load</CardTitle>
-           <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-              <Cpu className="h-4 w-4 text-indigo-600" />
-           </div>
-        </CardHeader>
-        <CardContent>
-           <div className="text-2xl font-bold">{data?.infraLoad?.cpu || 0}%</div>
-           <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              <Activity className="h-3 w-3 text-indigo-500" />
-              Avg CPU utilization
-           </p>
-           <div className="mt-4 space-y-3">
-              <div className="space-y-1">
-                 <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>Memory</span>
-                    <span>{data?.infraLoad?.memory?.used || 0} GB / {data?.infraLoad?.memory?.total || 0} GB</span>
-                 </div>
-                 <Progress value={(data?.infraLoad?.memory?.used / data?.infraLoad?.memory?.total) * 100 || 0} className="h-1" />
-              </div>
-              <div className="space-y-1">
-                 <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>Storage</span>
-                    <span>{data?.infraLoad?.storage?.used || 0} TB / {data?.infraLoad?.storage?.total || 0} TB</span>
-                 </div>
-                 <Progress value={(data?.infraLoad?.storage?.used / data?.infraLoad?.storage?.total) * 100 || 0} className="h-1" />
-              </div>
-           </div>
-        </CardContent>
-     </Card>
-
-     <Card className="bg-gradient-to-br from-slate-50/50 to-white dark:from-slate-900/10 border-slate-200 dark:border-slate-800">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-           <CardTitle className="text-sm font-medium">Security Posture</CardTitle>
-           <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
-              <Shield className="h-4 w-4 text-slate-600" />
-           </div>
-        </CardHeader>
-        <CardContent>
-           <div className="text-2xl font-bold">Grade {data?.security?.grade || 'N/A'}</div>
-           <p className="text-xs text-muted-foreground mt-1">Next audit in {data?.security?.nextAuditDays || 0} days</p>
-           <div className="grid grid-cols-2 gap-2 mt-4">
-              <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded border border-emerald-100 dark:border-emerald-800/50 text-center">
-                 <p className="text-[10px] text-emerald-800 dark:text-emerald-400 font-bold uppercase">SSL</p>
-                 <p className="text-[10px] text-emerald-600 font-medium">{data?.security?.sslStatus || 'Unknown'}</p>
-              </div>
-              <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded border border-indigo-100 dark:border-indigo-800/50 text-center">
-                 <p className="text-[10px] text-indigo-800 dark:text-indigo-400 font-bold uppercase">CDN</p>
-                 <p className="text-[10px] text-indigo-600 font-medium">{data?.security?.cdnStatus || 'Unknown'}</p>
-              </div>
-           </div>
-        </CardContent>
-     </Card>
-  </div>
-)
 
 
 export default function DepartmentDashboard() {
@@ -178,6 +36,104 @@ export default function DepartmentDashboard() {
   const [isExporting, setIsExporting] = useState(false)
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
   const [viewingTicketId, setViewingTicketId] = useState<string>("")
+
+  // Initialize socket connection for real-time updates
+  const { isConnected } = useSocketConnection({ autoConnect: true })
+
+  /**
+   * Core data fetching function - shared between initial load and refetch
+   * Consolidated to avoid code duplication (~100 lines saved)
+   */
+  const fetchDashboardData = useCallback(async (options?: { showLoader?: boolean }) => {
+    try {
+      if (options?.showLoader) {
+        setIsLoading(true)
+      }
+      
+      if (user?.isHead) {
+        // Fetch all data for department head
+        const [overview, analytics, teamPerf] = await Promise.all([
+          getDepartmentOverview(),
+          getAnalytics('7d'),
+          getTeamPerformance()
+        ])
+        
+        // Transform analytics trends data
+        let transformedAnalytics = analytics.data
+        if (analytics.data?.trends?.ticketsCreated && analytics.data?.trends?.ticketsResolved) {
+          const mergedTrends = analytics.data.trends.ticketsCreated.map((item: any, index: number) => ({
+            date: item.date,
+            created: item.count,
+            resolved: analytics.data.trends.ticketsResolved[index]?.count || 0
+          }))
+          transformedAnalytics = {
+            ...analytics.data,
+            trends: mergedTrends
+          }
+        }
+        
+        setData({ ...overview.data, analytics: transformedAnalytics })
+        
+        // Filter out heads and transform team performance data
+        const staffOnly = teamPerf.data?.teamMembers
+          ?.filter((member: any) => !member.isHead)
+          .map((member: any) => ({
+            ...member,
+            id: member.userId,
+            activeTickets: member.inProgressTickets || 0,
+            performance: parseInt(member.performance) || 0,
+            joinedAt: member.joinedAt || new Date().toISOString()
+          })) || []
+        setTeamPerformance(staffOnly)
+      } else {
+        // Fetch data for regular staff
+        const [stats, performance] = await Promise.all([
+          getStaffDashboardStats(),
+          getStaffPerformance()
+        ])
+        setData(stats.data)
+        setStaffPerformance(performance.data)
+      }
+    } catch (err) {
+      console.error("Failed to fetch dashboard data", err)
+      // Show user-facing error notification
+      if (options?.showLoader) {
+        toast.error("Failed to load dashboard data. Please try refreshing the page.")
+      }
+    } finally {
+      if (options?.showLoader) {
+        setIsLoading(false)
+      }
+    }
+  }, [user?.isHead])
+
+  // Wrapper for refetch that doesn't show loader
+  const refetchDashboardData = useCallback(() => {
+    return fetchDashboardData({ showLoader: false })
+  }, [fetchDashboardData])
+
+  // Create debounced version of refetch to prevent excessive API calls
+  // When multiple socket events fire rapidly, only one refetch will occur after 2 seconds of inactivity
+  const { debouncedCallback: debouncedRefetch } = useDebouncedCallback(refetchDashboardData, 2000)
+
+  // Listen for real-time ticket events with debounced refetch
+  useRealTimeTickets({
+    showNotifications: false, // Notifications handled by NotificationBell
+    onTicketCreated: () => {
+      // Debounced refetch to update stats without API spam
+      debouncedRefetch()
+    },
+    onTicketAssigned: () => {
+      debouncedRefetch()
+    },
+    onTicketStatusChanged: () => {
+      debouncedRefetch()
+    },
+    onTicketPriorityChanged: () => {
+      debouncedRefetch()
+    },
+    onRefresh: debouncedRefetch,
+  })
 
   const handleExport = async () => {
     try {
@@ -200,56 +156,14 @@ export default function DepartmentDashboard() {
     }
   }
 
+  // Initial data fetch on mount
+  // Use user?.id as dependency to ensure we refetch when user changes
+  // This prevents stale closures when user properties change
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true)
-        if (user?.isHead) {
-          const overview = await getDepartmentOverview()
-          const analytics = await getAnalytics('7d')
-          const teamPerf = await getTeamPerformance()
-          
-          // Transform analytics trends data
-          let transformedAnalytics = analytics.data
-          if (analytics.data?.trends?.ticketsCreated && analytics.data?.trends?.ticketsResolved) {
-            const mergedTrends = analytics.data.trends.ticketsCreated.map((item: any, index: number) => ({
-              date: item.date,
-              created: item.count,
-              resolved: analytics.data.trends.ticketsResolved[index]?.count || 0
-            }))
-            transformedAnalytics = {
-              ...analytics.data,
-              trends: mergedTrends
-            }
-          }
-          
-          setData({ ...overview.data, analytics: transformedAnalytics })
-          // Filter out heads from team performance and transform data
-          const staffOnly = teamPerf.data?.teamMembers?.filter((member: any) => !member.isHead).map((member: any) => ({
-            ...member,
-            id: member.userId,
-            activeTickets: member.inProgressTickets || 0,
-            performance: parseInt(member.performance) || 0, // Convert "100%" to 100
-            joinedAt: member.joinedAt || new Date().toISOString()
-          })) || []
-          setTeamPerformance(staffOnly)
-        } else {
-          const stats = await getStaffDashboardStats()
-          const performance = await getStaffPerformance()
-          setData(stats.data)
-          setStaffPerformance(performance.data)
-        }
-      } catch (err) {
-        console.error("Failed to fetch dashboard data", err)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     if (user) {
-      fetchData()
+      fetchDashboardData({ showLoader: true })
     }
-  }, [user?.isHead])
+  }, [user?.id, user?.isHead, fetchDashboardData])
 
   if (isLoading) {
     return (
@@ -287,6 +201,13 @@ export default function DepartmentDashboard() {
             </p>
           </div>
           <div className="flex items-center space-x-2">
+            {/* Real-time connection indicator */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-sm">
+              <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+              <span className="text-muted-foreground">
+                {isConnected ? 'Live' : 'Offline'}
+              </span>
+            </div>
             <Link to="/department/tickets">
               <Button>View All Tickets</Button>
             </Link>
@@ -367,38 +288,40 @@ export default function DepartmentDashboard() {
                   </CardHeader>
                   <CardContent>
                     {statusChartData.length > 0 ? (
-                      <div className="space-y-4">
-                        <div className="h-[250px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={statusChartData}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={({ percent }) => `${((percent || 0) * 100).toFixed(0)}%`}
-                                outerRadius={80}
-                                fill="#8884d8"
-                                dataKey="value"
-                              >
-                                {statusChartData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                              </Pie>
-                              <Tooltip />
-                            </PieChart>
-                          </ResponsiveContainer>
+                      <ChartErrorBoundary>
+                        <div className="space-y-4">
+                          <div className="h-[250px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={statusChartData}
+                                  cx="50%"
+                                  cy="50%"
+                                  labelLine={false}
+                                  label={({ percent }) => `${((percent || 0) * 100).toFixed(0)}%`}
+                                  outerRadius={80}
+                                  fill="#8884d8"
+                                  dataKey="value"
+                                >
+                                  {statusChartData.map((entry, index) => (
+                                    <Cell key={`cell-${entry.name}-${index}`} fill={entry.color} />
+                                  ))}
+                                </Pie>
+                                <Tooltip />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {statusChartData.map((item) => (
+                              <div key={item.name} className="flex items-center gap-2">
+                                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
+                                <span className="text-sm font-medium">{item.name}</span>
+                                <span className="text-sm text-muted-foreground ml-auto">{item.value}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          {statusChartData.map((item, index) => (
-                            <div key={index} className="flex items-center gap-2">
-                              <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                              <span className="text-sm font-medium">{item.name}</span>
-                              <span className="text-sm text-muted-foreground ml-auto">{item.value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                      </ChartErrorBoundary>
                     ) : (
                       <div className="flex items-center justify-center h-[300px] text-muted-foreground">
                         No status data available
@@ -415,15 +338,17 @@ export default function DepartmentDashboard() {
                   </CardHeader>
                   <CardContent className="h-[300px]">
                     {priorityChartData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={priorityChartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" />
-                          <YAxis />
-                          <Tooltip />
-                          <Bar dataKey="value" fill="#6366f1" barSize={40} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                      <ChartErrorBoundary message="Failed to load priority chart">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={priorityChartData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="value" fill="#6366f1" barSize={40} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </ChartErrorBoundary>
                     ) : (
                       <div className="flex items-center justify-center h-full text-muted-foreground">
                         No priority data available

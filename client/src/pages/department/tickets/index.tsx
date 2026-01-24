@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { DepartmentLayout } from "@/components/layout/DepartmentLayout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -9,21 +9,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/u
 import { getCurrentDepartmentUser } from "@/services/departmentAuthService"
 import { getMyTickets, getUnassignedTickets, updateMyTicketStatus, getMyInternalRequests } from "@/services/departmentStaffService"
 import { getAllTickets, updateTicketStatus } from "@/services/departmentHeadService"
-import { DndContext,  PointerSensor, useSensor, useSensors, useDroppable, useDraggable, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
-import { Loader2, Search,  Clock, User as UserIcon, Calendar, Tag, LayoutGrid, List, UserPlus } from "lucide-react"
+import type { DragEndEvent } from '@dnd-kit/core'
+import { Loader2, Search, Tag, LayoutGrid, List, Plus } from "lucide-react"
 import { useLocation } from "react-router-dom"
 import { AssignTicketDialog } from "@/components/department/AssignTicketDialog"
-import { TicketQuickActions } from "@/components/department/TicketQuickActions"
 import { BulkActionsToolbar } from "@/components/department/BulkActionsToolbar"
 import { BulkAssignDialog } from "@/components/department/BulkAssignDialog"
 import { BulkCloseDialog } from "@/components/department/BulkCloseDialog"
-import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from 'react-toastify'
-
+import { useDebounce, useRealTimeTickets, useSocketConnection } from "@/hooks"
+import { useTicketSelection } from "@/stores/ticketStore"
 import { CreateInternalTicketDialog } from "@/components/department/CreateInternalTicketDialog"
 import { TicketDetailsDialog } from "@/components/department/TicketDetailsDialog"
-import { Plus } from "lucide-react"
+import { 
+  TicketCard, 
+  TicketBoard, 
+  TicketList,
+  STATUS_COLUMNS_DEFAULT,
+  STATUS_COLUMNS_UNASSIGNED,
+  STATUS_COLUMNS_MY_REQUESTS,
+} from "@/components/department/tickets"
 
 export default function DepartmentTicketsPage() {
   const user = getCurrentDepartmentUser()
@@ -40,6 +45,12 @@ export default function DepartmentTicketsPage() {
   const [priorityFilter, setPriorityFilter] = useState("ALL")
   const [viewMode, setViewMode] = useState<"list" | "board">("board")
   
+  // Debounce search term for performance (waits 300ms after typing stops)
+  const debouncedSearchTerm = useDebounce(searchTerm, 300)
+  
+  // Real-time socket connection status
+  const { isConnected } = useSocketConnection({ autoConnect: true })
+  
   // Assignment dialog state
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<any>(null)
@@ -49,22 +60,17 @@ export default function DepartmentTicketsPage() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
   const [viewingTicketId, setViewingTicketId] = useState<string>("")
 
-  // Bulk operations state (Department Head only)
-  const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([])
+  // Bulk operations state - using global store to avoid duplicate state
+  const { 
+    selectedTicketIds, 
+    toggleTicketSelection, 
+    clearSelection: clearSelectedTickets
+  } = useTicketSelection()
   const [bulkAssignDialogOpen, setBulkAssignDialogOpen] = useState(false)
   const [bulkCloseDialogOpen, setBulkCloseDialogOpen] = useState(false)
 
-  // Drag and drop state
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // 8px movement required before drag starts
-      },
-    })
-  )
-
-  const fetchData = async () => {
+  // Memoized fetch function to prevent recreation
+  const fetchData = useCallback(async () => {
     setIsLoading(true)
     try {
       // Independently fetch unassigned count for the badge
@@ -105,39 +111,50 @@ export default function DepartmentTicketsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [activeTab, user?.isHead])
 
   useEffect(() => {
     fetchData()
-  }, [activeTab, user?.isHead])
+  }, [fetchData])
 
+  // Listen for real-time ticket events and refresh data
+  useRealTimeTickets({
+    showNotifications: false, // Notifications handled by DepartmentLayout's useNotificationSocket
+    onTicketCreated: () => {
+      fetchData()
+    },
+    onTicketAssigned: () => {
+      fetchData()
+    },
+    onTicketStatusChanged: () => {
+      fetchData()
+    },
+    onTicketPriorityChanged: () => {
+      fetchData()
+    },
+  })
 
-  // Bulk operations handlers
-  const handleToggleTicket = (ticketId: string) => {
-    setSelectedTicketIds(prev =>
-      prev.includes(ticketId)
-        ? prev.filter(id => id !== ticketId)
-        : [...prev, ticketId]
-    )
-  }
+  // ============================================================================
+  // MEMOIZED HANDLERS (using useCallback to prevent unnecessary re-renders)
+  // ============================================================================
 
+  // Bulk operations handlers - using global store
+  const handleToggleTicket = useCallback((ticketId: string) => {
+    toggleTicketSelection(ticketId)
+  }, [toggleTicketSelection])
 
-  const handleBulkAssignSuccess = () => {
-    setSelectedTicketIds([])
+  const handleBulkAssignSuccess = useCallback(() => {
+    clearSelectedTickets()
     fetchData()
-  }
+  }, [fetchData, clearSelectedTickets])
 
-  const handleBulkCloseSuccess = () => {
-    setSelectedTicketIds([])
+  const handleBulkCloseSuccess = useCallback(() => {
+    clearSelectedTickets()
     fetchData()
-  }
+  }, [fetchData, clearSelectedTickets])
 
-  // Drag and drop handlers
-  const handleDragStart = (_event: DragStartEvent) => {
-    // Drag start logic
-  }
-
-  const handleDragEnd = async (event: DragEndEvent) => {
+  // Drag and drop handler for status changes
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event
 
     if (!over || active.id === over.id) return
@@ -152,6 +169,9 @@ export default function DepartmentTicketsPage() {
 
     // Don't allow status change if ticket is already in that status
     if (ticket.status === newStatus) return
+
+    // Store previous status for rollback
+    const previousStatus = ticket.status
 
     try {
       // Optimistically update UI
@@ -173,251 +193,46 @@ export default function DepartmentTicketsPage() {
       console.error("Failed to update ticket status", error)
       toast.error("Failed to update ticket status")
       // Revert optimistic update
-      fetchData()
+      setTickets(prev => prev.map(t => 
+        (t._id || t.id) === ticketId ? { ...t, status: previousStatus } : t
+      ))
     }
-  }
+  }, [tickets, user?.isHead, fetchData])
 
-  const filteredTickets = tickets.filter(ticket => {
-    const matchesSearch = ticket.subject?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (ticket.ticketId && ticket.ticketId.includes(searchTerm)) ||
-                          (ticket.userName && ticket.userName.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesPriority = priorityFilter === "ALL" || ticket.priority === priorityFilter
-    return matchesSearch && matchesPriority
-  })
+  // Dialog handlers - memoized
+  const handleOpenAssignDialog = useCallback((ticket: any) => {
+    setSelectedTicket(ticket)
+    setAssignDialogOpen(true)
+  }, [])
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'CRITICAL': return 'destructive'
-      case 'HIGH': return 'default'
-      case 'MEDIUM': return 'secondary'
-      case 'LOW': return 'outline'
-      default: return 'outline'
-    }
-  }
+  const handleOpenTicketDetails = useCallback((ticketId: string) => {
+    setViewingTicketId(ticketId)
+    setDetailsDialogOpen(true)
+  }, [])
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'OPEN': return 'bg-blue-500'
-      case 'ASSIGNED': return 'bg-yellow-500'
-      case 'IN_PROGRESS': return 'bg-orange-500'
-      case 'WAITING_FOR_USER': return 'bg-purple-500'
-      case 'RESOLVED': return 'bg-green-500'
-      case 'CLOSED': return 'bg-gray-500'
-      default: return 'bg-gray-500'
-    }
-  }
+  // ============================================================================
+  // MEMOIZED COMPUTED VALUES (using useMemo to prevent recalculation)
+  // ============================================================================
 
-  // Dynamic status columns based on active tab
-  const statusColumns = activeTab === 'unassigned' 
-    ? [
-        { key: 'OPEN', label: 'Open', color: 'blue' },
-      ]
-    : activeTab === 'my-requests'
-    ? [
-        { key: 'OPEN', label: 'Open', color: 'blue' },
-        { key: 'ASSIGNED', label: 'Assigned', color: 'yellow' },
-        { key: 'IN_PROGRESS', label: 'In Progress', color: 'orange' },
-        { key: 'RESOLVED', label: 'Resolved', color: 'green' },
-        { key: 'CLOSED', label: 'Closed', color: 'gray' },
-      ]
-    : [
-        { key: 'ASSIGNED', label: 'Assigned', color: 'yellow' },
-        { key: 'IN_PROGRESS', label: 'In Progress', color: 'orange' },
-        { key: 'WAITING_FOR_USER', label: 'Waiting', color: 'purple' },
-        { key: 'RESOLVED', label: 'Resolved', color: 'green' },
-        { key: 'CLOSED', label: 'Closed', color: 'gray' },
-      ]
-
-  const groupedTickets = statusColumns.reduce((acc, column) => {
-    acc[column.key] = filteredTickets.filter(ticket => ticket.status === column.key)
-    return acc
-  }, {} as Record<string, any[]>)
-
-  // Droppable column wrapper
-  const DroppableColumn = ({ id, children }: { id: string; children: React.ReactNode }) => {
-    const { setNodeRef, isOver } = useDroppable({ id })
-    
-    return (
-      <div 
-        ref={setNodeRef}
-        className={`flex-1 space-y-0 min-h-[200px] rounded-lg p-3 transition-colors ${
-          isOver ? 'bg-primary/10 ring-2 ring-primary' : 'bg-muted/30'
-        }`}
-      >
-        {children}
-      </div>
-    )
-  }
-
-  // Draggable ticket card wrapper
-  const DraggableTicketCard = ({ ticket }: { ticket: any }) => {
-    const ticketId = ticket._id || ticket.id
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-      id: ticketId,
+  // Memoized filtered tickets (only recalculates when dependencies change)
+  const filteredTickets = useMemo(() => {
+    const searchLower = debouncedSearchTerm.toLowerCase()
+    return tickets.filter(ticket => {
+      const matchesSearch = !debouncedSearchTerm || 
+        ticket.subject?.toLowerCase().includes(searchLower) || 
+        (ticket.ticketId && ticket.ticketId.includes(debouncedSearchTerm)) ||
+        (ticket.userName && ticket.userName.toLowerCase().includes(searchLower))
+      const matchesPriority = priorityFilter === "ALL" || ticket.priority === priorityFilter
+      return matchesSearch && matchesPriority
     })
+  }, [tickets, debouncedSearchTerm, priorityFilter])
 
-    const style = {
-      transform: CSS.Translate.toString(transform),
-      opacity: isDragging ? 0.5 : 1,
-    }
-
-    return (
-      <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-        <TicketCard ticket={ticket} />
-      </div>
-    )
-  }
-
-  const TicketCard = ({ ticket }: { ticket: any }) => {
-    const ticketId = ticket._id || ticket.id
-    const isSelected = selectedTicketIds.includes(ticketId)
-    // Identify if this is a ticket created by me (internal request)
-    const isMyRequest = ticket.createdBy === user?.id || ticket.createdBy?._id === user?.id
-
-    const handleTicketClick = () => {
-      setViewingTicketId(ticketId)
-      setDetailsDialogOpen(true)
-    }
-
-    return (
-      <Card 
-        className={`cursor-pointer hover:shadow-md transition-all mb-2.5 ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''} ${isMyRequest ? 'border-r-4 border-r-indigo-500 bg-indigo-50/10' : ''}`}
-        onClick={handleTicketClick}
-      >
-        <CardContent className="p-2.5">
-          <div className="space-y-1.5">
-            <div className="flex items-start justify-between gap-2">
-              {/* Checkbox for Department Heads with visual indicator */}
-              {user?.isHead && (
-                <div 
-                  className="pt-0.5 group" 
-                  onClick={(e) => e.stopPropagation()}
-                  title="Select for bulk actions"
-                >
-                  <div className={`p-0.5 rounded transition-colors ${isSelected ? 'bg-primary/10' : 'hover:bg-muted'}`}>
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => handleToggleTicket(ticketId)}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="text-[10px] text-muted-foreground font-mono">
-                    #{ticket.ticketId || ticket._id?.slice(-6)}
-                  </span>
-                  <Badge variant={getPriorityColor(ticket.priority) as any} className="text-[9px] h-3.5 px-1.5">
-                    {ticket.priority}
-                  </Badge>
-                  {isMyRequest && (
-                    <Badge variant="outline" className="text-[9px] h-3.5 px-1.5 bg-indigo-100 text-indigo-700 border-indigo-200 uppercase">
-                      My Request
-                    </Badge>
-                  )}
-                </div>
-                <h4 className="font-medium text-xs line-clamp-1 mb-1">{ticket.subject}</h4>
-              </div>
-            </div>
-          
-          {ticket.description && (
-            <p className="text-[10px] text-muted-foreground line-clamp-1">
-              {ticket.description}
-            </p>
-          )}
-
-          <div className="space-y-1.5 pt-1.5 border-t mt-1.5">
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Clock className="h-2.5 w-2.5" />
-              {new Date(ticket.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            </div>
-            
-            <div className="space-y-1">
-              {/* Creator or Target Department */}
-              <div className="flex items-center gap-1 text-[10px]">
-                {isMyRequest ? (
-                  <>
-                    <span className="text-muted-foreground font-medium">To:</span>
-                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/30">
-                      <Tag className="h-2.5 w-2.5 text-indigo-600 dark:text-indigo-400" />
-                      <span className="text-indigo-600 dark:text-indigo-400 font-medium truncate max-w-[100px]">
-                        {ticket.department}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-muted-foreground font-medium">Creator:</span>
-                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/30">
-                      <UserIcon className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" />
-                      <span className="text-blue-600 dark:text-blue-400 font-medium truncate max-w-[100px]" title={ticket.userName || ticket.createdByName}>
-                        {ticket.userName || ticket.createdByName || 'User'}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-              
-              {/* Assigned Staff */}
-              <div className="flex items-center gap-1 text-[10px]">
-                <span className="text-muted-foreground font-medium">Assigned:</span>
-                {ticket.assignedToName ? (
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-50 dark:bg-green-950/30">
-                    <UserPlus className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />
-                    <span className="text-green-600 dark:text-green-400 font-medium truncate max-w-[100px]" title={ticket.assignedToName}>
-                      {ticket.assignedToName}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-50 dark:bg-orange-950/30">
-                    <UserPlus className="h-2.5 w-2.5 text-orange-600 dark:text-orange-400" />
-                    <span className="text-orange-600 dark:text-orange-400 font-medium">
-                      Unassigned
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions for Department Heads & Assigned Staff */}
-          {((user?.isHead && ticket.assignedTo) || (!user?.isHead && ticket.assignedTo === user?.id)) && !isMyRequest && (
-            <div className="mt-2 pt-2 border-t">
-              <TicketQuickActions
-                ticketId={ticket._id || ticket.id}
-                currentStatus={ticket.status}
-                currentPriority={ticket.priority}
-                onUpdate={fetchData}
-                compact
-              />
-            </div>
-          )}
-
-          {/* Assign Button for Unassigned Tickets */}
-          {user?.isHead && !ticket.assignedTo && !isMyRequest && (
-            <div className="mt-2 pt-2 border-t">
-              <Button 
-                size="sm" 
-                variant="outline"
-                className="w-full h-7 text-[10px]"
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  setSelectedTicket(ticket);
-                  setAssignDialogOpen(true);
-                }}
-              >
-                <UserPlus className="h-3 w-3 mr-1" />
-                Assign to Staff
-              </Button>
-            </div>
-          )}
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
+  // Memoized status columns based on active tab
+  const statusColumns = useMemo(() => {
+    if (activeTab === 'unassigned') return STATUS_COLUMNS_UNASSIGNED
+    if (activeTab === 'my-requests') return STATUS_COLUMNS_MY_REQUESTS
+    return STATUS_COLUMNS_DEFAULT
+  }, [activeTab])
 
   return (
     <DepartmentLayout>
@@ -431,7 +246,14 @@ export default function DepartmentTicketsPage() {
               Manage your department's support queue
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
+            {/* Real-time connection indicator */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-sm">
+              <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+              <span className="text-muted-foreground text-xs">
+                {isConnected ? 'Live' : 'Offline'}
+              </span>
+            </div>
             <Button
               onClick={() => setCreateInternalDialogOpen(true)}
               size="sm"
@@ -540,9 +362,24 @@ export default function DepartmentTicketsPage() {
             ) : activeTab === 'my-requests' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredTickets.length > 0 ? (
-                  filteredTickets.map((ticket) => (
-                    <TicketCard key={ticket._id || ticket.id} ticket={ticket} />
-                  ))
+                  filteredTickets.map((ticket) => {
+                    const ticketId = ticket._id || ticket.id
+                    const isMyRequest = ticket.createdBy === user?.id || ticket.createdBy?._id === user?.id
+                    return (
+                      <TicketCard 
+                        key={ticketId} 
+                        ticket={ticket}
+                        isSelected={selectedTicketIds.includes(ticketId)}
+                        isMyRequest={isMyRequest}
+                        isHead={user?.isHead || false}
+                        userId={user?.id}
+                        onToggleSelect={handleToggleTicket}
+                        onOpenDetails={handleOpenTicketDetails}
+                        onAssign={handleOpenAssignDialog}
+                        onRefresh={fetchData}
+                      />
+                    )
+                  })
                 ) : (
                   <Card className="border-dashed col-span-full">
                     <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -558,114 +395,27 @@ export default function DepartmentTicketsPage() {
                 )}
               </div>
             ) : viewMode === "board" ? (
-              <DndContext
-                sensors={sensors}
-                onDragStart={handleDragStart}
+              <TicketBoard
+                tickets={filteredTickets}
+                statusColumns={statusColumns}
+                selectedTicketIds={selectedTicketIds}
+                activeTab={activeTab}
+                isHead={user?.isHead || false}
+                userId={user?.id}
                 onDragEnd={handleDragEnd}
-              >
-                <div className={`grid gap-6 ${activeTab === 'unassigned' ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3 lg:grid-cols-5'}`}>
-                  {statusColumns.map((column) => (
-                    <div key={column.key} className="flex flex-col">
-                      <div className="mb-4 flex items-center justify-between border-b pb-2">
-                        <div className="flex items-center gap-2">
-                          <div className={`h-2.5 w-2.5 rounded-full ${column.color === 'blue' ? 'bg-blue-500' : column.color === 'yellow' ? 'bg-yellow-500' : column.color === 'orange' ? 'bg-orange-500' : column.color === 'purple' ? 'bg-purple-500' : column.color === 'green' ? 'bg-green-500' : 'bg-gray-500'}`} />
-                          <h3 className="font-bold text-sm tracking-tight">{column.label}</h3>
-                          <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-semibold">
-                            {groupedTickets[column.key]?.length || 0}
-                          </Badge>
-                        </div>
-                      </div>
-                      <DroppableColumn id={column.key}>
-                        {groupedTickets[column.key]?.length > 0 ? (
-                          <div className={activeTab === 'unassigned' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "space-y-3"}>
-                            {groupedTickets[column.key].map((ticket) => (
-                              <DraggableTicketCard key={ticket._id || ticket.id} ticket={ticket} />
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-40 bg-muted/20 border-2 border-dashed rounded-xl text-center p-4">
-                            <Clock className="h-8 w-8 text-muted-foreground/30 mb-2" />
-                            <p className="text-xs font-medium text-muted-foreground">No {column.label.toLowerCase()} tickets</p>
-                          </div>
-                        )}
-                      </DroppableColumn>
-                    </div>
-                  ))}
-                </div>
-              </DndContext>
+                onToggleSelect={handleToggleTicket}
+                onOpenDetails={handleOpenTicketDetails}
+                onAssign={handleOpenAssignDialog}
+                onRefresh={fetchData}
+              />
             ) : (
-              <div className={`grid gap-4 ${activeTab === 'unassigned' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-                {filteredTickets.length > 0 ? (
-                  filteredTickets.map((ticket) => {
-                    const ticketId = ticket._id || ticket.id
-                    
-                    return (
-                        <Card 
-                        key={ticketId} 
-                        className="cursor-pointer hover:shadow-md transition-all border-l-4"
-                        style={{ borderLeftColor: `var(--${getStatusColor(ticket.status).replace('bg-', '')})` }}
-                        onClick={() => {
-                          setViewingTicketId(ticketId)
-                          setDetailsDialogOpen(true)
-                        }}
-                        >
-                        <CardContent className="p-4">
-                            <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 space-y-2">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                <Badge variant="outline" className="text-xs">
-                                    {ticket.status.replace(/_/g, ' ')}
-                                </Badge>
-                                <Badge variant={getPriorityColor(ticket.priority) as any} className="text-xs">
-                                    {ticket.priority}
-                                </Badge>
-                                <h3 className="font-semibold text-base">{ticket.subject}</h3>
-                                </div>
-                                
-                                <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                                {ticket.userName && (
-                                    <span className="flex items-center gap-1.5">
-                                    <UserIcon className="h-3.5 w-3.5" />
-                                    {ticket.userName}
-                                    </span>
-                                )}
-                                <span className="flex items-center gap-1.5">
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    {new Date(ticket.createdAt).toLocaleDateString('en-US', { 
-                                    month: 'short', 
-                                    day: 'numeric', 
-                                    year: 'numeric' 
-                                    })}
-                                </span>
-                                </div>
-
-                                {ticket.description && (
-                                <p className="text-sm text-muted-foreground line-clamp-2">
-                                    {ticket.description}
-                                </p>
-                                )}
-                            </div>
-                            </div>
-                        </CardContent>
-                        </Card>
-                    )
-                  })
-                ) : (
-                  <Card className="border-dashed">
-                    <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                      <div className="rounded-full bg-muted p-3 mb-4">
-                        <Search className="h-6 w-6 text-muted-foreground" />
-                      </div>
-                      <h3 className="font-semibold text-lg mb-1">No tickets found</h3>
-                      <p className="text-sm text-muted-foreground max-w-sm">
-                        {searchTerm || priorityFilter !== "ALL"
-                          ? "Try adjusting your filters or search term"
-                          : "No tickets available in this category"}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+              <TicketList
+                tickets={filteredTickets}
+                activeTab={activeTab}
+                searchTerm={searchTerm}
+                priorityFilter={priorityFilter}
+                onOpenDetails={handleOpenTicketDetails}
+              />
             )}
           </TabsContent>
         </Tabs>
@@ -707,7 +457,7 @@ export default function DepartmentTicketsPage() {
             selectedCount={selectedTicketIds.length}
             onAssign={() => setBulkAssignDialogOpen(true)}
             onClose={() => setBulkCloseDialogOpen(true)}
-            onClear={() => setSelectedTicketIds([])}
+            onClear={clearSelectedTickets}
           />
 
           <BulkAssignDialog

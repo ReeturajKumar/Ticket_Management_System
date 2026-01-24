@@ -259,5 +259,31 @@ const TicketSchema = new Schema<ITicket>(
 TicketSchema.index({ createdBy: 1, status: 1 });
 TicketSchema.index({ department: 1, status: 1 });
 TicketSchema.index({ createdAt: -1 });
+TicketSchema.index({ assignedTo: 1, status: 1 });
+TicketSchema.index({ priority: 1, createdAt: -1 });
+
+// Text index for full-text search on subject and description
+// This enables fast searching across ticket content
+TicketSchema.index(
+  { 
+    subject: 'text', 
+    description: 'text',
+    contactName: 'text',
+    createdByName: 'text',
+  },
+  {
+    weights: {
+      subject: 10,       // Subject matches are most important
+      description: 5,    // Description matches are secondary
+      contactName: 2,    // Name matches are tertiary
+      createdByName: 2,
+    },
+    name: 'ticket_text_search',
+  }
+);
+
+// Compound index for date range queries with department filter
+TicketSchema.index({ department: 1, createdAt: -1, status: 1 });
+TicketSchema.index({ department: 1, resolvedAt: -1 });
 
 export default mongoose.model<ITicket>('Ticket', TicketSchema);

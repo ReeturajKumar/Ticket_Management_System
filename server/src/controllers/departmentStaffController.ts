@@ -4,6 +4,8 @@ import User from '../models/User';
 import { TicketStatus, Priority, UserRole } from '../constants';
 import AppError from '../utils/AppError';
 import { sendTicketReplyEmail } from '../utils/email';
+import { emitTicketCreated } from '../utils/socket';
+import { invalidateDepartmentCache } from '../utils/cache';
 
 /**
  * List my assigned tickets
@@ -542,6 +544,13 @@ export const createInternalTicket = async (req: Request, res: Response): Promise
       contactEmail: user.email,
       contactName: user.name,
     });
+
+    // Invalidate cache for the target department
+    invalidateDepartmentCache(department);
+
+    // Emit real-time notification to the TARGET department (not creator's department)
+    // This ensures the target department receives the notification and UI updates
+    emitTicketCreated(department, ticket);
 
     res.status(201).json({
       success: true,

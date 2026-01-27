@@ -4,7 +4,6 @@ import {
   connectSocket,
   disconnectSocket,
   getSocket,
-  isSocketConnected,
   subscribeToEvent,
   joinTicketRoom,
   leaveTicketRoom,
@@ -36,12 +35,13 @@ interface UseSocketConnectionOptions {
 export function useSocketConnection(options: UseSocketConnectionOptions = {}) {
   const { autoConnect = true, showToasts = false } = options
   const { user, isAuthenticated } = useAuth()
-  const [isConnected, setIsConnected] = useState(isSocketConnected())
+  const [isConnected, setIsConnected] = useState(false) // Start as false, will update when connected
   const connectionAttempted = useRef<string | null>(null) // Track which user we attempted to connect for
 
   // Connect to socket when authenticated
   useEffect(() => {
     if (!autoConnect || !isAuthenticated || !user) {
+      setIsConnected(false)
       return
     }
 
@@ -49,19 +49,22 @@ export function useSocketConnection(options: UseSocketConnectionOptions = {}) {
     const userKey = `${user.id}-${user.department}`
     if (connectionAttempted.current !== userKey) {
       connectionAttempted.current = userKey
+      // Reset connection state when user changes
+      setIsConnected(false)
     } else {
-      // Already attempted for this user, just check current status
+      // Already attempted for this user, check current status immediately
       const currentSocket = getSocket()
-      if (currentSocket) {
-        setIsConnected(currentSocket.connected)
+      if (currentSocket?.connected) {
+        setIsConnected(true)
+        return
       }
-      return
+      // If not connected, continue to set up connection
     }
 
     const socket = connectSocket(user.id, user.department)
 
     if (socket) {
-      // Listen for connection state changes
+      // Listen for connection state changes - set up IMMEDIATELY
       const handleConnect = () => {
         setIsConnected(true)
         if (showToasts) {
@@ -76,22 +79,59 @@ export function useSocketConnection(options: UseSocketConnectionOptions = {}) {
         }
       }
 
+      // Set up event listeners FIRST, before checking state
+      // This ensures we catch the connect event even if it fires immediately
       socket.on('connect', handleConnect)
       socket.on('disconnect', handleDisconnect)
+      
+      // Also listen for 'authenticated' event (fires after successful auth)
+      const handleAuthenticated = () => {
+        // Socket is fully authenticated and ready
+        setIsConnected(true)
+      }
+      socket.on('authenticated', handleAuthenticated)
 
-      // Check initial state - socket might already be connected
-      setIsConnected(socket.connected)
+      // Check initial state immediately - socket might already be connected
+      // Do this AFTER setting up listeners so we catch any immediate connections
+      // Use multiple quick checks to catch fast connections
+      const checkConnectionState = () => {
+        const currentSocket = getSocket()
+        if (currentSocket?.connected) {
+          setIsConnected(true)
+          return true
+        }
+        return false
+      }
 
-      // Also check periodically in case connection happens asynchronously
-      // This handles the case where socket connects after the initial check
-      // Only check if not already connected to avoid unnecessary checks
+      // Store all timeouts/intervals for cleanup
+      const quickCheckTimeouts: ReturnType<typeof setTimeout>[] = []
       let checkInterval: ReturnType<typeof setInterval> | null = null
       let timeoutId: ReturnType<typeof setTimeout> | null = null
-      if (!socket.connected) {
+
+      // Check immediately (synchronous check)
+      const isAlreadyConnected = checkConnectionState()
+      
+      // Also check after a microtask (next event loop tick) to catch very fast connections
+      setTimeout(() => checkConnectionState(), 0)
+      
+      // If not connected yet, set up aggressive checking
+      if (!isAlreadyConnected) {
+        // Not connected yet - set up aggressive checking
+        // Check multiple times quickly to catch fast connections
+        const quickChecks = [0, 25, 50, 100, 150, 200, 300, 500] // Check at these intervals (ms)
+        
+        quickChecks.forEach((delay) => {
+          const timeoutId = setTimeout(() => {
+            if (checkConnectionState() && delay > 0 && showToasts) {
+              toast.success('Real-time updates connected', { autoClose: 2000 })
+            }
+          }, delay)
+          quickCheckTimeouts.push(timeoutId)
+        })
+
+        // Also use interval for ongoing check (in case connection takes longer)
         checkInterval = setInterval(() => {
-          const currentSocket = getSocket()
-          if (currentSocket?.connected) {
-            setIsConnected(true)
+          if (checkConnectionState()) {
             if (showToasts) {
               toast.success('Real-time updates connected', { autoClose: 2000 })
             }
@@ -100,20 +140,27 @@ export function useSocketConnection(options: UseSocketConnectionOptions = {}) {
               clearInterval(checkInterval)
               checkInterval = null
             }
+            if (timeoutId) {
+              clearTimeout(timeoutId)
+              timeoutId = null
+            }
+            // Clear quick check timeouts
+            quickCheckTimeouts.forEach(clearTimeout)
           }
-        }, 500)
+        }, 50) // Very fast check (50ms) for immediate feedback
 
-        // Clear interval after 5 seconds (connection should happen by then)
+        // Clear interval after 2 seconds (connection should happen quickly)
         timeoutId = setTimeout(() => {
           if (checkInterval) {
             clearInterval(checkInterval)
             checkInterval = null
           }
-        }, 5000)
+        }, 2000)
       }
 
       // Return cleanup function
       return () => {
+        quickCheckTimeouts.forEach(clearTimeout)
         if (checkInterval) {
           clearInterval(checkInterval)
         }
@@ -122,6 +169,7 @@ export function useSocketConnection(options: UseSocketConnectionOptions = {}) {
         }
         socket.off('connect', handleConnect)
         socket.off('disconnect', handleDisconnect)
+        socket.off('authenticated', handleAuthenticated)
       }
     }
   }, [autoConnect, isAuthenticated, user?.id, user?.department, showToasts])

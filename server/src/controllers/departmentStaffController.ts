@@ -4,7 +4,7 @@ import User from '../models/User';
 import { TicketStatus, Priority, UserRole } from '../constants';
 import AppError from '../utils/AppError';
 import { sendTicketReplyEmail } from '../utils/email';
-import { emitTicketCreated } from '../utils/socket';
+import { emitTicketCreated, emitTicketStatusChanged } from '../utils/socket';
 import { invalidateDepartmentCache } from '../utils/cache';
 
 /**
@@ -198,6 +198,8 @@ export const updateMyTicketStatus = async (req: Request, res: Response): Promise
       throw new AppError('Cannot change status of closed tickets', 400);
     }
 
+    const oldStatus = ticket.status;
+
     // Update status
     ticket.status = status;
 
@@ -208,12 +210,26 @@ export const updateMyTicketStatus = async (req: Request, res: Response): Promise
 
     await ticket.save();
 
+    // Invalidate department cache to refresh dashboard stats
+    invalidateDepartmentCache(user.department);
+
+    // Emit real-time notification for status change
+    emitTicketStatusChanged(
+      user.department,
+      ticket._id.toString(),
+      ticket.subject,
+      oldStatus,
+      status,
+      user.name
+    );
+
     res.status(200).json({
       success: true,
       message: 'Ticket status updated successfully',
       data: {
         id: ticket._id,
         status: ticket.status,
+        previousStatus: oldStatus,
       },
     });
   } catch (error: any) {

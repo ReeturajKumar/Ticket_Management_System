@@ -45,7 +45,7 @@ const SOCKET_URL = getSocketUrl()
  * Connect to the WebSocket server
  * Creates a new connection if one doesn't exist
  */
-export function connectSocket(userId: string, department: string): Socket | null {
+export function connectSocket(userId: string, department?: string): Socket | null {
   // Return existing connected socket
   if (socket?.connected) {
     return socket
@@ -57,7 +57,8 @@ export function connectSocket(userId: string, department: string): Socket | null
   }
 
   isConnecting = true
-  const token = localStorage.getItem('dept_accessToken')
+  // Check for both department and admin tokens
+  const token = localStorage.getItem('dept_accessToken') || localStorage.getItem('admin_accessToken')
 
   if (!token) {
     console.warn('Cannot connect socket: No access token')
@@ -82,10 +83,15 @@ export function connectSocket(userId: string, department: string): Socket | null
       isConnecting = false
       reconnectAttempts = 0
 
-      // Authenticate and join department room
+      // Authenticate and join department room (or admin room)
       // Note: Server expects 'authenticate' and 'join:department' events (with colon)
-      socket?.emit('authenticate', { userId, department })
-      socket?.emit('join:department', department)
+      socket?.emit('authenticate', { userId, department: department || undefined })
+      if (department) {
+        socket?.emit('join:department', department)
+      } else {
+        // For admin users without department, join admin room
+        socket?.emit('join:admin', 'admin')
+      }
     })
 
     socket.on('connect_error', (error) => {

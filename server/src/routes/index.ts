@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import departmentRoutes from './departmentRoutes';
 import publicRoutes from './publicRoutes';
 import departmentAuthRoutes from './departmentAuthRoutes';
+import adminAuthRoutes from './adminAuthRoutes';
 import adminRoutes from './adminRoutes';
 import departmentDashboardRoutes from './departmentDashboardRoutes';
 import departmentTicketRoutes from './departmentTicketRoutes';
@@ -22,6 +23,7 @@ const router = Router();
 
 router.use('/departments', departmentRoutes);
 router.use('/department-auth', departmentAuthRoutes);
+router.use('/admin-auth', adminAuthRoutes);
 router.use('/public', publicRoutes);
 router.use('/admin', adminRoutes);
 router.use('/department/dashboard', departmentDashboardRoutes);

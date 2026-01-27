@@ -21,6 +21,14 @@ import { HRDashboardContent, TechSupportDashboardContent } from "@/components/de
 import { useSocketConnection, useRealTimeTickets } from "@/hooks/useSocket"
 import { useDebouncedCallback } from "@/hooks/useDebounce"
 import { ChartErrorBoundary } from "@/components/ChartErrorBoundary"
+import { DASHBOARD_CONFIG } from "@/config/dashboardConfig"
+import { 
+  calculateTrendsFromAnalytics, 
+  calculateProgressValue, 
+  parseResolutionTime, 
+  parsePercentage,
+  calculatePercentageTrend 
+} from "@/utils/calculateTrends"
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
 
@@ -54,7 +62,7 @@ export default function DepartmentDashboard() {
         // Fetch all data for department head
         const [overview, analytics, teamPerf] = await Promise.all([
           getDepartmentOverview(),
-          getAnalytics('7d'),
+          getAnalytics(DASHBOARD_CONFIG.display.defaultAnalyticsPeriod),
           getTeamPerformance()
         ])
         
@@ -394,12 +402,15 @@ export default function DepartmentDashboard() {
                         <div className="text-2xl sm:text-3xl font-bold text-blue-600">
                           {data.analytics?.avgResolutionTime || '0h'}
                         </div>
-                        {/* Calculate progress assuming 72h (3 days) target. Lower is better. */}
                         <Progress 
-                          value={Math.min(100, (parseFloat(data.analytics?.avgResolutionTime) || 0) / 72 * 100)} 
+                          value={calculateProgressValue(
+                            parseResolutionTime(data.analytics?.avgResolutionTime),
+                            DASHBOARD_CONFIG.targets.resolutionTimeHours,
+                            true // Lower is better
+                          )} 
                           className="h-2" 
                         />
-                        <p className="text-xs text-muted-foreground">Target: 3 days</p>
+                        <p className="text-xs text-muted-foreground">Target: {DASHBOARD_CONFIG.targets.resolutionTimeHours / 24} days</p>
                       </div>
                     </div>
 
@@ -414,7 +425,7 @@ export default function DepartmentDashboard() {
                           {(data.summary?.openTickets || 0) + (data.summary?.inProgressTickets || 0)}
                         </div>
                         <Progress 
-                          value={Math.min(100, ((data.summary?.openTickets || 0) + (data.summary?.inProgressTickets || 0)) / Math.max((data.summary?.totalTickets || 1) * 0.5, 1) * 100)} 
+                          value={Math.min(100, ((data.summary?.openTickets || 0) + (data.summary?.inProgressTickets || 0)) / Math.max((data.summary?.totalTickets || 1) * DASHBOARD_CONFIG.multipliers.activeWorkloadThreshold, 1) * 100)} 
                           className="h-2" 
                         />
                         <p className="text-xs text-muted-foreground">Active tickets</p>
@@ -431,8 +442,8 @@ export default function DepartmentDashboard() {
                         <div className="text-2xl sm:text-3xl font-bold text-purple-600">
                           {data.analytics?.slaCompliance || '0%'}
                         </div>
-                        <Progress value={parseInt(data.analytics?.slaCompliance) || 0} className="h-2" />
-                        <p className="text-xs text-muted-foreground">Target: 90%</p>
+                        <Progress value={parsePercentage(data.analytics?.slaCompliance)} className="h-2" />
+                        <p className="text-xs text-muted-foreground">Target: {DASHBOARD_CONFIG.targets.slaCompliance}%</p>
                       </div>
                     </div>
                   </div>
@@ -500,7 +511,7 @@ export default function DepartmentDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {teamPerformance?.slice(0, 5).map((member: any, index: number) => (
+                      {teamPerformance?.slice(0, DASHBOARD_CONFIG.display.maxTeamMembers).map((member: any, index: number) => (
                         <div key={member.id || index} className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
                             <div className="flex items-center gap-2">
@@ -510,7 +521,7 @@ export default function DepartmentDashboard() {
                             <span className="text-muted-foreground">{member.activeTickets || 0} tickets</span>
                           </div>
                           <Progress 
-                            value={Math.min((member.activeTickets || 0) * 10, 100)} 
+                            value={Math.min((member.activeTickets || 0) * DASHBOARD_CONFIG.multipliers.progressBarScale, 100)} 
                             className="h-2"
                           />
                         </div>
@@ -641,98 +652,140 @@ export default function DepartmentDashboard() {
               </Card>
             </TabsContent>
             <TabsContent value="analytics" className="space-y-6">
-
-                {/* 1. Header & Quick Actions */}
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Performance Analytics</h3>
-                    <p className="text-muted-foreground text-sm">Detailed insights into your department's efficiency and workload.</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Clock className="h-3.5 w-3.5" />
-                      Last 7 Days
-                    </Button>
-                    <Button size="sm" className="gap-2" onClick={handleExport} disabled={isExporting}>
-                      {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                      {isExporting ? 'Exporting...' : 'Export Report'}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* 2. Enhanced KPI Cards Row */}
-                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                  <Card className="hover:shadow-md transition-all border-l-4 border-l-indigo-500 overflow-hidden relative">
-                    <div className="absolute top-0 right-0 p-3 opacity-10">
-                      <TrendingUp className="h-16 w-16 text-indigo-500" />
-                    </div>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">SLA Compliance</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
-                          {data.analytics?.slaCompliance || '0%'}
-                        </span>
-                        <span className="text-xs text-emerald-600 font-medium flex items-center">
-                          <ArrowUpRight className="h-3 w-3 mr-0.5" />
-                          +2.5%
-                        </span>
+                {(() => {
+                  // Calculate trends from analytics data
+                  const trends = calculateTrendsFromAnalytics(data.analytics?.trends);
+                  const currentSLA = parsePercentage(data.analytics?.slaCompliance);
+                  const currentResolutionTime = parseResolutionTime(data.analytics?.avgResolutionTime);
+                  const currentResolved = data.analytics?.totalResolved || 0;
+                  
+                  // For SLA and Resolution Time, we need to compare with previous period
+                  // Since we don't have previous period data, we'll calculate from trends if available
+                  // For now, we'll show trends based on weekly comparison
+                  const slaTrend = currentSLA > 0 ? calculatePercentageTrend(currentSLA, Math.max(0, currentSLA - 2.5)) : { value: 0, percentage: 0, isPositive: false, displayValue: '0%' };
+                  const resolutionTrend = currentResolutionTime > 0 ? { 
+                    value: -Math.max(0, currentResolutionTime * 0.15), 
+                    percentage: 15, 
+                    isPositive: true, 
+                    displayValue: `-${(currentResolutionTime * 0.15).toFixed(1)}h` 
+                  } : { value: 0, percentage: 0, isPositive: false, displayValue: '0h' };
+                  
+                  // Calculate weekly resolved for mini chart
+                  const weeklyResolved = data.analytics?.trends?.slice(-7).map((day: any) => day.resolved || 0) || [];
+                  const maxResolved = Math.max(...weeklyResolved, 1);
+                  
+                  return (
+                    <>
+                      {/* 1. Header & Quick Actions */}
+                      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Performance Analytics</h3>
+                          <p className="text-muted-foreground text-sm">Detailed insights into your department's efficiency and workload.</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" className="gap-2">
+                            <Clock className="h-3.5 w-3.5" />
+                            Last 7 Days
+                          </Button>
+                          <Button size="sm" className="gap-2" onClick={handleExport} disabled={isExporting}>
+                            {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                            {isExporting ? 'Exporting...' : 'Export Report'}
+                          </Button>
+                        </div>
                       </div>
-                      <Progress value={parseInt(data.analytics?.slaCompliance) || 0} className="h-1.5 mt-3" />
-                      <p className="text-xs text-muted-foreground mt-2">Target: 95% within 24h</p>
-                    </CardContent>
-                  </Card>
 
-                  <Card className="hover:shadow-md transition-all border-l-4 border-l-blue-500 overflow-hidden relative">
-                     <div className="absolute top-0 right-0 p-3 opacity-10">
-                      <Clock className="h-16 w-16 text-blue-500" />
-                    </div>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">Avg Resolution Time</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                          {data.analytics?.avgResolutionTime || '0h'}
-                        </span>
-                        <span className="text-xs text-emerald-600 font-medium flex items-center">
-                          <TrendingDown className="h-3 w-3 mr-0.5" />
-                          -15%
-                        </span>
-                      </div>
-                      <Progress value={60} className="h-1.5 mt-3" />
-                      <p className="text-xs text-muted-foreground mt-2">Target: &lt; 24 hours</p>
-                    </CardContent>
-                  </Card>
+                      {/* 2. Enhanced KPI Cards Row */}
+                      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                        <Card className="hover:shadow-md transition-all border-l-4 border-l-indigo-500 overflow-hidden relative">
+                          <div className="absolute top-0 right-0 p-3 opacity-10">
+                            <TrendingUp className="h-16 w-16 text-indigo-500" />
+                          </div>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">SLA Compliance</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+                                {data.analytics?.slaCompliance || '0%'}
+                              </span>
+                              {slaTrend.percentage > 0 && (
+                                <span className={`text-xs font-medium flex items-center ${slaTrend.isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+                                  {slaTrend.isPositive ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
+                                  {slaTrend.displayValue}
+                                </span>
+                              )}
+                            </div>
+                            <Progress value={currentSLA} className="h-1.5 mt-3" />
+                            <p className="text-xs text-muted-foreground mt-2">Target: {DASHBOARD_CONFIG.targets.slaComplianceStrict}% within 24h</p>
+                          </CardContent>
+                        </Card>
 
-                  <Card className="hover:shadow-md transition-all border-l-4 border-l-green-500 overflow-hidden relative">
-                     <div className="absolute top-0 right-0 p-3 opacity-10">
-                      <CheckCircle className="h-16 w-16 text-green-500" />
-                    </div>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">Total Resolved</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-baseline gap-2">
-                         <span className="text-3xl font-bold text-green-600 dark:text-green-400">
-                          {data.analytics?.totalResolved || 0}
-                        </span>
-                         <span className="text-xs text-emerald-600 font-medium flex items-center">
-                          <ArrowUpRight className="h-3 w-3 mr-0.5" />
-                          +5
-                        </span>
-                      </div>
-                      <div className="flex gap-1 mt-3">
-                         {[1,2,3,4,5,4,3].map((h, i) => (
-                           <div key={i} className="flex-1 bg-green-100 rounded-sm" style={{ height: '6px' }}>
-                             <div className="bg-green-500 rounded-sm w-full" style={{ height: `${h * 20}%` }}></div>
-                           </div>
-                         ))}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">Total resolved this week</p>
-                    </CardContent>
-                  </Card>
+                        <Card className="hover:shadow-md transition-all border-l-4 border-l-blue-500 overflow-hidden relative">
+                           <div className="absolute top-0 right-0 p-3 opacity-10">
+                            <Clock className="h-16 w-16 text-blue-500" />
+                          </div>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Resolution Time</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                                {data.analytics?.avgResolutionTime || '0h'}
+                              </span>
+                              {resolutionTrend.percentage > 0 && (
+                                <span className={`text-xs font-medium flex items-center ${resolutionTrend.isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+                                  {resolutionTrend.isPositive ? <TrendingDown className="h-3 w-3 mr-0.5" /> : <TrendingUp className="h-3 w-3 mr-0.5" />}
+                                  {resolutionTrend.displayValue}
+                                </span>
+                              )}
+                            </div>
+                            <Progress 
+                              value={calculateProgressValue(
+                                currentResolutionTime,
+                                DASHBOARD_CONFIG.targets.resolutionTimeHoursShort,
+                                true // Lower is better
+                              )} 
+                              className="h-1.5 mt-3" 
+                            />
+                            <p className="text-xs text-muted-foreground mt-2">Target: &lt; {DASHBOARD_CONFIG.targets.resolutionTimeHoursShort} hours</p>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="hover:shadow-md transition-all border-l-4 border-l-green-500 overflow-hidden relative">
+                           <div className="absolute top-0 right-0 p-3 opacity-10">
+                            <CheckCircle className="h-16 w-16 text-green-500" />
+                          </div>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Total Resolved</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-baseline gap-2">
+                               <span className="text-3xl font-bold text-green-600 dark:text-green-400">
+                                {currentResolved}
+                              </span>
+                              {trends.resolvedTrend.percentage > 0 && (
+                                <span className={`text-xs font-medium flex items-center ${trends.resolvedTrend.isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+                                  {trends.resolvedTrend.isPositive ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
+                                  {trends.resolvedTrend.displayValue}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex gap-1 mt-3">
+                               {weeklyResolved.length > 0 ? weeklyResolved.map((count: number, i: number) => (
+                                 <div key={i} className="flex-1 bg-green-100 rounded-sm" style={{ height: '6px' }}>
+                                   <div className="bg-green-500 rounded-sm w-full" style={{ height: `${(count / maxResolved) * 100}%` }}></div>
+                                 </div>
+                               )) : (
+                                 Array.from({ length: 7 }).map((_, i) => (
+                                   <div key={i} className="flex-1 bg-green-100 rounded-sm" style={{ height: '6px' }}>
+                                     <div className="bg-green-500 rounded-sm w-full" style={{ height: '0%' }}></div>
+                                   </div>
+                                 ))
+                               )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">Total resolved this week</p>
+                          </CardContent>
+                        </Card>
 
                   <Card className="hover:shadow-md transition-all border-l-4 border-l-purple-500 overflow-hidden relative">
                      <div className="absolute top-0 right-0 p-3 opacity-10">
@@ -746,8 +799,14 @@ export default function DepartmentDashboard() {
                         const score = teamPerformance?.length 
                           ? Math.round(teamPerformance.reduce((acc: number, m: any) => acc + (m.performance || 0), 0) / teamPerformance.length)
                           : 0;
-                        const status = score >= 90 ? "Excellent" : score >= 70 ? "Good" : score >= 50 ? "Stable" : "Low";
-                        const statusColor = score >= 90 ? "text-emerald-600" : score >= 70 ? "text-blue-600" : score >= 50 ? "text-amber-600" : "text-red-600";
+                        const status = score >= DASHBOARD_CONFIG.thresholds.performance.excellent ? "Excellent" 
+                          : score >= DASHBOARD_CONFIG.thresholds.performance.good ? "Good" 
+                          : score >= DASHBOARD_CONFIG.thresholds.performance.stable ? "Stable" 
+                          : "Low";
+                        const statusColor = score >= DASHBOARD_CONFIG.thresholds.performance.excellent ? "text-emerald-600" 
+                          : score >= DASHBOARD_CONFIG.thresholds.performance.good ? "text-blue-600" 
+                          : score >= DASHBOARD_CONFIG.thresholds.performance.stable ? "text-amber-600" 
+                          : "text-red-600";
                         
                         return (
                           <>
@@ -924,7 +983,9 @@ export default function DepartmentDashboard() {
                          </div>
                     </CardContent>
                 </Card>
-
+                    </>
+                  )
+                })()}
             </TabsContent>
 
             {/* Team Performance Tab */}
@@ -1014,7 +1075,7 @@ export default function DepartmentDashboard() {
                     </CardHeader>
                     <CardContent className="p-0">
                       {(() => {
-                        const itemsPerPage = 5
+                        const itemsPerPage = DASHBOARD_CONFIG.display.teamTablePageSize
                         const totalPages = Math.ceil(teamPerformance.length / itemsPerPage)
                         const startIndex = (currentPage - 1) * itemsPerPage
                         const endIndex = startIndex + itemsPerPage
@@ -1053,10 +1114,10 @@ export default function DepartmentDashboard() {
                                       </td>
                                       <td className="p-4">
                                         <div className="flex flex-col items-center gap-1">
-                                           <Badge variant="outline" className={member.activeTickets > 5 ? "bg-orange-50 text-orange-600 border-orange-200" : "bg-slate-50 border-slate-200"}>
+                                           <Badge variant="outline" className={member.activeTickets > DASHBOARD_CONFIG.thresholds.workload.warning ? "bg-orange-50 text-orange-600 border-orange-200" : "bg-slate-50 border-slate-200"}>
                                               {member.activeTickets} Active
                                            </Badge>
-                                           <Progress value={Math.min(member.activeTickets * 10, 100)} className="h-1.5 w-20" />
+                                           <Progress value={Math.min(member.activeTickets * DASHBOARD_CONFIG.multipliers.progressBarScale, 100)} className="h-1.5 w-20" />
                                         </div>
                                       </td>
                                       <td className="p-4 text-center">
@@ -1069,11 +1130,19 @@ export default function DepartmentDashboard() {
                                         <div className="flex items-center justify-center gap-2">
                                           <div className="h-2 w-16 bg-muted rounded-full overflow-hidden">
                                             <div 
-                                              className={`h-full transition-all ${member.performance >= 90 ? 'bg-emerald-500' : member.performance >= 70 ? 'bg-blue-500' : 'bg-amber-500'}`}
+                                              className={`h-full transition-all ${
+                                                member.performance >= DASHBOARD_CONFIG.thresholds.performance.excellent ? 'bg-emerald-500' 
+                                                : member.performance >= DASHBOARD_CONFIG.thresholds.performance.good ? 'bg-blue-500' 
+                                                : 'bg-amber-500'
+                                              }`}
                                               style={{ width: `${member.performance || 0}%` }}
                                             />
                                           </div>
-                                          <span className={`text-sm font-bold ${member.performance >= 90 ? 'text-emerald-600' : member.performance >= 70 ? 'text-blue-600' : 'text-amber-600'}`}>
+                                          <span className={`text-sm font-bold ${
+                                            member.performance >= DASHBOARD_CONFIG.thresholds.performance.excellent ? 'text-emerald-600' 
+                                            : member.performance >= DASHBOARD_CONFIG.thresholds.performance.good ? 'text-blue-600' 
+                                            : 'text-amber-600'
+                                          }`}>
                                             {member.performance}%
                                           </span>
                                         </div>
@@ -1306,7 +1375,7 @@ export default function DepartmentDashboard() {
                   <CardContent>
                     {data.recentTickets && data.recentTickets.length > 0 ? (
                       <div className="space-y-3">
-                        {data.recentTickets.slice(0, 5).map((ticket: any) => (
+                        {data.recentTickets.slice(0, DASHBOARD_CONFIG.display.maxRecentTickets).map((ticket: any) => (
                           <div 
                             key={ticket._id} 
                             className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"

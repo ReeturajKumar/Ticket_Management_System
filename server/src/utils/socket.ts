@@ -40,6 +40,10 @@ export const SOCKET_EVENTS = {
   // Notifications
   NOTIFICATION: 'notification',
   
+  // User events (for admin)
+  USER_CREATED: 'user:created',
+  USER_UPDATED: 'user:updated',
+  
   // Bulk operations
   BULK_OPERATION_STARTED: 'bulk:started',
   BULK_OPERATION_PROGRESS: 'bulk:progress',
@@ -342,6 +346,42 @@ export const emitCommentAdded = (
 };
 
 // ============================================================================
+// USER EVENT EMITTERS (for admin dashboard)
+// ============================================================================
+
+/**
+ * Emit user created event (broadcast to all admins)
+ */
+export const emitUserCreated = (user: any): void => {
+  emitToAll(SOCKET_EVENTS.USER_CREATED, {
+    userId: user._id?.toString() || user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    department: user.department,
+    isHead: user.isHead,
+    approvalStatus: user.approvalStatus,
+    createdAt: user.createdAt?.toISOString?.() || user.createdAt,
+  });
+};
+
+/**
+ * Emit user updated event (broadcast to all admins)
+ */
+export const emitUserUpdated = (user: any): void => {
+  emitToAll(SOCKET_EVENTS.USER_UPDATED, {
+    userId: user._id?.toString() || user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    department: user.department,
+    isHead: user.isHead,
+    approvalStatus: user.approvalStatus,
+    updatedAt: user.updatedAt?.toISOString?.() || user.updatedAt,
+  });
+};
+
+// ============================================================================
 // BULK OPERATION EVENT EMITTERS
 // ============================================================================
 
@@ -432,6 +472,8 @@ export default {
   emitTicketStatusChanged,
   emitTicketPriorityChanged,
   emitCommentAdded,
+  emitUserCreated,
+  emitUserUpdated,
   emitBulkOperationStarted,
   emitBulkOperationProgress,
   emitBulkOperationCompleted,

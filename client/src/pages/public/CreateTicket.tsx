@@ -60,8 +60,9 @@ export default function CreatePublicTicketPage() {
         setDepartments(result.data.departments || [])
         setPriorities(result.data.priorities || [])
       } else {
-        // Fallback or error handling
-        console.error("Failed to fetch public config")
+        // Silently handle - server may not be running
+        // Fallback to default values if needed
+        setLimitError(true)
       }
     }
     fetchConfig()

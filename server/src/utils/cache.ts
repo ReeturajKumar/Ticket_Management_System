@@ -44,6 +44,8 @@ export const CACHE_KEYS = {
   TICKET_LIST: 'tickets:list',
   TICKET_STATS: 'tickets:stats',
   USER_PROFILE: 'user:profile',
+  ADMIN_DASHBOARD_OVERVIEW: 'admin:dashboard:overview',
+  ADMIN_ANALYTICS: 'admin:analytics',
 };
 
 /**
@@ -211,6 +213,15 @@ export function invalidateDepartmentCache(department: string): void {
  */
 export function invalidateAllDashboardCaches(): void {
   cacheDeletePattern('dashboard:');
+}
+
+/**
+ * Invalidate admin dashboard caches
+ */
+export function invalidateAdminCache(): void {
+  cacheDelete(CACHE_KEYS.ADMIN_DASHBOARD_OVERVIEW);
+  cacheDelete(CACHE_KEYS.ADMIN_ANALYTICS);
+  cacheDeletePattern('admin:');
 }
 
 // Auto-cleanup expired entries every 10 minutes

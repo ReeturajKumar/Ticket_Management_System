@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { DepartmentLayout } from "@/components/layout/DepartmentLayout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -6,19 +6,38 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { getTeamMemberTickets, getMemberPerformance } from "@/services/departmentHeadService"
 import { Loader2, ArrowLeft, Ticket, CheckCircle, Clock, TrendingUp } from "lucide-react"
+import type { VariantProps } from "class-variance-authority"
+
+interface TeamMemberPerformance {
+  name: string
+  email: string
+  assignedTickets: number
+  resolvedTickets: number
+  inProgressTickets: number
+  performance: string
+  avgResolutionTime: string
+}
+
+interface TeamMemberTicket {
+  _id: string
+  ticketId?: string
+  subject: string
+  description: string
+  status: string
+  priority: string
+  createdAt: string
+}
+
+type BadgeVariant = VariantProps<typeof Badge>['variant']
 
 export default function TeamMemberDetailPage() {
   const { userId } = useParams()
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(true)
-  const [performance, setPerformance] = useState<any>(null)
-  const [tickets, setTickets] = useState<any[]>([])
+  const [performance, setPerformance] = useState<TeamMemberPerformance | null>(null)
+  const [tickets, setTickets] = useState<TeamMemberTicket[]>([])
 
-  useEffect(() => {
-    fetchData()
-  }, [userId])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!userId) return
     
     setIsLoading(true)
@@ -50,7 +69,11 @@ export default function TeamMemberDetailPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [userId])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   if (isLoading) {
     return (
@@ -62,8 +85,8 @@ export default function TeamMemberDetailPage() {
     )
   }
 
-  const getPriorityColor = (priority: string) => {
-    const colors: Record<string, string> = {
+  const getPriorityColor = (priority: string): BadgeVariant => {
+    const colors: Record<string, BadgeVariant> = {
       LOW: "secondary",
       MEDIUM: "default",
       HIGH: "destructive",
@@ -72,8 +95,8 @@ export default function TeamMemberDetailPage() {
     return colors[priority] || "default"
   }
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
+  const getStatusColor = (status: string): BadgeVariant => {
+    const colors: Record<string, BadgeVariant> = {
       OPEN: "secondary",
       IN_PROGRESS: "default",
       WAITING_FOR_USER: "outline",
@@ -154,7 +177,7 @@ export default function TeamMemberDetailPage() {
           <CardContent>
             {tickets.length > 0 ? (
               <div className="space-y-3">
-                {tickets.map((ticket: any) => (
+                {tickets.map((ticket) => (
                   <div
                     key={ticket._id}
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
@@ -165,10 +188,10 @@ export default function TeamMemberDetailPage() {
                         <span className="text-sm font-mono text-muted-foreground">
                           #{ticket.ticketId || ticket._id?.slice(-6)}
                         </span>
-                        <Badge variant={getPriorityColor(ticket.priority) as any} className="text-xs">
+                        <Badge variant={getPriorityColor(ticket.priority)} className="text-xs">
                           {ticket.priority}
                         </Badge>
-                        <Badge variant={getStatusColor(ticket.status) as any} className="text-xs">
+                        <Badge variant={getStatusColor(ticket.status)} className="text-xs">
                           {ticket.status.replace(/_/g, " ")}
                         </Badge>
                       </div>

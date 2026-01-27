@@ -6,7 +6,6 @@ import {
   subscribeToEvent,
   type TicketCreatedEvent,
   type TicketAssignedEvent,
-  type TicketStatusChangedEvent,
   type TicketPriorityChangedEvent,
 } from '@/services/socket'
 
@@ -227,27 +226,9 @@ export function useNotificationSocket() {
       )
 
       // Ticket status changed
-      unsubscribers.push(
-        subscribeToEvent<TicketStatusChangedEvent>('ticket:status-changed', (data) => {
-          if (!isMounted) return
-          
-          const currentUser = userRef.current
-          if (currentUser && data.department === currentUser.department) {
-            // Play notification sound
-            playNotificationSound()
-            
-            addNotificationRef.current({
-              type: 'info',
-              title: 'Ticket Status Updated',
-              message: `Status changed from ${data.previousStatus} to ${data.newStatus}`,
-              data: {
-                ticketId: data.ticketId,
-                department: data.department,
-              },
-            })
-          }
-        })
-      )
+      // NOTE: Status changes are intentionally NOT added to the bell icon
+      // They only show toast notifications (handled by useRealTimeTickets hook)
+      // This prevents clutter when users change their own ticket statuses
 
       // Ticket priority changed
       unsubscribers.push(

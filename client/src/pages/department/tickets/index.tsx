@@ -236,20 +236,20 @@ export default function DepartmentTicketsPage() {
 
   return (
     <DepartmentLayout>
-      <div className="flex-1 p-6 space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="flex-1 p-3 sm:p-4 md:p-5 lg:p-6 space-y-4 sm:space-y-5 md:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight">
               {user?.department} Department
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
               Manage your department's support queue
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Real-time connection indicator */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-sm">
-              <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+            <div className="flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-muted text-xs sm:text-sm">
+              <div className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
               <span className="text-muted-foreground text-xs">
                 {isConnected ? 'Live' : 'Offline'}
               </span>
@@ -257,10 +257,11 @@ export default function DepartmentTicketsPage() {
             <Button
               onClick={() => setCreateInternalDialogOpen(true)}
               size="sm"
-              className="gap-1.5"
+              className="gap-1.5 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
             >
-              <Plus className="h-4 w-4" />
-              Create Internal Ticket
+              <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Create Internal Ticket</span>
+              <span className="sm:hidden">Create</span>
             </Button>
             {activeTab !== 'my-requests' && (
               <>
@@ -268,17 +269,19 @@ export default function DepartmentTicketsPage() {
                   variant={viewMode === "board" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setViewMode("board")}
+                  className="h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
                 >
-                  <LayoutGrid className="h-4 w-4 mr-2" />
-                  Board
+                  <LayoutGrid className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Board</span>
                 </Button>
                 <Button
                   variant={viewMode === "list" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setViewMode("list")}
+                  className="h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
                 >
-                  <List className="h-4 w-4 mr-2" />
-                  List
+                  <List className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">List</span>
                 </Button>
               </>
             )}
@@ -287,60 +290,63 @@ export default function DepartmentTicketsPage() {
 
         <Tabs 
           value={activeTab} 
-          className="space-y-4" 
+          className="space-y-3 sm:space-y-4" 
           onValueChange={setActiveTab}
         >
-          <div className="flex items-center justify-between">
-            <TabsList className="grid w-full max-w-lg grid-cols-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <TabsList className="grid w-full sm:w-auto sm:max-w-lg grid-cols-3">
               {user?.isHead ? (
                 <>
-                  <TabsTrigger value="all-tickets">
+                  <TabsTrigger value="all-tickets" className="text-xs sm:text-sm px-2 sm:px-3">
                     Queue
                   </TabsTrigger>
-                  <TabsTrigger value="unassigned">
+                  <TabsTrigger value="unassigned" className="text-xs sm:text-sm px-2 sm:px-3">
                     Unassigned
                     {unassignedCount > 0 && (
-                      <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs">{unassignedCount}</Badge>
+                      <Badge variant="destructive" className="ml-1 sm:ml-2 h-4 sm:h-5 px-1 sm:px-1.5 text-xs">{unassignedCount}</Badge>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="my-requests">
-                    My Requests
+                  <TabsTrigger value="my-requests" className="text-xs sm:text-sm px-2 sm:px-3">
+                    <span className="hidden sm:inline">My Requests</span>
+                    <span className="sm:hidden">Requests</span>
                   </TabsTrigger>
                 </>
               ) : (
                 <>
-                  <TabsTrigger value="my-tickets">
-                    My Tickets
+                  <TabsTrigger value="my-tickets" className="text-xs sm:text-sm px-2 sm:px-3">
+                    <span className="hidden sm:inline">My Tickets</span>
+                    <span className="sm:hidden">Tickets</span>
                   </TabsTrigger>
-                  <TabsTrigger value="unassigned">
+                  <TabsTrigger value="unassigned" className="text-xs sm:text-sm px-2 sm:px-3">
                     Unassigned
                     {unassignedCount > 0 && (
-                      <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs">{unassignedCount}</Badge>
+                      <Badge variant="destructive" className="ml-1 sm:ml-2 h-4 sm:h-5 px-1 sm:px-1.5 text-xs">{unassignedCount}</Badge>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="my-requests">
-                    My Requests
+                  <TabsTrigger value="my-requests" className="text-xs sm:text-sm px-2 sm:px-3">
+                    <span className="hidden sm:inline">My Requests</span>
+                    <span className="sm:hidden">Requests</span>
                   </TabsTrigger>
                 </>
               )}
             </TabsList>
 
-            <div className="flex gap-2">
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 w-full sm:w-auto">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-2.5 sm:left-3 top-2.5 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                 <Input 
                   placeholder="Search tickets..." 
-                  className="pl-9"
+                  className="pl-8 sm:pl-9 h-8 sm:h-9 text-xs sm:text-sm"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <div className="flex items-center gap-2">
-                    <Tag className="h-4 w-4" />
-                    <span className="text-sm">Priority</span>
+                <SelectTrigger className="w-full sm:w-[140px] h-8 sm:h-9 text-xs sm:text-sm">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <Tag className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="text-xs sm:text-sm">Priority</span>
                   </div>
                 </SelectTrigger>
                 <SelectContent>
@@ -354,13 +360,13 @@ export default function DepartmentTicketsPage() {
             </div>
           </div>
 
-          <TabsContent value={activeTab} className="mt-6">
+          <TabsContent value={activeTab} className="mt-4 sm:mt-5 md:mt-6">
             {isLoading ? (
-              <div className="flex justify-center p-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <div className="flex justify-center p-8 sm:p-10 md:p-12">
+                <Loader2 className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 animate-spin text-primary" />
               </div>
             ) : activeTab === 'my-requests' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                 {filteredTickets.length > 0 ? (
                   filteredTickets.map((ticket) => {
                     const ticketId = ticket._id || ticket.id

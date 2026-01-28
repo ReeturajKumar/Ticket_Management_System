@@ -54,10 +54,10 @@ export function DepartmentSidebar({ className, isOpen, onClose }: SidebarProps) 
 
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* Mobile & Tablet Overlay */}
       {isOpen && (
         <div 
-          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden"
           onClick={onClose}
         />
       )}
@@ -65,7 +65,9 @@ export function DepartmentSidebar({ className, isOpen, onClose }: SidebarProps) 
       <aside
         className={cn(
           "fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] w-56 border-r bg-white transition-transform duration-300 ease-in-out dark:bg-slate-950",
-          isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+          // Hidden by default on mobile and tablet, visible on desktop (lg+)
+          // Show when isOpen is true on mobile/tablet, always visible on desktop
+          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
           className
         )}
       >

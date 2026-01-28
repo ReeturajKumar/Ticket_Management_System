@@ -44,11 +44,11 @@ export function DepartmentHeader({ onMenuClick }: DepartmentHeaderProps) {
     <header className="fixed top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:bg-slate-950/95 dark:supports-[backdrop-filter]:bg-slate-950/60">
       <div className="flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-3">
-          {/* Mobile Menu Button */}
+          {/* Mobile & Tablet Menu Button */}
           <Button 
             variant="ghost" 
             size="icon" 
-            className="md:hidden -ml-2"
+            className="lg:hidden -ml-2"
             onClick={onMenuClick}
           >
             <Menu className="size-5" />

@@ -19,10 +19,14 @@ export function DepartmentLayout({ children }: DepartmentLayoutProps) {
   // This listens to socket events and adds them to the notification store
   useNotificationSocket()
 
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen)
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Header */}
-      <DepartmentHeader onMenuClick={() => setIsSidebarOpen(true)} />
+      <DepartmentHeader onMenuClick={toggleSidebar} />
       
       {/* Sidebar */}
       <DepartmentSidebar
@@ -33,7 +37,9 @@ export function DepartmentLayout({ children }: DepartmentLayoutProps) {
       {/* Main Content */}
       <main className={cn(
         "pt-16 transition-all duration-300 ease-in-out",
-        "md:ml-56", // Offset for fixed sidebar (reduced from ml-64)
+        // On tablet (md): margin only when sidebar is open
+        // On desktop (lg+): always show margin (sidebar always visible)
+        isSidebarOpen ? "md:ml-56 lg:ml-56" : "md:ml-0 lg:ml-56",
         "bg-slate-50/50" // Slight tint background
       )}>
         {children}

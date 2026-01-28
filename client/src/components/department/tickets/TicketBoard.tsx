@@ -44,7 +44,7 @@ export function DroppableColumn({ id, children }: DroppableColumnProps) {
   return (
     <div 
       ref={setNodeRef}
-      className={`flex-1 space-y-0 min-h-[200px] rounded-lg p-3 transition-colors ${
+      className={`flex-1 space-y-0 min-h-[150px] sm:min-h-[180px] md:min-h-[200px] rounded-lg p-2 sm:p-3 transition-colors ${
         isOver ? 'bg-primary/10 ring-2 ring-primary' : 'bg-muted/30'
       }`}
     >
@@ -173,21 +173,21 @@ export function TicketBoard({
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
     >
-      <div className={`grid gap-6 ${activeTab === 'unassigned' ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3 lg:grid-cols-5'}`}>
+      <div className={`grid gap-3 sm:gap-4 md:gap-5 lg:gap-6 ${activeTab === 'unassigned' ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}`}>
         {statusColumns.map((column) => (
           <div key={column.key} className="flex flex-col">
-            <div className="mb-4 flex items-center justify-between border-b pb-2">
-              <div className="flex items-center gap-2">
-                <div className={`h-2.5 w-2.5 rounded-full ${getColumnColorClass(column.color)}`} />
-                <h3 className="font-bold text-sm tracking-tight">{column.label}</h3>
-                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-semibold">
+            <div className="mb-2 sm:mb-3 md:mb-4 flex items-center justify-between border-b pb-1.5 sm:pb-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className={`h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full ${getColumnColorClass(column.color)}`} />
+                <h3 className="font-bold text-xs sm:text-sm tracking-tight">{column.label}</h3>
+                <Badge variant="secondary" className="h-4 sm:h-5 px-1 sm:px-1.5 text-[9px] sm:text-[10px] font-semibold">
                   {groupedTickets[column.key]?.length || 0}
                 </Badge>
               </div>
             </div>
             <DroppableColumn id={column.key}>
               {groupedTickets[column.key]?.length > 0 ? (
-                <div className={activeTab === 'unassigned' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "space-y-3"}>
+                <div className={activeTab === 'unassigned' ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4" : "space-y-2 sm:space-y-3"}>
                   {groupedTickets[column.key].map((ticket) => {
                     const ticketId = ticket._id || ticket.id
                     const isMyRequest = ticket.createdBy === userId || ticket.createdBy?._id === userId
@@ -208,9 +208,9 @@ export function TicketBoard({
                   })}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-40 bg-muted/20 border-2 border-dashed rounded-xl text-center p-4">
-                  <Clock className="h-8 w-8 text-muted-foreground/30 mb-2" />
-                  <p className="text-xs font-medium text-muted-foreground">No {column.label.toLowerCase()} tickets</p>
+                <div className="flex flex-col items-center justify-center h-32 sm:h-36 md:h-40 bg-muted/20 border-2 border-dashed rounded-lg sm:rounded-xl text-center p-3 sm:p-4">
+                  <Clock className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-muted-foreground/30 mb-1.5 sm:mb-2" />
+                  <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">No {column.label.toLowerCase()} tickets</p>
                 </div>
               )}
             </DroppableColumn>

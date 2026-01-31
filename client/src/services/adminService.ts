@@ -10,7 +10,8 @@ export interface PendingUser {
   name: string
   email: string
   department: string
-  isHead: boolean
+  isHead?: boolean
+  role: string
   requestedAt: string
 }
 
@@ -18,6 +19,7 @@ export interface AdminDashboardOverview {
   summary: {
     totalUsers: number
     departmentUsers: number
+    employees: number
     pendingUsers: number
     approvedUsers: number
     totalTickets: number

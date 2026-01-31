@@ -201,14 +201,17 @@ export function useNotificationSocket() {
       // Ticket assigned
       unsubscribers.push(
         subscribeToEvent<TicketAssignedEvent>('ticket:assigned', (data) => {
+          console.log('🔔 Notification hook - Ticket assigned event received:', data)
+          
           if (!isMounted) return
           
           const currentUser = userRef.current
           if (!currentUser) return
           
           // Notify only if assigned to this user
-          // Department heads will NOT receive notifications when they assign tickets to staff
           if (data.assigneeId === currentUser.id) {
+            console.log('✅ Adding notification to bell for assigned ticket')
+            
             // Play notification sound
             playNotificationSound()
             

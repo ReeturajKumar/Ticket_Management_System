@@ -15,10 +15,10 @@ export const getPendingUsers = async (req: Request, res: Response): Promise<void
   try {
     // Find all department users with PENDING status
     const pendingUsers = await User.find({
-      role: UserRole.DEPARTMENT_USER,
+      role: { $in: [UserRole.DEPARTMENT_USER, UserRole.EMPLOYEE] },
       approvalStatus: 'PENDING',
       isVerified: true, // Only show verified users
-    }).select('name email department isHead createdAt');
+    }).select('name email department isHead role createdAt');
 
     res.status(200).json({
       success: true,
@@ -27,8 +27,9 @@ export const getPendingUsers = async (req: Request, res: Response): Promise<void
           id: user._id,
           name: user.name,
           email: user.email,
-          department: user.department,
-          isHead: user.isHead,
+          department: user.department || 'N/A',
+          isHead: user.role === UserRole.DEPARTMENT_USER ? user.isHead : undefined,
+          role: user.role,
           requestedAt: user.createdAt,
         })),
         count: pendingUsers.length,
@@ -131,9 +132,9 @@ export const approveUser = async (req: Request, res: Response): Promise<void> =>
       throw new AppError('User not found', 404);
     }
 
-    // Check if user is department user
-    if (user.role !== UserRole.DEPARTMENT_USER) {
-      throw new AppError('User is not a department user', 400);
+    // Check if user is department user or employee
+    if (user.role !== UserRole.DEPARTMENT_USER && user.role !== UserRole.EMPLOYEE) {
+      throw new AppError('User is not a department user or employee', 400);
     }
 
     // Check if already approved
@@ -197,9 +198,9 @@ export const rejectUser = async (req: Request, res: Response): Promise<void> => 
       throw new AppError('User not found', 404);
     }
 
-    // Check if user is department user
-    if (user.role !== UserRole.DEPARTMENT_USER) {
-      throw new AppError('User is not a department user', 400);
+    // Check if user is department user or employee
+    if (user.role !== UserRole.DEPARTMENT_USER && user.role !== UserRole.EMPLOYEE) {
+      throw new AppError('User is not a department user or employee', 400);
     }
 
     // Check if already rejected
@@ -261,11 +262,12 @@ export const getAdminDashboardOverview = async (req: Request, res: Response): Pr
     }
 
     // Get total users count by role
-    const [totalUsers, departmentUsers, pendingUsers, approvedUsers] = await Promise.all([
+    const [totalUsers, departmentUsers, employees, pendingUsers, approvedUsers] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ role: UserRole.DEPARTMENT_USER }),
-      User.countDocuments({ role: UserRole.DEPARTMENT_USER, approvalStatus: 'PENDING' }),
-      User.countDocuments({ role: UserRole.DEPARTMENT_USER, approvalStatus: 'APPROVED' }),
+      User.countDocuments({ role: UserRole.EMPLOYEE }),
+      User.countDocuments({ role: { $in: [UserRole.DEPARTMENT_USER, UserRole.EMPLOYEE] }, approvalStatus: 'PENDING' }),
+      User.countDocuments({ role: { $in: [UserRole.DEPARTMENT_USER, UserRole.EMPLOYEE] }, approvalStatus: 'APPROVED' }),
     ]);
 
     // Get total tickets count
@@ -362,6 +364,7 @@ export const getAdminDashboardOverview = async (req: Request, res: Response): Pr
       summary: {
         totalUsers,
         departmentUsers,
+        employees,
         pendingUsers,
         approvedUsers,
         totalTickets,

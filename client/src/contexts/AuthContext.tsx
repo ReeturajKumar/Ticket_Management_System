@@ -17,6 +17,7 @@ import {
   storeDepartmentTokens,
   isDepartmentAuthenticated,
 } from '@/services/departmentAuthService'
+import { loginEmployee, logoutEmployee } from '@/services/employeeAuthService'
 
 // ============================================================================
 // AUTH CONTEXT - Centralized Authentication State Management
@@ -28,9 +29,9 @@ export interface DepartmentUser {
   id: string
   name: string
   email: string
-  role: 'DEPARTMENT_USER'
-  department: string
-  isHead: boolean
+  role: 'DEPARTMENT_USER' | 'EMPLOYEE'
+  department?: string
+  isHead?: boolean
   avatar?: string
 }
 
@@ -42,7 +43,7 @@ interface AuthContextType {
   isLoading: boolean
   
   // Auth actions
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>
+  login: (email: string, password: string, rememberMe?: boolean, role?: 'DEPARTMENT_USER' | 'EMPLOYEE') => Promise<boolean>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
   updateUser: (userData: Partial<DepartmentUser>) => void
@@ -136,10 +137,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = useCallback(async (
     email: string, 
     password: string, 
-    rememberMe: boolean = false
+    rememberMe: boolean = false,
+    requestedRole: 'DEPARTMENT_USER' | 'EMPLOYEE' = 'DEPARTMENT_USER'
   ): Promise<boolean> => {
     try {
-      const response = await loginDepartmentUser(email, password)
+      const loginMethod = requestedRole === 'EMPLOYEE' ? loginEmployee : loginDepartmentUser
+      const response = await loginMethod(email, password)
       
       if (response.success && response.data) {
         const { accessToken, refreshToken, user: userData } = response.data
@@ -174,7 +177,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Logout function
   const logout = useCallback(async () => {
     try {
-      await logoutDepartmentUser()
+      if (user?.role === 'EMPLOYEE') {
+        await logoutEmployee()
+      } else {
+        await logoutDepartmentUser()
+      }
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
@@ -288,8 +295,9 @@ export function usePermissions() {
   
   return useMemo(() => ({
     isAuthenticated,
-    isHead: user?.isHead ?? false,
-    isStaff: isAuthenticated && !user?.isHead,
+    isHead: user?.role === 'DEPARTMENT_USER' && (user?.isHead ?? false),
+    isStaff: user?.role === 'DEPARTMENT_USER' && !user?.isHead,
+    isEmployee: user?.role === 'EMPLOYEE',
     department: user?.department ?? null,
     
     // Permission checks

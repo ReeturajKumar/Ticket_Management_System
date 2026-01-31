@@ -26,12 +26,12 @@ interface CreateUserDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onUserCreated?: () => void
-  defaultType?: 'department-head' | 'department-staff'
+  defaultType?: 'department-head' | 'department-staff' | 'employee'
 }
 
 export function CreateUserDialog({ open, onOpenChange, onUserCreated, defaultType = 'department-head' }: CreateUserDialogProps) {
   const [isCreating, setIsCreating] = useState(false)
-  const [userType, setUserType] = useState<'department-head' | 'department-staff'>(defaultType)
+  const [userType, setUserType] = useState<'department-head' | 'department-staff' | 'employee'>(defaultType)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -43,13 +43,14 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, defaultTyp
   })
 
   // Update form data when user type changes
-  const handleUserTypeChange = (type: 'department-head' | 'department-staff') => {
+  const handleUserTypeChange = (type: 'department-head' | 'department-staff' | 'employee') => {
     setUserType(type)
     setFormData(prev => ({
       ...prev,
-      role: 'DEPARTMENT_USER',
+      role: type === 'employee' ? 'EMPLOYEE' : 'DEPARTMENT_USER',
       isHead: type === 'department-head',
       approvalStatus: 'APPROVED',
+      department: type === 'employee' ? '' : prev.department,
     }))
   }
 
@@ -61,7 +62,7 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, defaultTyp
       return
     }
 
-    if (!formData.department) {
+    if (formData.role === 'DEPARTMENT_USER' && !formData.department) {
       toast.error("Please select a department")
       return
     }
@@ -128,14 +129,18 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, defaultTyp
         </DialogHeader>
 
         <Tabs value={userType} onValueChange={(value) => handleUserTypeChange(value as 'department-head' | 'department-staff')} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="department-head">
               <UserCog className="h-4 w-4 mr-2" />
-              Department Head
+              Head
             </TabsTrigger>
             <TabsTrigger value="department-staff">
               <Users className="h-4 w-4 mr-2" />
-              Department Staff
+              Staff
+            </TabsTrigger>
+            <TabsTrigger value="employee">
+              <Building2 className="h-4 w-4 mr-2" />
+              Employee
             </TabsTrigger>
           </TabsList>
 
@@ -180,9 +185,13 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, defaultTyp
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="department">Department *</Label>
-                  <Select value={formData.department} onValueChange={(value) => setFormData(prev => ({ ...prev, department: value }))}>
+                  <Select 
+                    disabled={formData.role === 'EMPLOYEE'}
+                    value={formData.department} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, department: value }))}
+                  >
                     <SelectTrigger id="department">
-                      <SelectValue placeholder="Select department" />
+                      <SelectValue placeholder={formData.role === 'EMPLOYEE' ? "N/A (No Department)" : "Select department"} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="PLACEMENT">Placement</SelectItem>
@@ -196,17 +205,19 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, defaultTyp
                 </div>
               </div>
 
-              <div className="p-4 border rounded-lg bg-muted/30">
+               <div className="p-4 border rounded-lg bg-muted/30">
                 <div className="flex items-center gap-2 mb-2">
-                  <Building2 className="h-4 w-4 text-primary" />
+                  {userType === 'employee' ? <Building2 className="h-4 w-4 text-primary" /> : <Users className="h-4 w-4 text-primary" />}
                   <span className="text-sm font-semibold">
-                    {userType === 'department-head' ? 'Department Head' : 'Department Staff'}
+                    {userType === 'department-head' && 'Department Head'}
+                    {userType === 'department-staff' && 'Department Staff'}
+                    {userType === 'employee' && 'General Employee'}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {userType === 'department-head' 
-                    ? 'Department heads can manage tickets, assign staff, and view department analytics.'
-                    : 'Department staff can be assigned tickets and work on resolving them.'}
+                  {userType === 'department-head' && 'Department heads can manage tickets, assign staff, and view department analytics.'}
+                  {userType === 'department-staff' && 'Department staff can be assigned tickets and work on resolving them.'}
+                  {userType === 'employee' && 'General employees are internal users not bound to a specific department. They have higher privileges than guest users.'}
                 </p>
               </div>
 
@@ -230,6 +241,7 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, defaultTyp
                       <UserPlus className="mr-2 h-4 w-4" />
                       {userType === 'department-head' && 'Create Department Head'}
                       {userType === 'department-staff' && 'Create Department Staff'}
+                      {userType === 'employee' && 'Create Internal Employee'}
                     </>
                   )}
                 </Button>

@@ -219,7 +219,7 @@ function NotificationItem({ notification, onMarkAsRead, onRemove, onClick }: Not
   )
 }
 
-export function NotificationBell() {
+export function NotificationBell({ className }: { className?: string }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification, clearAll } = useNotifications()
@@ -244,12 +244,12 @@ export function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+          className={cn("relative cursor-pointer hover:bg-white/5", className)}
           aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'}
           aria-expanded={open}
           aria-haspopup="menu"
         >
-          <Bell className="h-5 w-5 text-slate-600 dark:text-slate-400" aria-hidden="true" />
+          <Bell className="h-5 w-5" aria-hidden="true" />
           {unreadCount > 0 && (
             <span 
               className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center"

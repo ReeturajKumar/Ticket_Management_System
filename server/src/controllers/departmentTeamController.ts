@@ -11,15 +11,12 @@ import AppError from '../utils/AppError';
 export const listTeamMembers = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = (req as any).user;
-
-    // Find all team members in the department
     const teamMembers = await User.find({
       role: UserRole.DEPARTMENT_USER,
       department: user.department,
       isApproved: true,
     }).select('name email isHead createdAt');
 
-    // Get ticket counts for each team member
     const teamMembersWithStats = await Promise.all(
       teamMembers.map(async (member) => {
         const assignedTickets = await Ticket.countDocuments({
@@ -68,9 +65,7 @@ export const getTeamMemberTickets = async (req: Request, res: Response): Promise
     const { userId } = req.params;
     const { status } = req.query;
 
-    // Verify team member exists and belongs to department
     const teamMember = await User.findById(userId);
-
     if (!teamMember) {
       throw new AppError('Team member not found', 404);
     }
@@ -79,7 +74,6 @@ export const getTeamMemberTickets = async (req: Request, res: Response): Promise
       throw new AppError('Team member does not belong to your department', 403);
     }
 
-    // Build filter
     const filter: any = {
       assignedTo: userId,
       department: user.department,
@@ -89,7 +83,6 @@ export const getTeamMemberTickets = async (req: Request, res: Response): Promise
       filter.status = status;
     }
 
-    // Get tickets
     const tickets = await Ticket.find(filter)
       .sort({ createdAt: -1 })
       .select('subject status priority createdAt updatedAt');
@@ -120,7 +113,6 @@ export const getTeamMemberPerformance = async (req: Request, res: Response): Pro
     const user = (req as any).user;
     const { userId } = req.params;
 
-    // Verify team member exists and belongs to department
     const teamMember = await User.findById(userId);
 
     if (!teamMember) {
@@ -131,7 +123,6 @@ export const getTeamMemberPerformance = async (req: Request, res: Response): Pro
       throw new AppError('Team member does not belong to your department', 403);
     }
 
-    // Get all tickets assigned to this team member
     const allTickets = await Ticket.find({
       assignedTo: userId,
       department: user.department,
@@ -144,7 +135,7 @@ export const getTeamMemberPerformance = async (req: Request, res: Response): Pro
       (t) => t.status === TicketStatus.OPEN || t.status === TicketStatus.ASSIGNED
     ).length;
 
-    // Calculate average resolution time
+
     const resolvedTickets = allTickets.filter((t) => t.resolvedAt);
     let avgResolutionTime = '0 hours';
 
@@ -160,10 +151,9 @@ export const getTeamMemberPerformance = async (req: Request, res: Response): Pro
       avgResolutionTime = `${avgTimeHours} hours`;
     }
 
-    // Calculate performance percentage
+
     const performance = totalAssigned > 0 ? Math.round((resolved / totalAssigned) * 100) : 0;
 
-    // Get this week's stats
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 

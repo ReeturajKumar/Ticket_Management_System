@@ -10,7 +10,6 @@ import { Loader2 } from "lucide-react"
 import { createInternalTicket } from "@/services/departmentStaffService"
 import { toast } from "react-toastify"
 
-
 interface CreateInternalTicketDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -31,6 +30,7 @@ export function CreateInternalTicketDialog({ open, onOpenChange, onSuccess }: Cr
     { value: 'TECHNICAL_SUPPORT', label: 'Technical Support' },
     { value: 'HR', label: 'HR Department' },
     { value: 'FINANCE', label: 'Finance Department' },
+    { value: 'OPERATIONS', label: 'Operations Department' },
   ]
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,82 +64,94 @@ export function CreateInternalTicketDialog({ open, onOpenChange, onSuccess }: Cr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[32px] border-none shadow-2xl p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Create Internal Ticket</DialogTitle>
-          <DialogDescription>
-            Create a new ticket for another department.
+          <DialogTitle className="text-xl font-bold text-slate-900 font-garnett">Internal Submission</DialogTitle>
+          <DialogDescription className="text-slate-500 font-medium">
+            Deploy a new internal request across departments.
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+        <form onSubmit={handleSubmit} className="space-y-5 py-2">
           <div className="space-y-2">
-            <Label htmlFor="subject">Subject</Label>
+            <Label htmlFor="subject" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Subject</Label>
             <Input 
               id="subject" 
-              placeholder="e.g. Need access to analytics dashboard" 
+              placeholder="Brief summary of the requirement" 
+              className="rounded-2xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-1 focus:ring-slate-300 transition-all h-11 px-4"
               value={formData.subject}
               onChange={(e) => setFormData({...formData, subject: e.target.value})}
               required
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="department">Target Department</Label>
-            <Select 
-              value={formData.department} 
-              onValueChange={(value) => setFormData({...formData, department: value})}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select department" />
-              </SelectTrigger>
-              <SelectContent>
-                {departments.map((dept) => (
-                  <SelectItem key={dept.value} value={dept.value}>
-                    {dept.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+             <div className="space-y-2">
+               <Label htmlFor="department" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Destination</Label>
+               <Select 
+                 value={formData.department} 
+                 onValueChange={(value) => setFormData({...formData, department: value})}
+               >
+                 <SelectTrigger className="rounded-2xl border-slate-200 bg-slate-50 h-11 px-4">
+                    <SelectValue placeholder="Select" />
+                 </SelectTrigger>
+                 <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
+                   {departments.map((dept) => (
+                     <SelectItem key={dept.value} value={dept.value} className="rounded-xl">
+                       {dept.label}
+                     </SelectItem>
+                   ))}
+                 </SelectContent>
+               </Select>
+             </div>
+
+             <div className="space-y-2">
+               <Label htmlFor="priority" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Priority</Label>
+               <Select 
+                 value={formData.priority} 
+                 onValueChange={(value) => setFormData({...formData, priority: value})}
+               >
+                 <SelectTrigger className="rounded-2xl border-slate-200 bg-slate-50 h-11 px-4">
+                    <SelectValue placeholder="Select" />
+                 </SelectTrigger>
+                 <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
+                   <SelectItem value="LOW" className="rounded-xl">Low</SelectItem>
+                   <SelectItem value="MEDIUM" className="rounded-xl">Medium</SelectItem>
+                   <SelectItem value="HIGH" className="rounded-xl">High</SelectItem>
+                   <SelectItem value="CRITICAL" className="rounded-xl text-rose-600 font-bold">Critical</SelectItem>
+                 </SelectContent>
+               </Select>
+             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="priority">Priority</Label>
-            <Select 
-              value={formData.priority} 
-              onValueChange={(value) => setFormData({...formData, priority: value})}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="LOW">Low</SelectItem>
-                <SelectItem value="MEDIUM">Medium</SelectItem>
-                <SelectItem value="HIGH">High</SelectItem>
-                <SelectItem value="CRITICAL">Critical</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Detailed Brief</Label>
             <Textarea 
               id="description" 
-              placeholder="Describe your request in detail..." 
-              className="resize-none min-h-[100px]"
+              placeholder="Elaborate on the request details..." 
+              className="resize-none min-h-[120px] rounded-[24px] border-slate-200 bg-slate-50 focus:bg-white focus:ring-1 focus:ring-slate-300 transition-all p-4"
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
               required
             />
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+          <DialogFooter className="gap-3 sm:gap-0 pt-4">
+            <Button 
+               type="button" 
+               variant="ghost" 
+               onClick={() => onOpenChange(false)}
+               className="rounded-2xl font-bold text-slate-400 hover:bg-slate-50"
+            >
+              Discard
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button 
+               type="submit" 
+               disabled={loading}
+               className="rounded-2xl bg-[#032313] hover:bg-[#032313]/90 text-[#ACDF33] font-bold px-8 h-11 shadow-lg active:scale-95 transition-all"
+            >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Ticket
+              Dispatch Ticket
             </Button>
           </DialogFooter>
         </form>

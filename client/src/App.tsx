@@ -34,9 +34,14 @@ import DepartmentResetPassword from "./pages/department/auth/ResetPassword"
 // Admin Auth Pages - loaded immediately (entry points for auth flow)
 import AdminLoginPage from "./pages/admin/auth/Login"
 
+// Employee Auth Pages
+import EmployeeLoginPage from "./pages/employee/auth/Login"
+import EmployeeRegisterPage from "./pages/employee/auth/Register"
+
 // Protected Route Components
 import { DepartmentProtectedRoute } from "./components/DepartmentProtectedRoute"
 import { AdminProtectedRoute } from "./components/AdminProtectedRoute"
+import { EmployeeProtectedRoute } from "./components/EmployeeProtectedRoute"
 import AdminTicketDetailsPage from "./pages/admin/tickets/[ticketId]"
 
 // ============================================================================
@@ -59,6 +64,11 @@ const AdminUsersPage = lazy(() => import("./pages/admin/users"))
 const AdminTicketsPage = lazy(() => import("./pages/admin/tickets"))
 const AdminAnalyticsPage = lazy(() => import("./pages/admin/analytics"))
 const AdminUserDetailsPage = lazy(() => import("./pages/admin/users/[userId]"))
+
+// Employee Pages
+const EmployeeDashboard = lazy(() => import("./pages/employee/dashboard"))
+const EmployeeTicketsPage = lazy(() => import("./pages/employee/tickets/index"))
+const EmployeeTicketDetailsPage = lazy(() => import("./pages/employee/tickets/details/index"))
 
 // ============================================================================
 // LAZY ROUTE WRAPPER
@@ -105,6 +115,42 @@ function App() {
 
               {/* Admin Auth Routes - Public */}
               <Route path="/admin/login" element={<AdminLoginPage />} />
+
+              {/* Employee Auth Routes - Public */}
+              <Route path="/employee/login" element={<EmployeeLoginPage />} />
+              <Route path="/employee/register" element={<EmployeeRegisterPage />} />
+
+              {/* Employee Routes - Protected */}
+              <Route
+                path="/employee/dashboard"
+                element={
+                  <EmployeeProtectedRoute>
+                    <LazyRoute fallback={<DashboardSkeleton />}>
+                      <EmployeeDashboard />
+                    </LazyRoute>
+                  </EmployeeProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee/tickets"
+                element={
+                  <EmployeeProtectedRoute>
+                    <LazyRoute fallback={<TicketsSkeleton />}>
+                      <EmployeeTicketsPage />
+                    </LazyRoute>
+                  </EmployeeProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee/tickets/:id"
+                element={
+                  <EmployeeProtectedRoute>
+                    <LazyRoute fallback={<PageSkeleton />}>
+                      <EmployeeTicketDetailsPage />
+                    </LazyRoute>
+                  </EmployeeProtectedRoute>
+                }
+              />
 
               {/* Department Routes - Protected (Lazy Loaded with Skeletons) */}
               <Route

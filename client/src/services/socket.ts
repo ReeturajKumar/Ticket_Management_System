@@ -7,10 +7,9 @@ import { io, Socket } from 'socket.io-client'
 
 // Socket instance (singleton)
 let socket: Socket | null = null
-
-// Connection state
 let isConnecting = false
 let reconnectAttempts = 0
+let connectionAttempts = 0 // Track connection attempts to prevent duplicates
 const MAX_RECONNECT_ATTEMPTS = 5
 const RECONNECT_DELAY = 3000
 
@@ -52,9 +51,12 @@ export function connectSocket(userId: string, department?: string): Socket | nul
   }
 
   // Prevent multiple simultaneous connection attempts
-  if (isConnecting) {
+  if (isConnecting || connectionAttempts > 0) {
+    console.log('🔌 Connection already in progress or attempted, skipping duplicate')
     return socket
   }
+
+  connectionAttempts++
 
   isConnecting = true
   // Check for both department and admin tokens
@@ -118,8 +120,13 @@ export function connectSocket(userId: string, department?: string): Socket | nul
       reconnectAttempts = 0
 
       // Re-authenticate after reconnection
-      socket?.emit('authenticate', { userId, department })
-      socket?.emit('join:department', department)
+      socket?.emit('authenticate', { userId, department: department || undefined })
+      if (department) {
+        socket?.emit('join:department', department)
+      } else {
+        // For admin users without department, join admin room
+        socket?.emit('join:admin', 'admin')
+      }
     })
 
     socket.on('error', (error) => {
@@ -129,17 +136,20 @@ export function connectSocket(userId: string, department?: string): Socket | nul
     // Authentication response
     socket.on('authenticated', (_data) => {
       // Successfully authenticated
+      connectionAttempts = 0 // Reset connection attempts on success
     })
 
     socket.on('authentication-error', (error) => {
       console.error('Socket authentication failed:', error)
+      connectionAttempts = 0 // Reset on error
       disconnectSocket()
     })
 
     return socket
   } catch (error) {
-    console.error('Failed to create socket connection:', error)
+    console.error('Failed to connect socket:', error)
     isConnecting = false
+    connectionAttempts = 0 // Reset on error
     return null
   }
 }
@@ -156,13 +166,11 @@ export function disconnectSocket(): void {
         socket?.off(event, listener as any)
       })
     })
-    eventListeners.clear()
-
     socket.disconnect()
     socket = null
-    isConnecting = false
-    reconnectAttempts = 0
   }
+  isConnecting = false
+  connectionAttempts = 0 // Reset connection attempts
 }
 
 /**

@@ -10,9 +10,9 @@ interface DepartmentAuthResponse {
       id: string
       name: string
       email: string
-      role: 'DEPARTMENT_USER'
-      department: string
-      isHead: boolean
+      role: 'DEPARTMENT_USER' | 'EMPLOYEE'
+      department?: string
+      isHead?: boolean
     }
     accessToken?: string
     refreshToken?: string

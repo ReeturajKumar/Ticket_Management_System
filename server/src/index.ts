@@ -85,8 +85,8 @@ app.use(errorHandler);
 
 // Start Server with HTTP (for Socket.IO support)
 const server = httpServer.listen(PORT, () => {
-  logger.info(`Server is running on port ${PORT}`);
-  logger.info('WebSocket server ready for connections');
+  console.log(`Server is running on port ${PORT}`);
+  console.log('WebSocket server ready for connections');
 });
 
 // ============================================================================

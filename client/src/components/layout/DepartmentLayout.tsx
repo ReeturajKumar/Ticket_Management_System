@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 // Layout wrapper for department pages
 import { DepartmentHeader } from "./DepartmentHeader"
 import { ToastContainer } from 'react-toastify'
@@ -19,14 +19,17 @@ export function DepartmentLayout({ children }: DepartmentLayoutProps) {
   // This listens to socket events and adds them to the notification store
   useNotificationSocket()
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen)
-  }
+  // Listen for mobile menu toggle events
+  useEffect(() => {
+    const handleToggle = () => setIsSidebarOpen(prev => !prev)
+    window.addEventListener('toggleSidebar', handleToggle)
+    return () => window.removeEventListener('toggleSidebar', handleToggle)
+  }, [])
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-[#032313]">
       {/* Header */}
-      <DepartmentHeader onMenuClick={toggleSidebar} />
+      <DepartmentHeader />
       
       {/* Sidebar */}
       <DepartmentSidebar
@@ -36,11 +39,11 @@ export function DepartmentLayout({ children }: DepartmentLayoutProps) {
       
       {/* Main Content */}
       <main className={cn(
-        "pt-16 transition-all duration-300 ease-in-out",
+        "pt-16 transition-all duration-300 ease-in-out min-h-screen",
         // On tablet (md): margin only when sidebar is open
         // On desktop (lg+): always show margin (sidebar always visible)
-        isSidebarOpen ? "md:ml-56 lg:ml-56" : "md:ml-0 lg:ml-56",
-        "bg-slate-50/50" // Slight tint background
+        isSidebarOpen ? "md:ml-60 lg:ml-60" : "md:ml-0 lg:ml-60",
+        "bg-white shadow-sm" 
       )}>
         {children}
       </main>

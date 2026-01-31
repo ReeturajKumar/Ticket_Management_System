@@ -38,6 +38,13 @@ export function useSocketConnection(options: UseSocketConnectionOptions = {}) {
   const [isConnected, setIsConnected] = useState(false) // Start as false, will update when connected
   const connectionAttempted = useRef<string | null>(null) // Track which user we attempted to connect for
 
+  console.log('🔌 Socket connection hook initialized', { 
+    autoConnect, 
+    isAuthenticated, 
+    userId: user?.id, 
+    department: user?.department 
+  })
+
   // Connect to socket when authenticated
   useEffect(() => {
     if (!autoConnect || !isAuthenticated || !user) {
@@ -45,10 +52,23 @@ export function useSocketConnection(options: UseSocketConnectionOptions = {}) {
       return
     }
 
+    // Check if socket already exists and is connected
+    const existingSocket = getSocket()
+    if (existingSocket?.connected) {
+      console.log('🔌 Socket already connected, skipping reconnection')
+      setIsConnected(true)
+      return
+    }
+
     // Reset connection attempt if user changed (logout/login scenario)
-    const userKey = `${user.id}-${user.department}`
+    const userKey = `${user.id}-${user.department || 'no-dept'}`
     if (connectionAttempted.current !== userKey) {
       connectionAttempted.current = userKey
+      // Disconnect existing socket if user changed
+      if (existingSocket) {
+        console.log('🔌 User changed, disconnecting existing socket')
+        disconnectSocket()
+      }
       // Reset connection state when user changes
       setIsConnected(false)
     } else {
@@ -238,64 +258,37 @@ export function useRealTimeTickets(options: UseRealTimeTicketsOptions = {}) {
 
   const { user } = useAuth()
   const refreshRef = useRef(onRefresh)
-  const [socketReady, setSocketReady] = useState(false)
   
   // Keep refs updated
   useEffect(() => {
     refreshRef.current = onRefresh
   }, [onRefresh])
 
-  // Monitor socket connection state
   useEffect(() => {
-    const checkSocket = () => {
-      const socket = getSocket()
-      if (socket?.connected) {
-        setSocketReady(true)
-      }
-    }
-    
-    // Check immediately
-    checkSocket()
-    
-    // Also check periodically for late connections
-    // Reduced from 500ms to 2000ms to reduce aggressive polling
-    // Socket events should handle most connection state changes
-    const interval = setInterval(checkSocket, 2000)
-    
-    // Listen for socket connection
     const socket = getSocket()
-    if (socket) {
-      const handleConnect = () => setSocketReady(true)
-      const handleDisconnect = () => setSocketReady(false)
-      
-      socket.on('connect', handleConnect)
-      socket.on('disconnect', handleDisconnect)
-      
-      return () => {
-        clearInterval(interval)
-        socket.off('connect', handleConnect)
-        socket.off('disconnect', handleDisconnect)
-      }
-    }
-    
-    return () => clearInterval(interval)
-  }, [])
+    if (!socket || !user) return
 
-  useEffect(() => {
-    const socket = getSocket()
-    if (!socket || !user || !socketReady) return
+    console.log('🔌 Setting up real-time ticket listeners for user:', user.id, user.department)
 
     const unsubscribers: (() => void)[] = []
 
     // Ticket created
     unsubscribers.push(
       subscribeToEvent<TicketCreatedEvent>('ticket:created', (data) => {
-        if (showNotifications && data.department === user.department) {
+        console.log('🎫 Ticket created event received:', data)
+        console.log('👤 Current user:', user.id, user.department)
+        
+        // Different logic for employees vs department users
+        const shouldNotify = user.department 
+          ? data.department === user.department  // Department users only get their department's tickets
+          : data.createdBy === user.id     // Employees only get their own tickets
+          
+        if (showNotifications && shouldNotify) {
           toast.info(`New ticket: ${data.subject}`, {
             autoClose: 5000,
             onClick: () => {
               // Could navigate to ticket
-              window.location.href = `/department/tickets/${data.ticketId}`
+              window.location.href = `/employee/tickets`
             },
           })
         }
@@ -307,26 +300,29 @@ export function useRealTimeTickets(options: UseRealTimeTicketsOptions = {}) {
     // Ticket assigned
     unsubscribers.push(
       subscribeToEvent<TicketAssignedEvent>('ticket:assigned', (data) => {
-        if (showNotifications) {
-          if (data.assigneeId === user.id) {
-            toast.info(`Ticket assigned to you: ${data.subject}`, {
-              autoClose: 5000,
-            })
-          } else if (data.department === user.department) {
-            toast.info(`Ticket assigned to ${data.assigneeName}`, {
-              autoClose: 3000,
-            })
-          }
+        // Debug logging to track events
+        console.log('🎫 Ticket assigned event received:', data)
+        console.log('👤 Current user:', user.id, user.department)
+        
+        // For ticket assignment, notify if assigned to this user (regardless of department)
+        const shouldNotify = data.assigneeId === user.id
+        
+        if (showNotifications && shouldNotify) {
+          toast.info(`Ticket assigned to you: ${data.subject}`, {
+            autoClose: 5000,
+          })
         }
         onTicketAssigned?.(data)
         refreshRef.current?.()
       })
     )
 
-    // Ticket status changed
+    // Ticket status changed - for employees, check if they created the ticket or it's assigned to them
     unsubscribers.push(
       subscribeToEvent<TicketStatusChangedEvent>('ticket:status-changed', (data) => {
-        if (showNotifications && data.department === user.department) {
+        // Note: We don't have ticket creator/assignee info in this event, so employees get all status changes
+        // In a real implementation, you'd want to filter by user involvement
+        if (showNotifications) {
           toast.info(
             `Ticket status changed: ${data.previousStatus} → ${data.newStatus}`,
             { autoClose: 3000 }
@@ -337,10 +333,10 @@ export function useRealTimeTickets(options: UseRealTimeTicketsOptions = {}) {
       })
     )
 
-    // Ticket priority changed
+    // Ticket priority changed - similar logic to status changes
     unsubscribers.push(
       subscribeToEvent<TicketPriorityChangedEvent>('ticket:priority-changed', (data) => {
-        if (showNotifications && data.department === user.department) {
+        if (showNotifications) {
           toast.info(
             `Ticket priority changed: ${data.previousPriority} → ${data.newPriority}`,
             { autoClose: 3000 }
@@ -355,7 +351,7 @@ export function useRealTimeTickets(options: UseRealTimeTicketsOptions = {}) {
     return () => {
       unsubscribers.forEach((unsubscribe) => unsubscribe())
     }
-  }, [user, showNotifications, socketReady, onTicketCreated, onTicketAssigned, onTicketStatusChanged, onTicketPriorityChanged])
+  }, [user, showNotifications, onTicketCreated, onTicketAssigned, onTicketStatusChanged, onTicketPriorityChanged])
 }
 
 // ============================================================================

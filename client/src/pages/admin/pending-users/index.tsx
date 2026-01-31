@@ -113,7 +113,7 @@ export default function AdminPendingUsersPage() {
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Pending User Approvals</h2>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Review and approve department user registration requests.
+            Review and approve registration requests for department staff and general employees.
           </p>
         </div>
 
@@ -149,12 +149,15 @@ export default function AdminPendingUsersPage() {
                       </div>
                       
                       <div className="flex flex-wrap items-center gap-2 mt-3">
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="bg-slate-50">
                           <Building2 className="h-3 w-3 mr-1" />
-                          {user.department}
+                          {user.department === 'N/A' ? 'General Staff' : user.department}
+                        </Badge>
+                        <Badge variant={user.role === 'EMPLOYEE' ? "default" : "secondary"} className={user.role === 'EMPLOYEE' ? "bg-blue-600" : ""}>
+                          {user.role === 'EMPLOYEE' ? 'General Employee' : 'Department Staff'}
                         </Badge>
                         {user.isHead && (
-                          <Badge variant="secondary">Department Head</Badge>
+                          <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200">Department Head</Badge>
                         )}
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Calendar className="h-3 w-3" />

@@ -103,26 +103,26 @@ export default function CreatePublicTicketPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white font-sans text-slate-900">
+    <div className="flex min-h-screen bg-background font-sans text-foreground">
       
       {/* Left Column: Image & Branding (Hidden on mobile) */}
-      <div className="relative hidden w-1/2 lg:flex flex-col justify-between overflow-hidden bg-slate-900 text-white">
+      <div className="relative hidden w-1/2 lg:flex flex-col justify-between overflow-hidden bg-secondary text-secondary-foreground">
         
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <img 
             src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=2070&auto=format&fit=crop" 
             alt="Modern Corporate Office" 
-            className="h-full w-full object-cover opacity-60"
+            className="h-full w-full object-cover opacity-30"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-secondary via-secondary/60 to-transparent" />
         </div>
 
         {/* Branding Content */}
         <div className="relative z-10 p-12 h-full flex flex-col justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 backdrop-blur-md border border-indigo-500/30">
-              <LifeBuoy className="h-6 w-6 text-indigo-200" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 backdrop-blur-md border border-primary/30">
+              <LifeBuoy className="h-6 w-6 text-primary" />
             </div>
             <span className="text-xl font-bold tracking-wide">EduDesk</span>
           </div>
@@ -131,19 +131,19 @@ export default function CreatePublicTicketPage() {
             <h1 className="text-5xl font-bold tracking-tight leading-tight">
               Here to Help You Succeed
             </h1>
-            <p className="text-xl text-slate-300 font-light leading-relaxed">
+            <p className="text-xl text-foreground/70 font-light leading-relaxed">
               Facing an issue? Submit your query and our department teams will resolve it as quickly as possible. We are dedicated to supporting your success.
             </p>
           </div>
           
-          <div className="text-sm text-slate-500">
+          <div className="text-sm text-foreground/50">
             &copy; {new Date().getFullYear()} EduDesk Support. All rights reserved.
           </div>
         </div>
       </div>
 
       {/* Right Column: Form */}
-      <div className="flex w-full flex-col justify-center lg:w-1/2 bg-slate-50 dark:bg-slate-950 px-4 py-6 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+      <div className="flex w-full flex-col justify-center lg:w-1/2 bg-background dark:bg-background px-4 py-6 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-lg lg:w-[480px]">
           
           {isSuccess ? (
@@ -165,7 +165,7 @@ export default function CreatePublicTicketPage() {
                    <Button 
                     onClick={() => setIsSuccess(false)} 
                     variant="outline" 
-                    className="w-full border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+                    className="w-full border-primary/20 text-primary hover:bg-primary/10 hover:text-primary"
                   >
                     Submit Another Request
                   </Button>
@@ -312,7 +312,7 @@ export default function CreatePublicTicketPage() {
                     <div className="pt-2">
                         <Button 
                             type="submit" 
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 h-10 text-sm font-medium" 
+                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 h-10 text-sm font-bold" 
                             disabled={isLoading}
                         >
                             {isLoading ? (

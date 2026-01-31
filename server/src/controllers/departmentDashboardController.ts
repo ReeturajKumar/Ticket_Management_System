@@ -77,6 +77,7 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
                 priority: 1,
                 createdAt: 1,
                 createdByName: 1,
+                assignedToName: 1,
                 contactName: 1,
                 contactEmail: 1,
                 creator: { $arrayElemAt: ['$creator', 0] },
@@ -126,10 +127,12 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
     // Format recent tickets
     const formattedRecentTickets = statsResult.recentTickets.map((ticket: any) => ({
       id: ticket._id,
+      ticketId: `#T-${ticket._id.toString().slice(-4).toUpperCase()}`,
       subject: ticket.subject,
       status: ticket.status,
       priority: ticket.priority,
       createdAt: ticket.createdAt,
+      staffName: ticket.assignedToName || 'Unassigned',
       userName: ticket.creator?.name || ticket.createdByName || ticket.contactName || 'Unknown',
       userEmail: ticket.creator?.email || ticket.contactEmail || 'Unknown',
     }));

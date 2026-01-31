@@ -27,7 +27,7 @@ export const DASHBOARD_CONFIG = {
   },
   display: {
     maxTeamMembers: 5, // Max team members to show in workload section
-    maxRecentTickets: 5, // Max recent tickets to display
+    maxRecentTickets: 3, // Max recent tickets to display
     teamTablePageSize: 10, // Items per page in team table
     defaultAnalyticsPeriod: '7d', // Default analytics period
   },

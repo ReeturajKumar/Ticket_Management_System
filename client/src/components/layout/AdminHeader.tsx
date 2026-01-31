@@ -40,7 +40,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   }
 
   return (
-    <header className="fixed top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:bg-slate-950/95 dark:supports-[backdrop-filter]:bg-slate-950/60">
+    <header className="fixed top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-3">
           {/* Mobile Menu Button */}
@@ -55,8 +55,8 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
 
           {/* Logo */}
           <Link to="/admin/dashboard" className="flex items-center gap-3 transition-opacity hover:opacity-80">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-purple-600/10">
-              <Shield className="size-6 text-purple-600" />
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+              <Shield className="size-6 text-primary" />
             </div>
             <div>
               <h1 className="text-lg font-bold leading-none">EduDesk</h1>
@@ -75,7 +75,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                 className="cursor-pointer gap-2 px-2"
               >
                 <Avatar className="size-8">
-                  <AvatarFallback className="bg-purple-600/10 text-sm font-semibold text-purple-600">
+                  <AvatarFallback className="bg-primary/20 text-sm font-bold text-primary">
                     {getInitials(user?.name || "Admin")}
                   </AvatarFallback>
                 </Avatar>
@@ -91,7 +91,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                   <p className="text-sm font-medium">{user?.name}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
                   <div className="flex gap-1">
-                    <Badge variant="secondary" className="w-fit text-xs bg-purple-100 text-purple-700">
+                    <Badge variant="secondary" className="w-fit text-[10px] bg-primary/20 text-primary-foreground border-none">
                       ADMIN
                     </Badge>
                   </div>

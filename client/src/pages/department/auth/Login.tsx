@@ -59,78 +59,60 @@ export default function DepartmentLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="flex min-h-screen bg-white">
       {/* Left: Illustration/Info */}
-      <div className="hidden lg:w-[60%] flex-col justify-between relative p-10 text-white lg:flex bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 overflow-hidden">
+      <div className="hidden lg:w-[60%] flex-col justify-between relative p-12 text-slate-900 lg:flex bg-slate-50 overflow-hidden">
         {/* Decorative Background Elements */}
         <div className="absolute inset-0 z-0">
-          {/* Animated gradient orbs */}
-          <div className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-500/30 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute top-1/3 -right-32 w-80 h-80 bg-violet-500/20 rounded-full blur-3xl animate-pulse delay-700" />
-          <div className="absolute bottom-0 left-1/4 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#00A38C]/5 rounded-full blur-[100px]" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px]" />
           
-          {/* Grid pattern overlay */}
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-40" />
+          {/* Subtle grid pattern */}
+          <div className="absolute inset-0 bg-grid-slate-200/[0.2] bg-[size:32px_32px]" />
         </div>
 
         {/* Content */}
-        <div className="relative z-10 space-y-6">
-          <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
-              <Building2 className="h-5 w-5" />
+        <div className="relative z-10 space-y-8">
+          <div className="inline-flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#00A38C]/10 border border-[#00A38C]/20 backdrop-blur-sm">
+              <Building2 className="h-6 w-6 text-[#00A38C]" />
             </div>
-            <span className="text-base font-bold tracking-wide">Department Portal</span>
+            <span className="text-xl font-bold tracking-tight text-slate-900">EduDesk Terminal</span>
           </div>
           
-          <div className="space-y-3 max-w-xl">
-            <h1 className="text-4xl font-bold tracking-tight leading-tight bg-gradient-to-r from-white via-indigo-50 to-white bg-clip-text text-transparent">
-              Welcome to Your Management Hub
+          <div className="space-y-4 max-w-xl text-balance">
+            <h1 className="text-5xl font-extrabold tracking-tight leading-[1.1] text-slate-900">
+              The unified operating system for department management.
             </h1>
-            <p className="text-lg text-indigo-100/90 leading-relaxed font-light">
-              Access the centralized management system to handle tickets, view analytics, and optimize team performance with powerful tools at your fingertips.
+            <p className="text-xl text-slate-500 leading-relaxed font-medium">
+              Streamline your department workflows, manage complex requests, and deliver exceptional student experiences through our integrated platform.
             </p>
           </div>
         </div>
         
-        {/* Feature Cards */}
-        <div className="relative z-10 grid gap-5">
-          <div className="group rounded-2xl bg-white/[0.08] p-4 backdrop-blur-xl border border-white/[0.15] hover:bg-white/[0.12] hover:border-white/25 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 group-hover:bg-indigo-500/30 transition-colors">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="mb-1 text-base font-bold text-white">Department Head Access</h3>
-                <p className="text-xs text-indigo-100/70 leading-relaxed">
-                  Full oversight of department operations, team management, strategic reporting, and performance analytics.
-                </p>
-              </div>
-            </div>
+        {/* Testimonial or Trust Element */}
+        <div className="relative z-10 p-8 bg-white border border-slate-200 rounded-3xl shadow-sm">
+          <div className="flex items-center gap-1 mb-4">
+            {[1,2,3,4,5].map(i => (
+              <svg key={i} className="w-5 h-5 text-amber-500 fill-current" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            ))}
           </div>
-          
-          <div className="group rounded-2xl bg-white/[0.08] p-4 backdrop-blur-xl border border-white/[0.15] hover:bg-white/[0.12] hover:border-white/25 transition-all duration-300 hover:shadow-2xl hover:shadow-violet-500/10 hover:-translate-y-1">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/20 group-hover:bg-violet-500/30 transition-colors">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="mb-1 text-base font-bold text-white">Staff Access</h3>
-                <p className="text-xs text-indigo-100/70 leading-relaxed">
-                  Manage assigned tickets, track resolution times, process requests efficiently, and collaborate seamlessly.
-                </p>
-              </div>
+          <p className="text-slate-700 font-medium text-lg leading-relaxed mb-6">"TMS has completely transformed our departmental efficiency. The real-time analytics turned our data into actionable insights overnight."</p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#00A38C]/10 flex items-center justify-center font-bold text-[#00A38C] text-lg">JS</div>
+            <div>
+              <p className="text-base font-bold text-slate-900">Janice Smith</p>
+              <p className="text-sm font-medium text-slate-500">Director of IT Operations</p>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="relative z-10 flex items-center justify-between text-xs text-indigo-200/50 font-medium">
-          <span>EduDesk - Student Support Platform</span>
-          <span>&copy; {new Date().getFullYear()}</span>
+        <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 font-bold uppercase tracking-widest">
+          <span>Enterprise License: active</span>
+          <span>&copy; {new Date().getFullYear()} EduDesk Inc.</span>
         </div>
       </div>
 
@@ -138,13 +120,13 @@ export default function DepartmentLoginPage() {
       <div className="flex w-full flex-col justify-center p-5 lg:w-[40%] lg:p-8">
         <div className="mx-auto w-full max-w-[400px]">
           <div className="mb-6 text-center lg:text-left">
-            <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 lg:hidden">
+            <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary lg:hidden">
               <Building2 className="h-6 w-6" />
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground dark:text-foreground">
               Welcome back
             </h2>
-            <p className="mt-2 text-slate-600 dark:text-slate-400">
+            <p className="mt-2 text-muted-foreground dark:text-muted-foreground">
               Please enter your credentials to access the portal.
             </p>
           </div>
@@ -182,7 +164,7 @@ export default function DepartmentLoginPage() {
                       <FormLabel>Password</FormLabel>
                       <Link 
                         to="/department/forgot-password"
-                        className="text-sm font-medium text-indigo-600 hover:text-indigo-500 hover:underline dark:text-indigo-400"
+                        className="text-sm font-medium text-primary hover:text-primary/80 hover:underline dark:text-primary"
                       >
                         Forgot password?
                       </Link>
@@ -218,7 +200,7 @@ export default function DepartmentLoginPage() {
 
               <Button 
                 type="submit" 
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-10 mt-1" 
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-10 mt-1 font-bold" 
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -235,7 +217,7 @@ export default function DepartmentLoginPage() {
 
           <div className="mt-4 text-center text-sm text-muted-foreground">
             Don't have an account?{" "}
-            <Link to="/department/register" className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline dark:text-indigo-400">
+            <Link to="/department/register" className="font-medium text-primary hover:text-primary/80 hover:underline dark:text-primary">
               Register here
             </Link>
           </div>

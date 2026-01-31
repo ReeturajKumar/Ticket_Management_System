@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getSummaryReport, exportReport } from "@/services/departmentHeadService"
-import { Loader2, FileText, Table, Calendar, TrendingUp, CheckCircle, AlertOctagon, Clock } from "lucide-react"
+import { Loader2, FileText, Calendar, CheckCircle, AlertOctagon, Clock } from "lucide-react"
 import { toast } from 'react-toastify'
 
 export default function DepartmentReportsPage() {
@@ -107,127 +107,176 @@ export default function DepartmentReportsPage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{reportData?.summary?.totalTickets || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {reportData?.summary?.open} open, {reportData?.summary?.inProgress} in progress
+            {/* Total Tickets - Compact Hero */}
+            <Card className="hover:shadow-md transition-all border-none bg-[#032112] text-white rounded-2xl p-4 h-32 group overflow-hidden relative flex flex-col justify-between shadow-sm">
+              <div className="flex justify-between items-start z-10">
+                <h4 className="text-[9px] font-bold opacity-60 uppercase tracking-widest text-[#ACDF33]">Total Inflow</h4>
+                <FileText className="size-3.5 text-[#ACDF33] opacity-50" />
+              </div>
+              <div className="z-10">
+                <h3 className="text-2xl font-bold tracking-tight leading-none mb-1">
+                  {reportData?.summary?.totalTickets || 0}
+                </h3>
+                <p className="text-[9px] font-bold opacity-40 uppercase tracking-tighter">
+                   {reportData?.summary?.open || 0} Open • {reportData?.summary?.inProgress || 0} Ongoing
                 </p>
-              </CardContent>
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Resolved</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{reportData?.summary?.resolved || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  Resolved tickets in this period
-                </p>
-              </CardContent>
+            {/* Resolved Stat - Compact White */}
+            <Card className="hover:shadow-md transition-all border border-slate-100 bg-white rounded-2xl p-4 h-32 group overflow-hidden relative flex flex-col justify-between shadow-sm">
+              <div className="flex justify-between items-start z-10">
+                <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Resolution</h4>
+                <CheckCircle className="size-3.5 text-emerald-500 opacity-50" />
+              </div>
+              <div className="z-10">
+                <h3 className="text-2xl font-bold text-slate-900 tracking-tight leading-none mb-1">
+                  {reportData?.summary?.resolved || 0}
+                </h3>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Total Completed</p>
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg Resolution Time</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{reportData?.summary?.avgResolutionTime || "N/A"}</div>
-              </CardContent>
+            {/* Avg Resolution Time - Compact White */}
+            <Card className="hover:shadow-md transition-all border border-slate-100 bg-white rounded-2xl p-4 h-32 group overflow-hidden relative flex flex-col justify-between shadow-sm">
+              <div className="flex justify-between items-start z-10">
+                <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Velocity</h4>
+                <Clock className="size-3.5 text-blue-500 opacity-50" />
+              </div>
+              <div className="z-10">
+                <h3 className="text-2xl font-bold text-slate-900 tracking-tight leading-none mb-1">
+                  {reportData?.summary?.avgResolutionTime || "N/A"}
+                </h3>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Avg Duration</p>
+              </div>
             </Card>
             
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">SLA Compliance</CardTitle>
-                <AlertOctagon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{reportData?.summary?.slaCompliance || "0%"}</div>
-                <p className="text-xs text-muted-foreground">
-                   Tickets meeting SLA
-                </p>
-              </CardContent>
+            {/* SLA Compliance - Compact White */}
+            <Card className="hover:shadow-md transition-all border border-slate-100 bg-white rounded-2xl p-4 h-32 group overflow-hidden relative flex flex-col justify-between shadow-sm">
+              <div className="flex justify-between items-start z-10">
+                <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">SLA Score</h4>
+                <AlertOctagon className="size-3.5 text-indigo-500 opacity-50" />
+              </div>
+              <div className="z-10">
+                <h3 className="text-2xl font-bold text-slate-900 tracking-tight leading-none mb-1">
+                  {reportData?.summary?.slaCompliance || "0%"}
+                </h3>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Compliance Rate</p>
+              </div>
             </Card>
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Export Section */}
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Export Data</CardTitle>
-              <CardDescription>
-                Download detailed reports in Excel or PDF format
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-6 md:grid-cols-3">
-                 {/* Tickets Export */}
-                 <div className="rounded-lg border p-4 space-y-3">
-                    <div className="flex items-center gap-2 font-medium">
-                      <FileText className="h-5 w-5 text-blue-500" />
-                      Tickets Report
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Complete list of tickets with details, status history, and assignment info.
-                    </p>
-                     <div className="flex gap-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleExport('excel', 'tickets')} disabled={isExporting}>
-                        Download Excel
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleExport('pdf', 'tickets')} disabled={isExporting}>
-                        Download PDF
-                      </Button>
-                    </div>
-                 </div>
+        {/* Premium Export Section */}
+        <div className="space-y-3">
+          <div className="flex flex-col gap-0.5">
+            <h3 className="text-xl font-bold text-slate-900 tracking-tight leading-none">Export Data</h3>
+            <p className="text-xs font-medium text-slate-500">Download reports in Excel or PDF format</p>
+          </div>
 
-                 {/* Team Performance Export */}
-                 <div className="rounded-lg border p-4 space-y-3">
-                    <div className="flex items-center gap-2 font-medium">
-                      <TrendingUp className="h-5 w-5 text-green-500" />
-                      Team Performance
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Detailed metrics per staff member including workload and efficiency stats.
-                    </p>
-                    <div className="flex gap-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleExport('excel', 'team')} disabled={isExporting}>
-                        Download Excel
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleExport('pdf', 'team')} disabled={isExporting}>
-                        Download PDF
-                      </Button>
-                    </div>
+          <div className="grid gap-5 lg:grid-cols-3">
+             {/* Module 1: Tickets Report */}
+             <Card className="border-none shadow-sm hover:shadow-md transition-all rounded-[2.25rem] bg-slate-50/50 group overflow-hidden border border-slate-200/50">
+               <CardHeader className="pb-2 pt-5 px-6">
+                 <div className="flex items-center justify-between mb-2">
+                   <CardTitle className="text-lg font-bold text-slate-900">Tickets Report</CardTitle>
+                   <div className="px-2.5 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-blue-100/50">
+                     Historical
+                   </div>
                  </div>
+                 <CardDescription className="text-xs font-medium leading-tight">
+                   Complete list of tickets with details, status history, and assignment info.
+                 </CardDescription>
+               </CardHeader>
+               <CardContent className="px-6 pb-6 pt-2">
+                 <div className="flex flex-row gap-2.5">
+                   <Button 
+                     onClick={() => handleExport('excel', 'tickets')} 
+                     disabled={isExporting}
+                     className="flex-1 bg-[#032313] hover:bg-[#032313]/90 text-[#ACDF33] font-bold rounded-xl h-10.5 flex items-center justify-center group/btn px-3"
+                   >
+                     <span className="text-[11px] uppercase tracking-wider">Excel</span>
+                   </Button>
+                   <Button 
+                     variant="outline"
+                     onClick={() => handleExport('pdf', 'tickets')} 
+                     disabled={isExporting}
+                     className="flex-1 border-slate-200 hover:border-[#ACDF33] hover:bg-[#ACDF33]/5 font-bold rounded-xl h-10.5 text-slate-600 text-[11px] uppercase tracking-wider px-3"
+                   >
+                     PDF docs
+                   </Button>
+                 </div>
+               </CardContent>
+             </Card>
 
-                 {/* Executive Summary */}
-                 <div className="rounded-lg border p-4 space-y-3">
-                    <div className="flex items-center gap-2 font-medium">
-                      <Table className="h-5 w-5 text-purple-500" />
-                      Executive Summary
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      High-level overview of department KPIs and operational health.
-                    </p>
-                    <div className="flex gap-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleExport('excel', 'summary')} disabled={isExporting}>
-                        Download Excel
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleExport('pdf', 'summary')} disabled={isExporting}>
-                        Download PDF
-                      </Button>
-                    </div>
+             {/* Module 2: Team Performance */}
+             <Card className="border-none shadow-sm hover:shadow-md transition-all rounded-[2.25rem] bg-slate-50/50 group overflow-hidden border border-slate-200/50">
+               <CardHeader className="pb-2 pt-5 px-6">
+                 <div className="flex items-center justify-between mb-2">
+                   <CardTitle className="text-lg font-bold text-slate-900">Team Performance</CardTitle>
+                   <div className="px-2.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-100/50">
+                     Operational
+                   </div>
                  </div>
-              </div>
-            </CardContent>
-          </Card>
+                 <CardDescription className="text-xs font-medium leading-tight">
+                   Detailed metrics per staff member including workload and efficiency stats.
+                 </CardDescription>
+               </CardHeader>
+               <CardContent className="px-6 pb-6 pt-2">
+                 <div className="flex flex-row gap-2.5">
+                   <Button 
+                     onClick={() => handleExport('excel', 'team')} 
+                     disabled={isExporting}
+                     className="flex-1 bg-[#032313] hover:bg-[#032313]/90 text-[#ACDF33] font-bold rounded-xl h-10.5 flex items-center justify-center group/btn px-3"
+                   >
+                     <span className="text-[11px] uppercase tracking-wider">Excel</span>
+                   </Button>
+                   <Button 
+                     variant="outline"
+                     onClick={() => handleExport('pdf', 'team')} 
+                     disabled={isExporting}
+                     className="flex-1 border-slate-200 hover:border-[#ACDF33] hover:bg-[#ACDF33]/5 font-bold rounded-xl h-10.5 text-slate-600 text-[11px] uppercase tracking-wider px-3"
+                   >
+                     PDF docs
+                   </Button>
+                 </div>
+               </CardContent>
+             </Card>
+
+             {/* Module 3: Executive Summary */}
+             <Card className="border-none shadow-sm hover:shadow-md transition-all rounded-[2.25rem] bg-slate-50/50 group overflow-hidden border border-slate-200/50">
+               <CardHeader className="pb-2 pt-5 px-6">
+                 <div className="flex items-center justify-between mb-2">
+                   <CardTitle className="text-lg font-bold text-slate-900">Executive Summary</CardTitle>
+                   <div className="px-2.5 py-0.5 bg-purple-50 text-purple-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-purple-100/50">
+                     Leadership
+                   </div>
+                 </div>
+                 <CardDescription className="text-xs font-medium leading-tight">
+                   High-level overview of department KPIs and operational health.
+                 </CardDescription>
+               </CardHeader>
+               <CardContent className="px-6 pb-6 pt-2">
+                 <div className="flex flex-row gap-2.5">
+                   <Button 
+                     onClick={() => handleExport('excel', 'summary')} 
+                     disabled={isExporting}
+                     className="flex-1 bg-[#032313] hover:bg-[#032313]/90 text-[#ACDF33] font-bold rounded-xl h-10.5 flex items-center justify-center group/btn px-3"
+                   >
+                     <span className="text-[11px] uppercase tracking-wider">Excel</span>
+                   </Button>
+                   <Button 
+                     variant="outline"
+                     onClick={() => handleExport('pdf', 'summary')} 
+                     disabled={isExporting}
+                     className="flex-1 border-slate-200 hover:border-[#ACDF33] hover:bg-[#ACDF33]/5 font-bold rounded-xl h-10.5 text-slate-600 text-[11px] uppercase tracking-wider px-3"
+                   >
+                     PDF docs
+                   </Button>
+                 </div>
+               </CardContent>
+             </Card>
+          </div>
         </div>
       </div>
     </DepartmentLayout>

@@ -10,6 +10,9 @@ import departmentTicketRoutes from './departmentTicketRoutes';
 import departmentTeamRoutes from './departmentTeamRoutes';
 import departmentReportsRoutes from './departmentReportsRoutes';
 import departmentStaffRoutes from './departmentStaffRoutes';
+import employeeRoutes from './employeeRoutes';
+import employeeAuthRoutes from './employeeAuthRoutes';
+import employeeActionRoutes from './employeeActionRoutes';
 import { getCacheStats, cacheCleanup } from '../utils/cache';
 import { getConnectionStats } from '../config/db';
 import { getSocketStats, SOCKET_EVENTS } from '../utils/socket';
@@ -31,6 +34,9 @@ router.use('/department/tickets', departmentTicketRoutes);
 router.use('/department/team', departmentTeamRoutes);
 router.use('/department/reports', departmentReportsRoutes);
 router.use('/department/staff', departmentStaffRoutes);
+router.use('/employees', employeeRoutes);
+router.use('/employee-auth', employeeAuthRoutes);
+router.use('/employee', employeeActionRoutes);
 
 // Basic health check route
 router.get('/health', (req, res) => {

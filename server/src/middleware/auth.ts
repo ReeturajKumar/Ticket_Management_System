@@ -196,3 +196,58 @@ export const requireDepartmentUser = async (
     });
   }
 };
+
+/**
+ * Middleware to check if user is an internal employee
+ */
+export const requireEmployee = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const User = require('../models/User').default;
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    if (user.role !== 'EMPLOYEE') {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied. Employee role required.',
+      });
+      return;
+    }
+
+    if (!user.isApproved) {
+      res.status(403).json({
+        success: false,
+        message: 'Your account is pending approval.',
+      });
+      return;
+    }
+
+    (req as any).user = user;
+    next();
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Authorization check failed',
+    });
+  }
+};
+

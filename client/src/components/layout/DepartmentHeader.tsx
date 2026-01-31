@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,21 +10,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { getCurrentDepartmentUser, logoutDepartmentUser } from "@/services/departmentAuthService"
 import { NotificationBell } from "@/components/notifications"
 import {
-  Building2,
   LogOut,
-  Menu,
+  Plus,
 } from "lucide-react"
+import { CreateInternalTicketDialog } from "@/components/department/CreateInternalTicketDialog"
 
 interface DepartmentHeaderProps {
-  onMenuClick?: () => void
 }
 
-export function DepartmentHeader({ onMenuClick }: DepartmentHeaderProps) {
+export function DepartmentHeader({}: DepartmentHeaderProps) {
   const user = getCurrentDepartmentUser()
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
   
   // Get user initials for avatar
   const getInitials = (name: string) => {
@@ -41,83 +41,92 @@ export function DepartmentHeader({ onMenuClick }: DepartmentHeaderProps) {
   }
 
   return (
-    <header className="fixed top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:bg-slate-950/95 dark:supports-[backdrop-filter]:bg-slate-950/60">
-      <div className="flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-3">
-          {/* Mobile & Tablet Menu Button */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="lg:hidden -ml-2"
-            onClick={onMenuClick}
+    <>
+      <header className={cn(
+        "fixed top-0 z-50 w-full bg-[#032313] transition-all duration-300 ease-in-out",
+        "lg:left-60 lg:w-[calc(100%-15rem)]"
+      )}>
+        <div className="flex h-16 items-center justify-between px-4 sm:px-6">
+          {/* Mobile Menu Button - Only visible on mobile/tablet */}
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('toggleSidebar'))}
+            className="lg:hidden p-2 -ml-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+            aria-label="Toggle menu"
           >
-            <Menu className="size-5" />
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
+          <div className="flex items-center gap-4 lg:gap-8 flex-1">
+            {/* Context Display - Showing Dept and Role - Hidden on mobile */}
+            <div className="hidden lg:flex items-center gap-2">
+               <div className="flex flex-col leading-tight">
+                 <span className="text-lg font-bold text-white uppercase tracking-wide">{user?.department?.replace('_', ' ') || 'Operations'}</span>
+                 <span className="text-[11px] font-extrabold text-[#ACDF33] uppercase tracking-wider opacity-90">
+                    {user?.isHead ? 'Department Head' : 'Staff Member'}
+                 </span>
+               </div>
+            </div>
+          </div>
+
+          {/* Right Section - Functional Actions */}
+          <div className="flex items-center gap-3">
+            {/* Quick Action Button - Perfectly matching the theme */}
+          <Button 
+             onClick={() => setCreateDialogOpen(true)}
+             className="flex items-center justify-center sm:justify-between gap-3 bg-[#ACDF33] text-[#032313] hover:bg-[#ACDF33]/90 border border-white/10 rounded-full px-3 sm:px-5 h-10 min-w-[40px] sm:min-w-[190px] font-extrabold shadow-sm active:scale-95 transition-all"
+          >
+             <span className="text-[12px] uppercase tracking-wide hidden sm:inline">Create Internal Ticket</span>
+             <div className="flex size-6 items-center justify-center rounded-full bg-[#032313]/10">
+                <Plus className="size-3.5 text-[#032313]" />
+             </div>
           </Button>
 
-          {/* Logo */}
-          <Link to="/department/dashboard" className="flex items-center gap-3 transition-opacity hover:opacity-80">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-indigo-600/10">
-              <Building2 className="size-6 text-indigo-600" />
+            <div className="flex items-center gap-1.5 border-l border-white/10 pl-3 ml-1">
+              <NotificationBell className="text-white hover:text-white" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold leading-none">TMS</h1>
-              <p className="text-xs text-muted-foreground">Department Portal</p>
-            </div>
-          </Link>
-        </div>
 
-        {/* Right Section */}
-        <div className="flex items-center gap-2">
-          {/* Notifications */}
-          <NotificationBell />
-
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="cursor-pointer gap-2 px-2"
-              >
-                <Avatar className="size-8">
-                  <AvatarFallback className="bg-indigo-600/10 text-sm font-semibold text-indigo-600">
-                    {getInitials(user?.name || "Staff")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden text-left sm:block">
-                  <p className="text-sm font-medium leading-none">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  <div className="flex gap-1">
-                    <Badge variant="secondary" className="w-fit text-xs bg-indigo-100 text-indigo-700">
-                      {user?.department}
-                    </Badge>
-                    {user?.isHead && (
-                       <Badge variant="outline" className="w-fit text-xs border-indigo-200 text-indigo-600">
-                        HEAD
-                      </Badge>
-                    )}
+            {/* User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="cursor-pointer p-0 hover:bg-transparent"
+                >
+                  <Avatar className="size-9 border-2 border-white/20 shadow-sm ring-1 ring-white/10">
+                    <AvatarFallback className="bg-[#ACDF33] text-xs font-black text-[#032313]">
+                      {getInitials(user?.name || "Staff")}
+                    </AvatarFallback>
+                   </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 mt-2">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium">{user?.name}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
                   </div>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="cursor-pointer text-destructive focus:text-destructive"
-                onClick={handleLogout}
-              >
-                <LogOut className="mr-2 size-4" />
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="mr-2 size-4" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      <CreateInternalTicketDialog 
+        open={createDialogOpen} 
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={() => {}}
+      />
+    </>
   )
 }

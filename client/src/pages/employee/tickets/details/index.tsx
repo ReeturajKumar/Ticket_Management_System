@@ -25,6 +25,7 @@ import { employeeService } from "@/services/employeeService"
 import { cn } from "@/lib/utils"
 import { toast } from "react-toastify"
 import { useAuth } from "@/contexts/AuthContext"
+import { useRealTimeTicket } from "@/hooks"
 
 export default function EmployeeTicketDetailsPage() {
   interface TimelineEvent {
@@ -49,6 +50,17 @@ export default function EmployeeTicketDetailsPage() {
   useEffect(() => {
     if (id) fetchTicketDetails(id)
   }, [id])
+
+  // Real-time updates
+  useRealTimeTicket({
+    ticketId: id || '',
+    onCommentAdded: () => {
+        if (id) fetchTicketDetails(id)
+    },
+    onStatusChanged: () => {
+        if (id) fetchTicketDetails(id)
+    }
+  });
 
   const fetchTicketDetails = async (ticketId: string) => {
     try {
@@ -141,7 +153,9 @@ export default function EmployeeTicketDetailsPage() {
   }
 
   if (ticket.comments && ticket.comments.length > 0) {
-      ticket.comments.forEach((c: any) => {
+      ticket.comments
+        .filter((c: any) => !c.isInternal && !c.userName?.toUpperCase().includes('INTERNAL'))
+        .forEach((c: any) => {
           timelineEvents.push({
               type: 'comment',
               title: c.userName === user?.name ? 'Your Response' : 'Support Response',

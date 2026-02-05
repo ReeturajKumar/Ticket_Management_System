@@ -1,70 +1,72 @@
 import { useEffect } from 'react'
-import { getSocket, subscribeToEvent, connectSocket } from '@/services/socket'
-import { getCurrentAdminUser, isAdminAuthenticated } from '@/services/adminAuthService'
+import { getSocket, subscribeToEvent } from '@/services/socket'
+import { useAuth } from '@/contexts/AuthContext'
 
-/**
- * Hook for admin users to listen to real-time user events
- */
+
 export function useAdminSocketEvents(options: {
   onUserCreated?: () => void
   onUserUpdated?: () => void
+  onTicketCreated?: () => void
+  onTicketUpdated?: () => void
 } = {}) {
-  const { onUserCreated, onUserUpdated } = options
+  const { onUserCreated, onUserUpdated, onTicketCreated, onTicketUpdated } = options
+  const { user, isAuthenticated } = useAuth()
 
   useEffect(() => {
-    if (!isAdminAuthenticated()) return
-
-    const adminUser = getCurrentAdminUser()
-    if (!adminUser) return
-
-    // Connect socket for admin user (no department needed)
-    let socket = getSocket()
-    if (!socket || !socket.connected) {
-      socket = connectSocket(adminUser.id, undefined) // Admin users don't have department
-      if (!socket) return
+    if (!isAuthenticated || !user || user.role !== 'ADMIN') {
+      return
     }
 
-    // Wait for connection if not connected
-    if (!socket.connected) {
-      const handleConnect = () => {
-        socket?.emit('authenticate', { userId: adminUser.id, department: undefined })
-      }
-      socket.on('connect', handleConnect)
-      
-      // Also try to authenticate immediately if already connected
-      if (socket.connected) {
-        socket.emit('authenticate', { userId: adminUser.id, department: undefined })
+    // Wait a bit for socket to be ready
+    const setupTimeout = setTimeout(() => {
+      const socket = getSocket()
+      if (!socket || !socket.connected) {
+        return
       }
 
+      const unsubscribers: (() => void)[] = []
+
+      if (onUserCreated) {
+        unsubscribers.push(
+          subscribeToEvent('user:created', onUserCreated)
+        )
+      }
+
+      if (onUserUpdated) {
+        unsubscribers.push(
+          subscribeToEvent('user:updated', onUserUpdated)
+        )
+      }
+
+      if (onTicketCreated) {
+        unsubscribers.push(
+          subscribeToEvent('ticket:created', onTicketCreated)
+        )
+      }
+
+      if (onTicketUpdated) {
+        unsubscribers.push(
+          subscribeToEvent('ticket:updated', onTicketUpdated)
+        )
+        unsubscribers.push(
+          subscribeToEvent('ticket:status-changed', onTicketUpdated)
+        )
+        unsubscribers.push(
+          subscribeToEvent('ticket:priority-changed', onTicketUpdated)
+        )
+        unsubscribers.push(
+          subscribeToEvent('ticket:assigned', onTicketUpdated)
+        )
+      }
+
+      // Cleanup function
       return () => {
-        socket?.off('connect', handleConnect)
+        unsubscribers.forEach((unsubscribe) => unsubscribe())
       }
-    } else {
-      // Already connected, authenticate immediately
-      socket.emit('authenticate', { userId: adminUser.id, department: undefined })
-    }
-
-    // Subscribe to user events
-    const unsubscribers: (() => void)[] = []
-
-    if (onUserCreated) {
-      unsubscribers.push(
-        subscribeToEvent('user:created', () => {
-          onUserCreated()
-        })
-      )
-    }
-
-    if (onUserUpdated) {
-      unsubscribers.push(
-        subscribeToEvent('user:updated', () => {
-          onUserUpdated()
-        })
-      )
-    }
+    }, 500)
 
     return () => {
-      unsubscribers.forEach((unsubscribe) => unsubscribe())
+      clearTimeout(setupTimeout)
     }
-  }, [onUserCreated, onUserUpdated])
+  }, [user?.id, onUserCreated, onUserUpdated, onTicketCreated, onTicketUpdated]) // Include all callback dependencies
 }

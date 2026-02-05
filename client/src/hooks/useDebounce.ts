@@ -1,18 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-/**
- * useDebounce - Debounce a value
- * Returns the debounced value after the specified delay
- * 
- * @example
- * const [searchTerm, setSearchTerm] = useState('');
- * const debouncedSearch = useDebounce(searchTerm, 300);
- * 
- * useEffect(() => {
- *   // This will only run 300ms after the user stops typing
- *   fetchResults(debouncedSearch);
- * }, [debouncedSearch]);
- */
 export function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value)
 
@@ -29,18 +16,7 @@ export function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue
 }
 
-/**
- * useDebouncedCallback - Debounce a callback function
- * Returns a debounced version of the callback
- * 
- * @example
- * const debouncedSearch = useDebouncedCallback((term) => {
- *   fetchResults(term);
- * }, 300);
- * 
- * // In input
- * <input onChange={(e) => debouncedSearch(e.target.value)} />
- */
+
 export function useDebouncedCallback<Args extends any[]>(
   callback: (...args: Args) => void,
   delay: number
@@ -48,7 +24,6 @@ export function useDebouncedCallback<Args extends any[]>(
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const callbackRef = useRef(callback)
 
-  // Update callback ref on each render
   useEffect(() => {
     callbackRef.current = callback
   }, [callback])
@@ -63,7 +38,6 @@ export function useDebouncedCallback<Args extends any[]>(
     }, delay)
   }, [delay])
 
-  // Cancel on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -72,7 +46,6 @@ export function useDebouncedCallback<Args extends any[]>(
     }
   }, [])
 
-  // Cancel function
   const cancel = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
@@ -82,14 +55,7 @@ export function useDebouncedCallback<Args extends any[]>(
   return { debouncedCallback, cancel }
 }
 
-/**
- * useThrottle - Throttle a value
- * Returns the throttled value (updates at most once per interval)
- * 
- * @example
- * const [scrollY, setScrollY] = useState(0);
- * const throttledScrollY = useThrottle(scrollY, 100);
- */
+
 export function useThrottle<T>(value: T, interval: number): T {
   const [throttledValue, setThrottledValue] = useState<T>(value)
   const lastUpdated = useRef<number>(Date.now())

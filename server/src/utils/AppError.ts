@@ -21,7 +21,6 @@ export enum ErrorCode {
   FORBIDDEN = 'FORBIDDEN',
   ACCESS_DENIED = 'ACCESS_DENIED',
   INSUFFICIENT_PERMISSIONS = 'INSUFFICIENT_PERMISSIONS',
-  ACCOUNT_NOT_VERIFIED = 'ACCOUNT_NOT_VERIFIED',
   ACCOUNT_NOT_APPROVED = 'ACCOUNT_NOT_APPROVED',
   ACCOUNT_REJECTED = 'ACCOUNT_REJECTED',
   
@@ -49,8 +48,6 @@ export enum ErrorCode {
   TICKET_CLOSED = 'TICKET_CLOSED',
   INVALID_STATUS_TRANSITION = 'INVALID_STATUS_TRANSITION',
   INVALID_DEPARTMENT = 'INVALID_DEPARTMENT',
-  OTP_EXPIRED = 'OTP_EXPIRED',
-  OTP_INVALID = 'OTP_INVALID',
 }
 
 /**
@@ -90,7 +87,6 @@ const USER_FRIENDLY_MESSAGES: Record<string, string> = {
   [ErrorCode.FORBIDDEN]: 'You do not have permission to perform this action.',
   [ErrorCode.ACCESS_DENIED]: 'Access denied. You cannot access this resource.',
   [ErrorCode.INSUFFICIENT_PERMISSIONS]: 'You need additional permissions for this action.',
-  [ErrorCode.ACCOUNT_NOT_VERIFIED]: 'Please verify your email address first.',
   [ErrorCode.ACCOUNT_NOT_APPROVED]: 'Your account is pending approval.',
   [ErrorCode.ACCOUNT_REJECTED]: 'Your registration was not approved.',
   
@@ -113,8 +109,6 @@ const USER_FRIENDLY_MESSAGES: Record<string, string> = {
   [ErrorCode.TICKET_CLOSED]: 'This ticket is closed and cannot be modified.',
   [ErrorCode.INVALID_STATUS_TRANSITION]: 'This status change is not allowed.',
   [ErrorCode.INVALID_DEPARTMENT]: 'Please select a valid department.',
-  [ErrorCode.OTP_EXPIRED]: 'Your verification code has expired. Please request a new one.',
-  [ErrorCode.OTP_INVALID]: 'The verification code is incorrect.',
 };
 
 /**

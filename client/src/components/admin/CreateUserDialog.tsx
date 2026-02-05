@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, UserPlus, Building2, UserCog, Users } from "lucide-react"
-import { createUser } from "@/services/adminService"
+import { createUser, getAdminConstants } from "@/services/adminService"
 import { toast } from "react-toastify"
 
 interface CreateUserDialogProps {
@@ -32,6 +32,7 @@ interface CreateUserDialogProps {
 export function CreateUserDialog({ open, onOpenChange, onUserCreated, defaultType = 'department-head' }: CreateUserDialogProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [userType, setUserType] = useState<'department-head' | 'department-staff' | 'employee'>(defaultType)
+  const [constants, setConstants] = useState({ roles: [] as string[], departments: [] as string[] })
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -41,6 +42,23 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, defaultTyp
     isHead: true,
     approvalStatus: 'APPROVED',
   })
+
+  useEffect(() => {
+    if (open) {
+      fetchConstants()
+    }
+  }, [open])
+
+  const fetchConstants = async () => {
+    try {
+      const result = await getAdminConstants()
+      if (result.success) {
+        setConstants(result.data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch constants:", error)
+    }
+  }
 
   // Update form data when user type changes
   const handleUserTypeChange = (type: 'department-head' | 'department-staff' | 'employee') => {
@@ -194,12 +212,9 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, defaultTyp
                       <SelectValue placeholder={formData.role === 'EMPLOYEE' ? "N/A (No Department)" : "Select department"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="PLACEMENT">Placement</SelectItem>
-                      <SelectItem value="OPERATIONS">Operations</SelectItem>
-                      <SelectItem value="TRAINING">Training</SelectItem>
-                      <SelectItem value="FINANCE">Finance</SelectItem>
-                      <SelectItem value="TECHNICAL_SUPPORT">Technical Support</SelectItem>
-                      <SelectItem value="HR">HR</SelectItem>
+                      {constants.departments.map(dept => (
+                        <SelectItem key={dept} value={dept}>{dept.replace(/_/g, ' ')}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

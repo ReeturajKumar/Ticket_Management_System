@@ -8,9 +8,6 @@ interface EmployeeAuthResponse {
   data?: any
 }
 
-/**
- * Register internal employee
- */
 export async function registerEmployee(data: {
   name: string
   email: string
@@ -20,13 +17,13 @@ export async function registerEmployee(data: {
     const response = await axios.post(`${API_URL}/employee-auth/register`, data)
     return response.data
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || 'Registration failed')
+    const message = error.response?.data?.error?.userMessage || 
+                   error.response?.data?.message || 
+                   'Registration failed';
+    throw new Error(message)
   }
 }
 
-/**
- * Login internal employee
- */
 export async function loginEmployee(email: string, password: string): Promise<EmployeeAuthResponse> {
   try {
     const response = await axios.post(`${API_URL}/employee-auth/login`, {
@@ -35,29 +32,14 @@ export async function loginEmployee(email: string, password: string): Promise<Em
     })
     return response.data
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || 'Login failed')
+    const message = error.response?.data?.error?.userMessage || 
+                   error.response?.data?.message || 
+                   'Login failed';
+    throw new Error(message)
   }
 }
-/**
- * Logout internal employee
- */
+
 export async function logoutEmployee(): Promise<void> {
-  const refreshToken = localStorage.getItem('dept_refreshToken')
-  const accessToken = localStorage.getItem('dept_accessToken')
-  
-  if (refreshToken && accessToken) {
-    try {
-      await axios.post(
-        `${API_URL}/employee-auth/logout`,
-        { refreshToken },
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
-        }
-      )
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
-  }
+  localStorage.removeItem('dept_token')
+  localStorage.removeItem('dept_user')
 }

@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { toast } from "react-toastify"
 import { useParams, useNavigate } from "react-router-dom"
 import { DepartmentLayout } from "@/components/layout/DepartmentLayout"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
@@ -23,21 +23,49 @@ import {
 import { 
     getTicketDetails, 
     updateTicketStatus, 
-    addInternalNote,
     changeTicketPriority
 } from "@/services/departmentHeadService"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, ArrowLeft, Send, User as UserIcon, Calendar, Clock, MessageSquare, Shield, FileIcon, Star } from "lucide-react"
 import { Avatar, AvatarFallback} from "@/components/ui/avatar"
+import { DashboardLoading } from "@/components/department/dashboard/shared/DashboardHeader"
+import { useRealTimeTicket } from "@/hooks"
+
 export default function DepartmentTicketDetailsPage() {
   const { id } = useParams()
   const user = getCurrentDepartmentUser()
   const navigate = useNavigate()
-  // const { toast } = useToast()
 
   const [ticket, setTicket] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [newComment, setNewComment] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isInternalNote, setIsInternalNote] = useState(false)
+  const commentsEndRef = useRef<HTMLDivElement>(null)
+
+  const scrollToBottom = () => {
+    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    // Default internal note to true for department staff/heads only
+    // Creators' comments are always external, so no need to default to internal
+    const isCreator = ticket?.createdBy && user?._id && 
+        (ticket.createdBy === user._id || ticket.createdBy.toString() === user._id.toString());
+    
+    if (user?.isHead || (user?.department === ticket?.department && !isCreator)) {
+      // Department staff/heads can use internal notes
+      setIsInternalNote(true);
+    } else {
+      // Creators always use external comments
+      setIsInternalNote(false);
+    }
+  }, [user, ticket])
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [ticket?.comments])
 
   const fetchTicket = async () => {
     if (!id) return
@@ -52,11 +80,6 @@ export default function DepartmentTicketDetailsPage() {
         setTicket(res.data)
     } catch (error) {
         console.error("Failed to fetch ticket", error)
-        // toast({
-        //     title: "Error", 
-        //     description: "Failed to load ticket details. You may not have access.", 
-        //     variant: "destructive"
-        // })
         navigate("/department/tickets")
     } finally {
         setIsLoading(false)
@@ -66,6 +89,44 @@ export default function DepartmentTicketDetailsPage() {
   useEffect(() => {
     fetchTicket()
   }, [id, user?.isHead])
+
+  // Real-time updates
+  useRealTimeTicket({
+    ticketId: id || '',
+    showNotifications: false,
+    onCommentAdded: (data) => {
+      setTicket((prev: any) => {
+        if (!prev) return prev
+        // Prevent duplicates
+        const exists = prev.comments?.some((c: any) => 
+          (c._id && c._id === data.commentId) || 
+          (new Date(c.createdAt).getTime() === new Date(data.timestamp || new Date()).getTime() && c.comment === data.content)
+        )
+        if (exists) return prev
+        
+        return {
+          ...prev,
+          comments: [
+            ...(prev.comments || []),
+            {
+              _id: data.commentId,
+              user: data.authorId,
+              userName: data.authorName,
+              comment: data.content,
+              isInternal: data.isInternal,
+              createdAt: data.timestamp || new Date().toISOString()
+            }
+          ]
+        }
+      })
+    },
+    onStatusChanged: (data) => {
+      setTicket((prev: any) => {
+        if (!prev) return prev
+        return { ...prev, status: data.newStatus }
+      })
+    }
+  })
 
   const handleStatusChange = async (newStatus: string) => {
     if (!id) return
@@ -97,16 +158,15 @@ export default function DepartmentTicketDetailsPage() {
     if (!id || !newComment.trim()) return
     setIsSubmitting(true)
     try {
-        if (user?.isHead) {
-            await addInternalNote(id, newComment)
-        } else {
-            await addCommentToMyTicket(id, newComment)
-        }
-        toast.success("Comment added successfully.")
+        // Use the unified staff service which now supports isInternal
+        await addCommentToMyTicket(id, newComment, isInternalNote)
+        
         setNewComment("")
+        // Reset toggle to true after sending
+        setIsInternalNote(true)
         fetchTicket()
-    } catch (error) {
-        toast.error("Failed to add comment.")
+    } catch (error: any) {
+        toast.error(error.message || "Failed to add comment.")
     } finally {
         setIsSubmitting(false)
     }
@@ -115,9 +175,7 @@ export default function DepartmentTicketDetailsPage() {
   if (isLoading) {
     return (
         <DepartmentLayout>
-            <div className="flex h-screen items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <DashboardLoading />
         </DepartmentLayout>
     )
   }
@@ -229,58 +287,176 @@ export default function DepartmentTicketDetailsPage() {
                     </Card>
                 )}
 
-                <Card>
-                    <CardHeader>
+                <Card className="flex flex-col h-[600px]">
+                    <CardHeader className="border-b">
                         <CardTitle className="flex items-center gap-2">
-                            <MessageSquare className="h-5 w-5" />
+                            <MessageSquare className="h-5 w-5 text-primary" />
                             Activity & Comments
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
                         {ticket.comments && ticket.comments.length > 0 ? (
-                            ticket.comments.map((comment: any, index: number) => (
-                                <div key={index} className="flex gap-4">
-                                     <Avatar className="h-8 w-8">
-                                        <AvatarFallback>{comment.userName?.charAt(0) || 'U'}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1 space-y-1">
-                                        <div className="flex items-center justify-between">
-                                            <span className="font-semibold text-sm">
-                                                {comment.userName}
-                                                {comment.userName?.includes('[INTERNAL]') && <Badge variant="secondary" className="ml-2 text-[10px]">INTERNAL</Badge>}
-                                            </span>
-                                            <span className="text-xs text-muted-foreground">{new Date(comment.createdAt).toLocaleString()}</span>
+                            ticket.comments.map((comment: any, index: number) => {
+                                const isInternal = comment.userName?.includes('[INTERNAL]') || comment.isInternal;
+                                const currentUserId = user?._id || user?.id || user?.userId;
+                                const commentUserId = comment.user?._id || comment.user || comment.userId || comment.authorId;
+                                const isOwn = currentUserId && commentUserId && currentUserId.toString() === commentUserId.toString();
+                                
+                                return (
+                                    <div key={index} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`flex gap-3 max-w-[80%] ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+                                            {!isOwn && (
+                                                <Avatar className="h-8 w-8 shrink-0 mt-1">
+                                                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                                        {comment.userName?.charAt(0) || 'U'}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                            )}
+                                            <div className="space-y-1">
+                                                {!isOwn && (
+                                                    <div className="flex items-center gap-2 px-1">
+                                                        <span className="text-xs font-bold text-slate-600">
+                                                            {comment.userName?.replace('[INTERNAL] ', '')}
+                                                        </span>
+                                                        {isInternal && (
+                                                            <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none text-[9px] h-4 px-1.5 font-bold uppercase tracking-wider">
+                                                                Internal Note
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                <div className={`
+                                                    p-3 rounded-2xl text-sm shadow-sm
+                                                    ${isOwn 
+                                                        ? 'bg-slate-900 text-white rounded-tr-none' 
+                                                        : isInternal 
+                                                            ? 'bg-amber-50 border border-amber-100 text-amber-900 rounded-tl-none'
+                                                            : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'
+                                                    }
+                                                `}>
+                                                    {comment.comment}
+                                                </div>
+                                                <div className={`text-[10px] text-slate-400 px-1 ${isOwn ? 'text-right' : 'text-left'}`}>
+                                                    {new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <p className="text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900 p-3 rounded-md">
-                                            {comment.comment}
-                                        </p>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         ) : (
-                            <p className="text-center text-muted-foreground py-4">No comments yet.</p>
+                            <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-3">
+                                <div className="p-4 bg-slate-50 rounded-full">
+                                    <MessageSquare className="h-8 w-8 opacity-20" />
+                                </div>
+                                <p className="text-sm">No interaction yet for this ticket.</p>
+                            </div>
                         )}
+                        <div ref={commentsEndRef} />
                     </CardContent>
-                    <CardFooter className="flex-col items-start gap-4">
-                        <Separator />
-                        <div className="w-full space-y-4">
-                            <h4 className="text-sm font-medium">Add Response</h4>
+                    <Separator />
+                    <div className="p-4 bg-slate-50/50">
+                        <div className="relative">
                             <Textarea 
-                                placeholder={user?.isHead ? "Add an internal note or reply..." : "Type your reply here..."}
-                                className="min-h-[100px]"
+                                placeholder={isInternalNote ? "Write an internal note..." : "Type your reply here..."}
+                                className={`min-h-[100px] pr-12 resize-none bg-white border-slate-200 focus-visible:ring-slate-400 rounded-xl transition-colors ${isInternalNote ? 'border-amber-200 bg-amber-50/10' : ''}`}
                                 value={newComment}
                                 onChange={(e) => setNewComment(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSubmitComment();
+                                    }
+                                }}
                             />
-                            <div className="flex justify-end">
-                                <Button onClick={handleSubmitComment} disabled={isSubmitting || !newComment.trim()}>
-                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                                    {user?.isHead ? "Post Internal Note" : "Send Reply"}
-                                </Button>
-                            </div>
+                            <Button 
+                                onClick={handleSubmitComment} 
+                                disabled={isSubmitting || !newComment.trim()}
+                                size="icon"
+                                className={`absolute bottom-3 right-3 h-8 w-8 rounded-lg shadow-lg transition-all ${isInternalNote ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}`}
+                            >
+                                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            </Button>
                         </div>
-                    </CardFooter>
+                        <div className="flex items-center justify-between mt-2 px-1">
+                            {(() => {
+                                const isCreator = ticket?.createdBy && user?._id && 
+                                    (ticket.createdBy === user._id || ticket.createdBy.toString() === user._id.toString());
+                                const isFromSameDepartment = ticket?.department === user?.department;
+                                const isDepartmentStaff = isFromSameDepartment && (user?.isHead || !isCreator);
+                                
+                                if (isCreator && !user?.isHead) {
+                                    // Creator (non-head) - their comments are always external
+                                    return (
+                                        <div className="flex items-center space-x-2">
+                                            <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 rounded-lg border border-blue-100">
+                                                <UserIcon className="h-3 w-3 text-blue-600" />
+                                                <span className="text-[10px] font-bold text-blue-700 uppercase tracking-tight">
+                                                    Your messages are visible to department staff
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                } else if (isDepartmentStaff) {
+                                    // Department staff/head - can choose internal or external
+                                    return (
+                                        <div className="flex items-center space-x-2">
+                                            <Checkbox 
+                                                id="internal-note" 
+                                                checked={isInternalNote} 
+                                                onCheckedChange={(checked) => setIsInternalNote(checked as boolean)}
+                                                className="border-slate-300 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                                            />
+                                            <Label 
+                                                htmlFor="internal-note" 
+                                                className={`text-[11px] cursor-pointer font-medium ${isInternalNote ? 'text-amber-700' : 'text-slate-500'}`}
+                                            >
+                                                Internal Note
+                                            </Label>
+                                        </div>
+                                    );
+                                } else {
+                                    // Default case
+                                    return (
+                                        <div className="flex items-center space-x-2">
+                                            <Checkbox 
+                                                id="internal-note" 
+                                                checked={isInternalNote} 
+                                                onCheckedChange={(checked) => setIsInternalNote(checked as boolean)}
+                                                className="border-slate-300 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                                            />
+                                            <Label 
+                                                htmlFor="internal-note" 
+                                                className={`text-[11px] cursor-pointer font-medium ${isInternalNote ? 'text-amber-700' : 'text-slate-500'}`}
+                                            >
+                                                Internal Note
+                                            </Label>
+                                        </div>
+                                    );
+                                }
+                            })()}
+                            <p className="text-[10px] text-muted-foreground">
+                                Press Enter to send, Shift + Enter for new line. 
+                            </p>
+                        </div>
+                        {(() => {
+                            const isCreator = ticket?.createdBy && user?._id && 
+                                (ticket.createdBy === user._id || ticket.createdBy.toString() === user._id.toString());
+                            const isDepartmentStaff = ticket?.department === user?.department && (user?.isHead || !isCreator);
+                            
+                            if (isInternalNote && isDepartmentStaff) {
+                                return (
+                                    <div className="mt-2 px-2 py-1.5 bg-amber-50 rounded-lg border border-amber-100 flex items-center gap-2">
+                                        <Shield className="h-3 w-3 text-amber-600" />
+                                        <span className="text-[10px] font-bold text-amber-700 uppercase tracking-tight">Only staff can see this note</span>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
+                    </div>
                 </Card>
-             </div>
+            </div>
 
              <div className="space-y-6">
                   <Card>

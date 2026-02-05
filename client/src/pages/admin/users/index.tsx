@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react"
 import { AdminLayout } from "@/components/layout/AdminLayout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
   Select,
@@ -12,17 +10,30 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { 
-  Loader2, Users, Search, Mail, Building2,  UserCheck, UserX,  UserCog
+  Loader2, Users, Search, Mail, 
+   ChevronLeft, ChevronRight,
+  UserCircle2, ShieldCheck, Eye
 } from "lucide-react"
-import { getAllUsers, type AdminUser } from "@/services/adminService"
+import { getAllUsers, getAdminConstants, type AdminUser } from "@/services/adminService"
 import { toast } from "react-toastify"
 import { UserDetailsDialog } from "@/components/admin/UserDetailsDialog"
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog"
 import { useAdminSocketEvents } from "@/hooks/useAdminSocket"
+import { useDebounce } from "@/hooks/useDebounce"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { cn } from "@/lib/utils"
 
 export default function AdminUsersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [users, setUsers] = useState<AdminUser[]>([])
+  const [constants, setConstants] = useState({ roles: [] as string[], departments: [] as string[] })
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -35,25 +46,51 @@ export default function AdminUsersPage() {
     approvalStatus: '',
     search: '',
   })
+  const [searchInput, setSearchInput] = useState('') // Separate state for input
+  const debouncedSearch = useDebounce(searchInput, 500) // 500ms debounce
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [createDialogType, setCreateDialogType] = useState<'department-head' | 'department-staff'>('department-head')
+
+  useEffect(() => {
+    fetchConstants()
+  }, [])
 
   useEffect(() => {
     fetchUsers()
   }, [currentPage, filters])
 
+  // Update search filter when debounced search changes
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, search: debouncedSearch }))
+    setCurrentPage(1) // Reset to first page when searching
+  }, [debouncedSearch])
+
   // Listen for real-time user updates
   useAdminSocketEvents({
     onUserCreated: () => {
-      fetchUsers() // Refresh list when user is created
+      fetchUsers()
     },
     onUserUpdated: () => {
-      fetchUsers() // Refresh list when user is updated
+      fetchUsers()
+    },
+    onTicketCreated: () => {
+      // Refresh user stats if they include ticket counts
+      fetchUsers()
     },
   })
+
+  const fetchConstants = async () => {
+    try {
+      const result = await getAdminConstants()
+      if (result.success) {
+        setConstants(result.data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch constants:", error)
+    }
+  }
 
   const fetchUsers = async () => {
     try {
@@ -67,7 +104,7 @@ export default function AdminUsersPage() {
         setUsers(result.data.users)
         setPagination(result.data.pagination)
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Failed to fetch users:", error)
       toast.error("Failed to load users")
     } finally {
@@ -77,7 +114,7 @@ export default function AdminUsersPage() {
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
-    setCurrentPage(1) // Reset to first page on filter change
+    setCurrentPage(1)
   }
 
   const handleUserClick = (userId: string) => {
@@ -86,14 +123,17 @@ export default function AdminUsersPage() {
   }
 
   const handleUserUpdated = () => {
-    fetchUsers() // Refresh the list when user is updated
+    fetchUsers()
   }
 
   if (isLoading && users.length === 0) {
     return (
       <AdminLayout>
-        <div className="flex h-screen items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex h-[calc(100vh-200px)] items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-10 w-10 animate-spin text-[#00A38C]" />
+            <p className="text-sm font-medium text-slate-500 tracking-tight">Accessing User Database...</p>
+          </div>
         </div>
       </AdminLayout>
     )
@@ -101,206 +141,225 @@ export default function AdminUsersPage() {
 
   return (
     <AdminLayout>
-      <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">User Management</h2>
-            <p className="text-sm sm:text-base text-muted-foreground mt-1">
-              Manage all system users
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button 
-              onClick={() => {
-                setCreateDialogType('department-head')
-                setIsCreateDialogOpen(true)
-              }} 
-              className="w-full sm:w-auto"
-            >
-              <UserCog className="mr-2 h-4 w-4" />
-              Create Head
-            </Button>
-            <Button 
-              onClick={() => {
-                setCreateDialogType('department-staff')
-                setIsCreateDialogOpen(true)
-              }} 
-              variant="secondary"
-              className="w-full sm:w-auto"
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Create Staff
-            </Button>
-          </div>
+      <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        
+        {/* Simple Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+           <div>
+              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+                 User <span className="text-[#00A38C]">Management</span>
+              </h2>
+              <p className="text-sm text-slate-500 font-medium">
+                 Browse and manage access for all {pagination.total} platform users
+                 {filters.search && (
+                   <span className="text-[#00A38C] ml-1">
+                     • Filtered by "{filters.search}"
+                   </span>
+                 )}
+              </p>
+           </div>
+
+           <div className="flex flex-wrap items-center gap-2">
+              <Button 
+                onClick={() => setIsCreateDialogOpen(true)} 
+                className="h-10 px-5 rounded-xl bg-[#032313] text-[#ACDF33] font-black text-xs shadow-sm shadow-[#032313]/10 gap-2 hover:bg-[#032313] hover:text-[#ACDF33] active:bg-[#032313] transition-none"
+              >
+                <Users className="size-4" />
+                Create User
+              </Button>
+           </div>
         </div>
 
-        {/* Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Filters</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-              <div className="lg:col-span-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by name or email..."
-                    value={filters.search}
-                    onChange={(e) => handleFilterChange('search', e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-              <Select value={filters.role || 'all'} onValueChange={(value) => handleFilterChange('role', value === 'all' ? '' : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="USER">User</SelectItem>
-                  <SelectItem value="DEPARTMENT_USER">Department User</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filters.department || 'all'} onValueChange={(value) => handleFilterChange('department', value === 'all' ? '' : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Departments" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  <SelectItem value="PLACEMENT">Placement</SelectItem>
-                  <SelectItem value="OPERATIONS">Operations</SelectItem>
-                  <SelectItem value="TRAINING">Training</SelectItem>
-                  <SelectItem value="FINANCE">Finance</SelectItem>
-                  <SelectItem value="TECHNICAL_SUPPORT">Technical Support</SelectItem>
-                  <SelectItem value="HR">HR</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filters.approvalStatus || 'all'} onValueChange={(value) => handleFilterChange('approvalStatus', value === 'all' ? '' : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="APPROVED">Approved</SelectItem>
-                  <SelectItem value="REJECTED">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Users List */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Users ({pagination.total})</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {users.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Users className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
-                <p className="text-sm text-muted-foreground">No users found</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {users.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+        {/* Filters Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+           <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+              <input 
+                 type="text" 
+                 placeholder="Search by name or email..." 
+                 value={searchInput}
+                 onChange={(e) => setSearchInput(e.target.value)}
+                 className="h-10 w-full pl-9 pr-10 bg-slate-50/50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00A38C]/10 focus:border-[#00A38C] transition-all"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                {searchInput !== debouncedSearch && (
+                  <Loader2 className="size-3 animate-spin text-slate-400" />
+                )}
+                {searchInput && (
+                  <button
+                    onClick={() => setSearchInput('')}
+                    className="size-4 rounded-full bg-slate-300 hover:bg-slate-400 flex items-center justify-center text-white text-xs transition-colors"
                   >
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
-                        <Users className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold truncate">{user.name}</h3>
-                          {user.isHead && (
-                            <Badge variant="outline" className="text-xs">Head</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                          <Mail className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{user.email}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-2 flex-wrap">
-                          <Badge variant="secondary" className="text-xs">
-                            {user.role}
-                          </Badge>
-                          {user.department && (
-                            <Badge variant="outline" className="text-xs">
-                              <Building2 className="h-3 w-3 mr-1" />
-                              {user.department}
-                            </Badge>
-                          )}
-                          {user.approvalStatus && (
-                            <Badge 
-                              variant={
-                                user.approvalStatus === 'APPROVED' ? 'default' :
-                                user.approvalStatus === 'PENDING' ? 'secondary' :
-                                'destructive'
-                              }
-                              className="text-xs"
-                            >
-                              {user.approvalStatus === 'PENDING' && <UserCheck className="h-3 w-3 mr-1" />}
-                              {user.approvalStatus === 'REJECTED' && <UserX className="h-3 w-3 mr-1" />}
-                              {user.approvalStatus}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="sm:flex-shrink-0">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full sm:w-auto"
-                        onClick={() => handleUserClick(user.id)}
-                      >
-                        View Details
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                    ×
+                  </button>
+                )}
               </div>
-            )}
+           </div>
 
-            {/* Pagination */}
-            {pagination.pages > 1 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t">
-                <p className="text-sm text-muted-foreground">
-                  Page {pagination.page} of {pagination.pages}
-                </p>
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <Button
+           <Select value={filters.role || 'all'} onValueChange={(value) => handleFilterChange('role', value === 'all' ? '' : value)}>
+              <SelectTrigger className="h-10 rounded-xl border-slate-100 bg-slate-50/50 hover:bg-slate-100/50 transition-colors">
+                 <SelectValue placeholder="All Roles" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-slate-100">
+                 <SelectItem value="all">All Roles</SelectItem>
+                 {constants.roles.map(role => (
+                   <SelectItem key={role} value={role}>{role.replace(/_/g, ' ')}</SelectItem>
+                 ))}
+              </SelectContent>
+           </Select>
+
+           <Select value={filters.department || 'all'} onValueChange={(value) => handleFilterChange('department', value === 'all' ? '' : value)}>
+              <SelectTrigger className="h-10 rounded-xl border-slate-100 bg-slate-50/50 hover:bg-slate-100/50 transition-colors">
+                 <SelectValue placeholder="All Departments" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-slate-100">
+                 <SelectItem value="all">All Departments</SelectItem>
+                 {constants.departments.map(dept => (
+                   <SelectItem key={dept} value={dept}>{dept.replace(/_/g, ' ')}</SelectItem>
+                 ))}
+              </SelectContent>
+           </Select>
+
+           <Select value={filters.approvalStatus || 'all'} onValueChange={(value) => handleFilterChange('approvalStatus', value === 'all' ? '' : value)}>
+              <SelectTrigger className="h-10 rounded-xl border-slate-100 bg-slate-50/50 hover:bg-slate-100/50 transition-colors">
+                 <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-slate-100">
+                 <SelectItem value="all">All Status</SelectItem>
+                 <SelectItem value="PENDING">Pending</SelectItem>
+                 <SelectItem value="APPROVED">Approved</SelectItem>
+                 <SelectItem value="REJECTED">Rejected</SelectItem>
+              </SelectContent>
+           </Select>
+        </div>
+
+        {/* Global Registry Table */}
+        <div className="bg-white border border-slate-100 rounded-[2rem] shadow-sm overflow-hidden transition-all duration-500">
+           {users.length === 0 ? (
+             <div className="py-24 flex flex-col items-center justify-center space-y-4">
+                <div className="size-20 bg-slate-50 flex items-center justify-center rounded-[2rem] border border-slate-100">
+                   <ShieldCheck className="size-10 text-slate-200" />
+                </div>
+                <div className="text-center px-4">
+                   <h3 className="text-xl font-bold text-slate-900">No matching users</h3>
+                   <p className="text-sm text-slate-400 mt-1 max-w-[300px]">
+                      Try adjusting your filters or search terms to find what you're looking for.
+                   </p>
+                </div>
+             </div>
+           ) : (
+             <Table>
+                <TableHeader className="bg-slate-50/50">
+                   <TableRow className="hover:bg-transparent border-slate-100">
+                      <TableHead className="py-5 px-8 text-xs font-bold text-slate-500 uppercase">User Information</TableHead>
+                      <TableHead className="py-5 px-4 text-xs font-bold text-slate-500 uppercase text-center">Department</TableHead>
+                      <TableHead className="py-5 px-4 text-xs font-bold text-slate-500 uppercase text-center">Role</TableHead>
+                      <TableHead className="py-5 px-4 text-xs font-bold text-slate-500 uppercase text-center">Status</TableHead>
+                      <TableHead className="py-5 px-8 text-right text-xs font-bold text-slate-500 uppercase">Actions</TableHead>
+                   </TableRow>
+                </TableHeader>
+                <TableBody>
+                   {users.map((user) => (
+                      <TableRow key={user.id} className="group border-slate-50 hover:bg-slate-50/30 transition-all duration-300">
+                         <TableCell className="py-4 px-8">
+                            <div className="flex items-center gap-4">
+                               <div className="size-11 rounded-xl bg-slate-900 flex items-center justify-center text-[#ACDF33] shadow-sm group-hover:scale-105 transition-transform">
+                                  <UserCircle2 className="size-6 stroke-[1.5]" />
+                               </div>
+                               <div>
+                                  <div className="flex items-center gap-2">
+                                     <p className="text-[15px] font-bold text-slate-900 leading-tight">{user.name}</p>
+                                     {user.isHead && (
+                                        <Badge className="bg-[#ACDF33]/10 text-[#032313] border-none text-[8px] font-black h-4 px-1.5 rounded-[4px] shadow-none uppercase">HEAD</Badge>
+                                     )}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                     <Mail className="size-3 text-slate-400" />
+                                     <span className="text-[11px] font-medium text-slate-400">{user.email}</span>
+                                  </div>
+                               </div>
+                            </div>
+                         </TableCell>
+                         <TableCell className="py-4 px-4 text-center">
+                            <span className="text-[13px] font-bold text-slate-700">
+                               {user.department?.replace(/_/g, ' ') || 'GLOBAL'}
+                            </span>
+                         </TableCell>
+                         <TableCell className="py-4 px-4 text-center">
+                            <Badge className="bg-slate-100 text-slate-600 border-none text-[10px] font-bold px-2 py-0.5 rounded-md shadow-none uppercase">
+                               {user.role}
+                            </Badge>
+                         </TableCell>
+                         <TableCell className="py-4 px-4 text-center">
+                            <div className="flex justify-center">
+                               <Badge 
+                                 className={cn(
+                                   "text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-lg border-none shadow-none",
+                                   user.approvalStatus === 'APPROVED' ? "bg-emerald-50 text-emerald-600" :
+                                   user.approvalStatus === 'PENDING' ? "bg-amber-50 text-amber-600" :
+                                   "bg-rose-50 text-rose-600"
+                                 )}
+                               >
+                                 {user.approvalStatus}
+                               </Badge>
+                            </div>
+                         </TableCell>
+                         <TableCell className="py-4 px-8 text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleUserClick(user.id)}
+                              className="h-9 px-4 rounded-xl text-slate-500 font-bold text-[11px] gap-2 hover:bg-transparent hover:text-slate-500 active:bg-transparent transition-none"
+                            >
+                               <Eye className="size-3.5" />
+                               View Profile
+                            </Button>
+                         </TableCell>
+                      </TableRow>
+                   ))}
+                </TableBody>
+             </Table>
+           )}
+        </div>
+
+        {/* Global Pagination Console */}
+        {pagination.pages > 1 && (
+           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 p-6 rounded-3xl border border-dashed border-slate-200 mt-8 transition-all">
+              <div className="flex items-center gap-4">
+                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                    Page Index <span className="text-slate-900 ml-2">{pagination.page} / {pagination.pages}</span>
+                  </p>
+                 <div className="h-4 w-[1px] bg-slate-200" />
+                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                    Total Records <span className="text-slate-900 ml-2">{pagination.total}</span>
+                 </p>
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                 <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="flex-1 sm:flex-none"
-                  >
+                    className="flex-1 sm:flex-none h-10 px-5 rounded-xl border-slate-200 bg-white text-slate-600 font-bold text-xs shadow-sm shadow-black/5 hover:bg-white active:scale-95 disabled:opacity-30 transition-all"
+                 >
+                    <ChevronLeft className="size-4 mr-2" />
                     Previous
-                  </Button>
-                  <Button
+                 </Button>
+                 <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentPage(p => Math.min(pagination.pages, p + 1))}
                     disabled={currentPage === pagination.pages}
-                    className="flex-1 sm:flex-none"
-                  >
+                    className="flex-1 sm:flex-none h-10 px-6 rounded-xl border-slate-200 bg-white text-slate-600 font-bold text-xs shadow-sm shadow-black/5 hover:bg-white active:scale-95 disabled:opacity-30 transition-all"
+                 >
                     Next
-                  </Button>
-                </div>
+                    <ChevronRight className="size-4 ml-2" />
+                 </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
+           </div>
+        )}
 
-        {/* User Details Dialog */}
+        {/* Dynamic Modals */}
         <UserDetailsDialog
           userId={selectedUserId}
           open={isDialogOpen}
@@ -308,12 +367,11 @@ export default function AdminUsersPage() {
           onUserUpdated={handleUserUpdated}
         />
 
-        {/* Create User Dialog */}
         <CreateUserDialog
           open={isCreateDialogOpen}
           onOpenChange={setIsCreateDialogOpen}
           onUserCreated={fetchUsers}
-          defaultType={createDialogType}
+          defaultType="department-head"
         />
       </div>
     </AdminLayout>

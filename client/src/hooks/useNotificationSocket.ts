@@ -174,91 +174,65 @@ export function useNotificationSocket() {
 
       // New ticket created
       unsubscribers.push(
-        subscribeToEvent<TicketCreatedEvent>('ticket:created', (data) => {
-          // Check if still mounted before processing
+        subscribeToEvent<TicketCreatedEvent>('ticket:created', () => {
           if (!isMounted) return
-          
-          const currentUser = userRef.current
-          // Only notify for tickets in user's department
-          if (currentUser && data.department === currentUser.department) {
-            // Play notification sound
-            playNotificationSound()
-            
-            addNotificationRef.current({
-              type: 'ticket',
-              title: 'New Ticket Created',
-              message: data.subject,
-              data: {
-                ticketId: data.ticketId,
-                department: data.department,
-                priority: data.priority,
-              },
-            })
-          }
+          // Removed redundant store logic to prevent duplicates.
+          // Formal notifications now arrive via the generic 'notification' event.
         })
       )
-
+ 
       // Ticket assigned
       unsubscribers.push(
-        subscribeToEvent<TicketAssignedEvent>('ticket:assigned', (data) => {
-          console.log('🔔 Notification hook - Ticket assigned event received:', data)
-          
+        subscribeToEvent<TicketAssignedEvent>('ticket:assigned', () => {
           if (!isMounted) return
-          
-          const currentUser = userRef.current
-          if (!currentUser) return
-          
-          // Notify only if assigned to this user
-          if (data.assigneeId === currentUser.id) {
-            console.log('✅ Adding notification to bell for assigned ticket')
-            
-            // Play notification sound
-            playNotificationSound()
-            
-            addNotificationRef.current({
-              type: 'info',
-              title: 'Ticket Assigned to You',
-              message: data.subject,
-              data: {
-                ticketId: data.ticketId,
-                department: data.department,
-              },
-            })
-          }
+          // Removed redundant store logic.
         })
       )
-
-      // Ticket status changed
-      // NOTE: Status changes are intentionally NOT added to the bell icon
-      // They only show toast notifications (handled by useRealTimeTickets hook)
-      // This prevents clutter when users change their own ticket statuses
-
+ 
       // Ticket priority changed
       unsubscribers.push(
-        subscribeToEvent<TicketPriorityChangedEvent>('ticket:priority-changed', (data) => {
+        subscribeToEvent<TicketPriorityChangedEvent>('ticket:priority-changed', () => {
           if (!isMounted) return
-          
-          const currentUser = userRef.current
-          if (currentUser && data.department === currentUser.department) {
-            // Play notification sound
-            playNotificationSound()
-            
-            const type = data.newPriority === 'CRITICAL' || data.newPriority === 'HIGH' ? 'warning' : 'info'
-            addNotificationRef.current({
-              type,
-              title: 'Ticket Priority Updated',
-              message: `Priority changed from ${data.previousPriority} to ${data.newPriority}`,
-              data: {
-                ticketId: data.ticketId,
-                department: data.department,
-                priority: data.newPriority,
-              },
-            })
-          }
+          // Removed redundant store logic.
         })
       )
       
-      return true // Successfully set up
+      // Ticket comment added
+      unsubscribers.push(
+        subscribeToEvent<any>('ticket:comment-added', () => {
+          if (!isMounted) return
+          // Typed events now only handle real-time UI data refreshes in other hooks.
+          // Bell notifications are handled by the generic listener below.
+        })
+      )
+      
+      // Generic notification event
+      unsubscribers.push(
+        subscribeToEvent<any>('notification', (data) => {
+          if (!isMounted) return
+          const currentUser = userRef.current
+          if (!currentUser) return
+
+          // Enhanced self-notification prevention check
+          // Checks multiple possible ID fields and ensure string comparison
+          const currentUserId = currentUser.id || (currentUser as any)._id || (currentUser as any).userId;
+          const senderId = data.senderId?.toString();
+          
+          if (senderId && currentUserId && senderId === currentUserId.toString()) {
+            return;
+          }
+
+          playNotificationSound()
+          addNotificationRef.current({
+            type: data.type || 'info',
+            title: data.title || 'Notification',
+            message: data.message || '',
+            data: data.data || {},
+          })
+        })
+      )
+      
+      return true
     }
 
     // Try to setup immediately if socket is available
@@ -266,56 +240,33 @@ export function useNotificationSocket() {
     if (socket?.connected) {
       setupSubscriptions()
     } else {
-      // Socket not ready yet - wait for it
-      // Check periodically for socket availability (with mount check)
       checkInterval = setInterval(() => {
         if (!isMounted) {
-          if (checkInterval) {
-            clearInterval(checkInterval)
-            checkInterval = null
-          }
+          if (checkInterval) clearInterval(checkInterval)
           return
         }
-        
         const currentSocket = getSocket()
         if (currentSocket?.connected && setupSubscriptions()) {
-          // Successfully set up, stop checking
-          if (checkInterval) {
-            clearInterval(checkInterval)
-            checkInterval = null
-          }
+          if (checkInterval) clearInterval(checkInterval)
         }
       }, 500)
       
-      // Also listen for connect event if socket exists but not connected
       if (socket) {
         const handleConnect = () => {
           if (!isMounted) return
-          
-          if (setupSubscriptions() && checkInterval) {
-            clearInterval(checkInterval)
-            checkInterval = null
-          }
+          if (setupSubscriptions() && checkInterval) clearInterval(checkInterval)
         }
         socket.on('connect', handleConnect)
         unsubscribers.push(() => socket.off('connect', handleConnect))
       }
     }
 
-    // Cleanup function - properly unsubscribe all listeners
     return () => {
-      // Mark as unmounted first to prevent any new subscriptions
       isMounted = false
-      
-      if (checkInterval) {
-        clearInterval(checkInterval)
-        checkInterval = null
-      }
-      
-      // Cleanup all subscriptions
+      if (checkInterval) clearInterval(checkInterval)
       unsubscribers.forEach((unsub) => unsub())
     }
-  }, [user?.id, user?.department]) // Only re-run if user identity changes
+  }, [user?.id, user?.department])
 }
 
 export default useNotificationSocket

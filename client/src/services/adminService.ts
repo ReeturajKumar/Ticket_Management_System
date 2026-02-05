@@ -27,6 +27,7 @@ export interface AdminDashboardOverview {
     inProgressTickets: number
     resolvedTickets: number
     closedTickets: number
+    waitingForUserTickets: number
   }
   byPriority: {
     LOW: number
@@ -48,6 +49,11 @@ export interface AdminDashboardOverview {
     department: string
     createdByName: string
     createdAt: string
+  }>
+  trends: Array<{
+    date: string
+    created: number
+    resolved: number
   }>
 }
 
@@ -116,6 +122,148 @@ export interface AdminAnalytics {
   }>
 }
 
+// Comprehensive Analytics Types
+export interface AnalyticsOverview {
+  period: {
+    start: string
+    end: string
+    label: string
+  }
+  summary: {
+    tickets: {
+      total: number
+      open: number
+      assigned: number
+      inProgress: number
+      waiting: number
+      resolved: number
+      closed: number
+      resolutionRate: number
+    }
+    priority: {
+      critical: number
+      high: number
+      medium: number
+      low: number
+    }
+    users: {
+      total: number
+      departmentUsers: number
+      employees: number
+    }
+    resolution: {
+      avgHours: number
+      minHours: number
+      maxHours: number
+    }
+  }
+  byDepartment: Array<{
+    department: string
+    total: number
+    open: number
+    resolved: number
+    critical: number
+    high: number
+    resolutionRate: number
+  }>
+  byPriority: Array<{
+    priority: string
+    total: number
+    open: number
+    inProgress: number
+    resolved: number
+    resolutionRate: number
+  }>
+  slaCompliance: Array<{
+    priority: string
+    total: number
+    withinSLA: number
+    breached: number
+    complianceRate: number
+  }>
+  trends: Array<{
+    date: string
+    created: number
+    resolved: number
+  }>
+  hourlyDistribution: Array<{
+    hour: number
+    count: number
+    label: string
+  }>
+  topPerformers: Array<{
+    id: string
+    name: string
+    email: string
+    department: string
+    resolved: number
+    avgResolutionHours: number | null
+  }>
+}
+
+export interface DepartmentAnalytics {
+  period: string
+  departments: Array<{
+    department: string
+    tickets: {
+      total: number
+      open: number
+      assigned: number
+      inProgress: number
+      waiting: number
+      resolved: number
+      closed: number
+      resolutionRate: number
+    }
+    priority: {
+      critical: number
+      high: number
+      medium: number
+      low: number
+    }
+    staff: {
+      total: number
+      heads: number
+      members: number
+    }
+    avgResolutionHours: number | null
+    ticketsPerStaff: number
+  }>
+}
+
+export interface StaffAnalytics {
+  period: string
+  staff: Array<{
+    id: string
+    name: string
+    email: string
+    department: string
+    isHead: boolean
+    tickets: {
+      total: number
+      open: number
+      inProgress: number
+      resolved: number
+      resolutionRate: number
+    }
+    priority: {
+      critical: number
+      high: number
+    }
+    avgResolutionHours: number | null
+  }>
+}
+
+export interface TicketTrends {
+  period: string
+  groupBy: string
+  trends: Array<{
+    date: string
+    created: number
+    resolved: number
+  }>
+}
+
 export interface SystemStats {
   users: {
     total: number
@@ -135,12 +283,14 @@ export interface SystemStats {
 /**
  * Get Admin Dashboard Overview
  */
-export const getAdminDashboardOverview = async (): Promise<{
+export const getAdminDashboardOverview = async (period: string = 'all', startDate?: string, endDate?: string): Promise<{
   success: boolean
   data: AdminDashboardOverview
   cached?: boolean
 }> => {
-  const response = await adminAxios.get('/admin/dashboard/overview')
+  const response = await adminAxios.get('/admin/dashboard/overview', {
+    params: { period, startDate, endDate }
+  })
   return response.data
 }
 
@@ -362,4 +512,138 @@ export const getTicketDetails = async (ticketId: string): Promise<{
 }> => {
   const response = await adminAxios.get(`/admin/tickets/${ticketId}`)
   return response.data
+}
+/**
+ * Get Admin Constants
+ */
+export const getAdminConstants = async (): Promise<{
+  success: boolean
+  data: {
+    roles: string[]
+    departments: string[]
+  }
+}> => {
+  const response = await adminAxios.get('/admin/constants')
+  return response.data
+}
+
+// ============================================================================
+// ANALYTICS - COMPREHENSIVE
+// ============================================================================
+
+/**
+ * Get Comprehensive Analytics Overview
+ */
+export const getAnalyticsOverview = async (params?: {
+  period?: string
+  startDate?: string
+  endDate?: string
+}): Promise<{
+  success: boolean
+  data: AnalyticsOverview
+}> => {
+  const response = await adminAxios.get('/admin/analytics/overview', { params })
+  return response.data
+}
+
+/**
+ * Get Department Analytics
+ */
+export const getDepartmentAnalytics = async (period: string = '30d'): Promise<{
+  success: boolean
+  data: DepartmentAnalytics
+}> => {
+  const response = await adminAxios.get('/admin/analytics/departments', {
+    params: { period }
+  })
+  return response.data
+}
+
+/**
+ * Get Staff Analytics
+ */
+export const getStaffAnalytics = async (params?: {
+  period?: string
+  department?: string
+}): Promise<{
+  success: boolean
+  data: StaffAnalytics
+}> => {
+  const response = await adminAxios.get('/admin/analytics/staff', { params })
+  return response.data
+}
+
+/**
+ * Get Ticket Trends
+ */
+export const getTicketTrends = async (params?: {
+  period?: string
+  groupBy?: 'day' | 'week' | 'month'
+}): Promise<{
+  success: boolean
+  data: TicketTrends
+}> => {
+  const response = await adminAxios.get('/admin/analytics/trends', { params })
+  return response.data
+}
+
+// ============================================================================
+// ANALYTICS - EXPORT
+// ============================================================================
+
+/**
+ * Export Tickets to Excel
+ */
+export const exportTickets = async (params?: {
+  status?: string
+  priority?: string
+  department?: string
+  startDate?: string
+  endDate?: string
+}): Promise<Blob> => {
+  const response = await adminAxios.get('/admin/analytics/export/tickets', {
+    params,
+    responseType: 'blob'
+  })
+  return response.data
+}
+
+/**
+ * Export Users to Excel
+ */
+export const exportUsers = async (params?: {
+  role?: string
+  department?: string
+  approvalStatus?: string
+}): Promise<Blob> => {
+  const response = await adminAxios.get('/admin/analytics/export/users', {
+    params,
+    responseType: 'blob'
+  })
+  return response.data
+}
+
+/**
+ * Export Analytics Report to Excel
+ */
+export const exportAnalyticsReport = async (period: string = '30d'): Promise<Blob> => {
+  const response = await adminAxios.get('/admin/analytics/export/report', {
+    params: { period },
+    responseType: 'blob'
+  })
+  return response.data
+}
+
+/**
+ * Download exported file helper
+ */
+export const downloadFile = (blob: Blob, filename: string): void => {
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', filename)
+  document.body.appendChild(link)
+  link.click()
+  link.parentNode?.removeChild(link)
+  window.URL.revokeObjectURL(url)
 }

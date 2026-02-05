@@ -5,46 +5,22 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Clock, User as UserIcon, Tag, UserPlus } from "lucide-react"
 import { TicketQuickActions } from "@/components/department/TicketQuickActions"
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-export const getPriorityColor = (priority: string) => {
-  switch (priority) {
-    case 'CRITICAL': return 'destructive'
-    case 'HIGH': return 'default'
-    case 'MEDIUM': return 'secondary'
-    case 'LOW': return 'outline'
-    default: return 'outline'
-  }
-}
-
-export const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'OPEN': return 'bg-blue-500'
-    case 'ASSIGNED': return 'bg-yellow-500'
-    case 'IN_PROGRESS': return 'bg-orange-500'
-    case 'WAITING_FOR_USER': return 'bg-purple-500'
-    case 'RESOLVED': return 'bg-green-500'
-    case 'CLOSED': return 'bg-gray-500'
-    default: return 'bg-gray-500'
-  }
-}
+import { PRIORITY_CONFIG, STATUS_CONFIG } from "@/config/themeConfig"
+import type { Ticket, UserReference } from "@/types/ticket"
 
 // ============================================================================
 // TICKET CARD COMPONENT
 // ============================================================================
 
 export interface TicketCardProps {
-  ticket: any
+  ticket: Ticket
   isSelected: boolean
   isMyRequest: boolean
   isHead: boolean
   userId: string | undefined
   onToggleSelect: (ticketId: string) => void
   onOpenDetails: (ticketId: string) => void
-  onAssign: (ticket: any) => void
+  onAssign: (ticket: Ticket) => void
   onRefresh: () => void
 }
 
@@ -59,7 +35,7 @@ export const TicketCard = memo(function TicketCard({
   onAssign,
   onRefresh,
 }: TicketCardProps) {
-  const ticketId = ticket._id || ticket.id
+  const ticketId = ticket._id || ticket.id || ""
 
   const handleTicketClick = useCallback(() => {
     onOpenDetails(ticketId)
@@ -83,9 +59,26 @@ export const TicketCard = memo(function TicketCard({
     return new Date(ticket.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }, [ticket.createdAt])
 
+  // Helper for names
+  const createdByName = typeof ticket.createdBy === 'object' 
+    ? (ticket.createdBy as UserReference)?.name 
+    : (ticket.userName || 'User')
+
+  const assignedToName = typeof ticket.assignedTo === 'object'
+    ? (ticket.assignedTo as UserReference)?.name
+    : 'Unassigned'
+
+  const assignedToId = typeof ticket.assignedTo === 'object'
+    ? (ticket.assignedTo as UserReference)?._id
+    : ticket.assignedTo
+
+  const priorityInfo = PRIORITY_CONFIG[ticket.priority] || PRIORITY_CONFIG.LOW
+
   return (
     <Card 
-      className={`cursor-pointer hover:shadow-md transition-all mb-2.5 ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''} ${isMyRequest ? 'border-r-4 border-r-indigo-500 bg-indigo-50/10' : ''}`}
+      className={`cursor-pointer hover:shadow-md transition-all mb-2.5 
+        ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''} 
+        ${isMyRequest ? 'border-r-4 border-r-primary bg-primary/5' : ''}`}
       onClick={handleTicketClick}
     >
       <CardContent className="p-2.5">
@@ -110,13 +103,13 @@ export const TicketCard = memo(function TicketCard({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-0.5">
                 <span className="text-[10px] text-muted-foreground font-mono">
-                  #{ticket.ticketId || ticket._id?.slice(-6)}
+                  #{ticket.ticketId || ticketId.slice(-6)}
                 </span>
-                <Badge variant={getPriorityColor(ticket.priority) as any} className="text-[9px] h-3.5 px-1.5">
-                  {ticket.priority}
+                <Badge variant={priorityInfo.variant as any} className="text-[9px] h-3.5 px-1.5">
+                  {priorityInfo.label}
                 </Badge>
                 {isMyRequest && (
-                  <Badge variant="outline" className="text-[9px] h-3.5 px-1.5 bg-indigo-100 text-indigo-700 border-indigo-200 uppercase">
+                  <Badge variant="outline" className="text-[9px] h-3.5 px-1.5 bg-primary/10 text-primary border-primary/20 uppercase">
                     My Request
                   </Badge>
                 )}
@@ -142,21 +135,21 @@ export const TicketCard = memo(function TicketCard({
             <div className="flex items-center gap-1 text-[10px]">
               {isMyRequest ? (
                 <>
-                  <span className="text-muted-foreground font-medium">To:</span>
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/30">
-                    <Tag className="h-2.5 w-2.5 text-indigo-600 dark:text-indigo-400" />
-                    <span className="text-indigo-600 dark:text-indigo-400 font-medium truncate max-w-[100px]">
+                  <span className="text-muted-foreground font-medium text-[9px]">To:</span>
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/30">
+                    <Tag className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" />
+                    <span className="text-blue-600 dark:text-blue-400 font-medium truncate max-w-[100px]">
                       {ticket.department}
                     </span>
                   </div>
                 </>
               ) : (
                 <>
-                  <span className="text-muted-foreground font-medium">Creator:</span>
+                  <span className="text-muted-foreground font-medium text-[9px]">From:</span>
                   <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/30">
                     <UserIcon className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" />
-                    <span className="text-blue-600 dark:text-blue-400 font-medium truncate max-w-[100px]" title={ticket.userName || ticket.createdByName}>
-                      {ticket.userName || ticket.createdByName || 'User'}
+                    <span className="text-blue-600 dark:text-blue-400 font-medium truncate max-w-[100px]" title={createdByName}>
+                      {createdByName}
                     </span>
                   </div>
                 </>
@@ -165,12 +158,12 @@ export const TicketCard = memo(function TicketCard({
             
             {/* Assigned Staff */}
             <div className="flex items-center gap-1 text-[10px]">
-              <span className="text-muted-foreground font-medium">Assigned:</span>
-              {ticket.assignedToName ? (
+              <span className="text-muted-foreground font-medium text-[9px]">Staff:</span>
+              {assignedToId ? (
                 <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-50 dark:bg-green-950/30">
                   <UserPlus className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />
-                  <span className="text-green-600 dark:text-green-400 font-medium truncate max-w-[100px]" title={ticket.assignedToName}>
-                    {ticket.assignedToName}
+                  <span className="text-green-600 dark:text-green-400 font-medium truncate max-w-[100px]" title={assignedToName}>
+                    {assignedToName}
                   </span>
                 </div>
               ) : (
@@ -186,10 +179,10 @@ export const TicketCard = memo(function TicketCard({
         </div>
 
         {/* Quick Actions for Department Heads & Assigned Staff */}
-        {((isHead && ticket.assignedTo) || (!isHead && ticket.assignedTo === userId)) && !isMyRequest && (
+        {((isHead && assignedToId) || (!isHead && assignedToId === userId)) && !isMyRequest && (
           <div className="mt-2 pt-2 border-t">
             <TicketQuickActions
-              ticketId={ticket._id || ticket.id}
+              ticketId={ticketId}
               currentStatus={ticket.status}
               currentPriority={ticket.priority}
               onUpdate={onRefresh}
@@ -199,16 +192,16 @@ export const TicketCard = memo(function TicketCard({
         )}
 
         {/* Assign Button for Unassigned Tickets */}
-        {isHead && !ticket.assignedTo && !isMyRequest && (
+        {isHead && !assignedToId && !isMyRequest && (
           <div className="mt-2 pt-2 border-t">
             <Button 
               size="sm" 
               variant="outline"
-              className="w-full h-7 text-[10px]"
+              className="w-full h-7 text-[10px] hover:bg-primary/5 hover:text-primary hover:border-primary/30"
               onClick={handleAssignClick}
             >
               <UserPlus className="h-3 w-3 mr-1" />
-              Assign to Staff
+              Assign Staff
             </Button>
           </div>
         )}
@@ -219,3 +212,18 @@ export const TicketCard = memo(function TicketCard({
 })
 
 export default TicketCard
+
+// ============================================================================
+// COMPATIBILITY EXPORTS
+// These are deprecated and will be removed in favor of themeConfig.ts
+// ============================================================================
+
+export const getPriorityColor = (priority: string): "default" | "secondary" | "destructive" | "outline" => {
+  const config = PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG.LOW
+  return config.variant as any
+}
+
+export const getStatusColor = (status: string): string => {
+  const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.OPEN
+  return config.color
+}

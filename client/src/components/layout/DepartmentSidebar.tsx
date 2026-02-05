@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Ticket,
   LogOut,
-  UserCircle,
   FileText,
   BarChart3,
   Users2
@@ -28,6 +27,8 @@ export function DepartmentSidebar({ className, isOpen, onClose }: SidebarProps) 
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        if (!user) return; // Don't fetch if no user
+        
         if (user?.isHead) {
           const stats = await getDepartmentOverview()
           if (stats?.success && stats?.data?.summary) {
@@ -40,11 +41,15 @@ export function DepartmentSidebar({ className, isOpen, onClose }: SidebarProps) 
           }
         }
       } catch (error) {
-        console.error("Error fetching sidebar stats:", error)
+        // Silently fail - sidebar badge is not critical
+        setTicketCount(0)
       }
     }
-    fetchStats()
-  }, [user?.isHead])
+    
+    if (user) {
+      fetchStats()
+    }
+  }, [user?.isHead, user?.id])
 
   const handleLogout = async () => {
     await logoutDepartmentUser()
@@ -59,17 +64,17 @@ export function DepartmentSidebar({ className, isOpen, onClose }: SidebarProps) 
     menuItems.push(
       {
         title: "Overview",
-        href: "/department/dashboard?tab=overview",
+        href: "/department/dashboard",
         icon: LayoutDashboard,
       },
       {
         title: "Analytics",
-        href: "/department/dashboard?tab=analytics",
+        href: "/department/analytics",
         icon: BarChart3,
       },
       {
         title: "Team Performance",
-        href: "/department/dashboard?tab=team",
+        href: "/department/team",
         icon: Users2,
       }
     )
@@ -174,31 +179,6 @@ export function DepartmentSidebar({ className, isOpen, onClose }: SidebarProps) 
                 })}
               </div>
             </div>
-
-            {/* General Section */}
-            <div>
-              <div className="mb-6 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-                General
-              </div>
-              <div className="space-y-1.5">
-                <Link
-                   to="/department/profile"
-                   onClick={() => onClose?.()}
-                   className={cn(
-                     "relative flex cursor-pointer items-center gap-3.5 px-3 py-2.5 text-sm font-medium transition-all group",
-                     "text-white",
-                     location.pathname === '/department/profile' ? "bg-[#ACDF33]/10 text-white" : "text-white/60 hover:text-white hover:bg-white/5"
-                   )}
-                >
-                   {location.pathname === '/department/profile' && (
-                     <div className="absolute left-0 w-1 h-6 bg-[#ACDF33] rounded-r-full hidden" />
-                   )}
-                   <UserCircle className={cn("size-5 shrink-0 transition-colors", location.pathname === '/department/profile' ? "text-[#ACDF33]" : "text-white/40 group-hover:text-white")} />
-                   <span className="transition-colors text-white">Profile</span>
-                </Link>
-              </div>
-            </div>
-
           </nav>
 
           {/* Bottom Navigation */}

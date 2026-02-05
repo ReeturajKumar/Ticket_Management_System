@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Loader2 } from "lucide-react"
+import { Loader2, Paperclip, X } from "lucide-react"
 import { employeeService } from "@/services/employeeService"
 import { toast } from "react-toastify"
 
@@ -23,8 +23,19 @@ export function CreateEmployeeTicketDialog({ open, onOpenChange, onSuccess }: Cr
     department: "",
     priority: "MEDIUM"
   })
+  const [files, setFiles] = useState<File[]>([])
 
-  // List of departments an employee can submit to
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files)
+      setFiles(prev => [...prev, ...newFiles])
+    }
+  }
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
   const departments = [
     { value: 'TECHNICAL_SUPPORT', label: 'Technical Support' },
     { value: 'HR', label: 'HR Department' },
@@ -42,7 +53,15 @@ export function CreateEmployeeTicketDialog({ open, onOpenChange, onSuccess }: Cr
 
     try {
       setLoading(true)
-      await employeeService.createTicket(formData)
+      
+      const payload = new FormData()
+      payload.append('subject', formData.subject)
+      payload.append('description', formData.description)
+      payload.append('department', formData.department)
+      payload.append('priority', formData.priority)
+      files.forEach(file => payload.append('attachments', file))
+
+      await employeeService.createTicket(payload)
       toast.success("Ticket created successfully")
       onSuccess?.()
       onOpenChange(false)
@@ -53,6 +72,7 @@ export function CreateEmployeeTicketDialog({ open, onOpenChange, onSuccess }: Cr
         department: "",
         priority: "MEDIUM"
       })
+      setFiles([])
     } catch (error) {
       console.error("Failed to create ticket", error)
       toast.error("Failed to create ticket")
@@ -133,6 +153,25 @@ export function CreateEmployeeTicketDialog({ open, onOpenChange, onSuccess }: Cr
               onChange={(e) => setFormData({...formData, description: e.target.value})}
               required
             />
+          </div>
+
+          <div className="space-y-3">
+             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Attachments</Label>
+             <div className="flex flex-wrap gap-2">
+                {files.map((file, i) => (
+                   <div key={i} className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full text-[10px] font-bold text-slate-600 border border-slate-200">
+                      <span className="max-w-[120px] truncate">{file.name}</span>
+                      <button type="button" onClick={() => removeFile(i)} className="text-slate-400 hover:text-rose-500">
+                         <X className="size-3" />
+                      </button>
+                   </div>
+                ))}
+                <label className="flex items-center gap-2 bg-white border border-dashed border-slate-300 px-4 py-1.5 rounded-full text-[10px] font-bold text-slate-400 hover:border-[#ACDF33] hover:text-[#ACDF33] transition-all cursor-pointer">
+                   <Paperclip className="size-3" />
+                   Add Files
+                   <input type="file" multiple className="hidden" onChange={handleFileChange} />
+                </label>
+             </div>
           </div>
 
           <DialogFooter className="gap-3 sm:gap-0 pt-2">

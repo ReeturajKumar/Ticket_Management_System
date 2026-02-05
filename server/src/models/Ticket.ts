@@ -17,6 +17,7 @@ export interface IComment {
   user: mongoose.Types.ObjectId;
   userName: string;
   comment: string;
+  isInternal?: boolean;
   attachments?: IAttachment[];
   createdAt: Date;
 }
@@ -155,7 +156,7 @@ const TicketSchema = new Schema<ITicket>(
         uploadedBy: {
           type: Schema.Types.ObjectId,
           ref: 'User',
-          required: true,
+          required: false, // Made optional for guest/public tickets
         },
         uploadedAt: {
           type: Date,
@@ -176,8 +177,12 @@ const TicketSchema = new Schema<ITicket>(
         },
         comment: {
           type: String,
-          required: true,
+          required: [true, 'Please provide a comment'],
           maxlength: [1000, 'Comment cannot exceed 1000 characters'],
+        },
+        isInternal: {
+          type: Boolean,
+          default: false,
         },
         attachments: [
           {
@@ -189,6 +194,7 @@ const TicketSchema = new Schema<ITicket>(
             uploadedBy: {
               type: Schema.Types.ObjectId,
               ref: 'User',
+              required: false,
             },
             uploadedAt: {
               type: Date,

@@ -15,6 +15,7 @@ export const listTeamMembers = async (req: Request, res: Response): Promise<void
       role: UserRole.DEPARTMENT_USER,
       department: user.department,
       isApproved: true,
+      isHead: false, // Only return staff members, not heads
     }).select('name email isHead createdAt');
 
     const teamMembersWithStats = await Promise.all(

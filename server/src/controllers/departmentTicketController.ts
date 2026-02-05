@@ -4,15 +4,17 @@ import Ticket from '../models/Ticket';
 import User from '../models/User';
 import { TicketStatus, Priority, UserRole } from '../constants';
 import AppError, { ErrorCode } from '../utils/AppError';
-import { invalidateDepartmentCache } from '../utils/cache';
 import { 
   emitTicketAssigned, 
   emitTicketStatusChanged, 
   emitTicketPriorityChanged,
-  emitCommentAdded 
+  emitCommentAdded,
+  emitToUser,
+  notifyUser,
+  NotificationType,
+  SOCKET_EVENTS
 } from '../utils/socket';
-import { parseFieldSelection, DEFAULT_FIELDS } from '../utils/fieldSelection';
-import { parsePaginationParams, buildPaginationMeta } from '../utils/pagination';
+import { parseFieldSelection, parsePaginationParams, buildPaginationMeta } from '../utils/query';
 
 /**
  * List all tickets for the department - OPTIMIZED with Cursor-Based Pagination
@@ -215,9 +217,8 @@ export const listDepartmentTickets = async (req: Request, res: Response): Promis
       
       paginationInfo = buildPaginationMeta(
         total,
-        { ...paginationParams, cursor: cursor as string | undefined },
-        transformedTickets.length,
-        nextCursor
+        paginationParams,
+        transformedTickets.length
       );
     }
 
@@ -345,7 +346,7 @@ export const getTicketDetails = async (req: Request, res: Response): Promise<voi
 
     // Verify permission: Must belong to Head's department OR be created by the Head
     const isFromMyDepartment = ticket.department === user.department;
-    const isCreatedByMe = ticket.createdBy && (
+    const isCreatedByMe = ticket.createdBy && user?._id && (
       (typeof ticket.createdBy === 'string' && ticket.createdBy === user._id.toString()) ||
       (typeof ticket.createdBy === 'object' && (ticket.createdBy as any)._id?.toString() === user._id.toString())
     );
@@ -354,9 +355,15 @@ export const getTicketDetails = async (req: Request, res: Response): Promise<voi
       throw new AppError('You do not have permission to view this ticket', 403);
     }
 
+    // Filter out internal comments for non-department staff
+    const ticketObj = (ticket as any);
+    if (ticket.department !== user.department && ticketObj.comments) {
+      ticketObj.comments = ticketObj.comments.filter((c: any) => !c.isInternal);
+    }
+
     res.status(200).json({
       success: true,
-      data: ticket,
+      data: ticketObj,
     });
   } catch (error: any) {
     throw error;
@@ -373,10 +380,6 @@ export const assignTicket = async (req: Request, res: Response): Promise<void> =
     const { id } = req.params;
     const { assignedTo } = req.body;
 
-    if (!assignedTo) {
-      throw new AppError('Please provide assignedTo user ID', 400);
-    }
-
     // Find ticket
     const ticket = await Ticket.findById(id);
 
@@ -389,7 +392,7 @@ export const assignTicket = async (req: Request, res: Response): Promise<void> =
       throw new AppError('You do not have permission to modify this ticket', 403);
     }
 
-    // Verify assignee is a team member
+    // Verify assignee is a team member (STAFF ONLY, NOT HEADS)
     const assignee = await User.findById(assignedTo);
 
     if (!assignee) {
@@ -398,6 +401,11 @@ export const assignTicket = async (req: Request, res: Response): Promise<void> =
 
     if (assignee.role !== UserRole.DEPARTMENT_USER || assignee.department !== user.department) {
       throw new AppError('Can only assign to team members in your department', 403);
+    }
+
+    // NEW: Prevent assigning to department heads
+    if (assignee.isHead) {
+      throw new AppError('Cannot assign tickets to department heads. Please assign to staff members only.', 403);
     }
 
     // Update ticket
@@ -411,8 +419,6 @@ export const assignTicket = async (req: Request, res: Response): Promise<void> =
 
     await ticket.save();
 
-    // Invalidate department caches
-    invalidateDepartmentCache(user.department);
 
     // Emit real-time notification
     emitTicketAssigned(
@@ -421,8 +427,29 @@ export const assignTicket = async (req: Request, res: Response): Promise<void> =
       ticket.subject,
       assignee._id.toString(),
       assignee.name,
-      user.name
+      user.name,
+      user._id.toString()
     );
+
+    // NEW: Notify the original ticket creator about assignment
+    if (ticket.createdBy && ticket.createdBy.toString() !== assignee._id.toString()) {
+      emitToUser(ticket.createdBy.toString(), SOCKET_EVENTS.TICKET_ASSIGNED, {
+        ticketId: ticket._id.toString(),
+        subject: ticket.subject,
+        assigneeId: assignee._id.toString(),
+        assigneeName: assignee.name,
+        assignedBy: user.name,
+        department: user.department,
+      });
+      
+      notifyUser(ticket.createdBy.toString(), {
+        type: NotificationType.INFO,
+        title: 'Your Ticket Assigned',
+        message: `Your internal ticket "${ticket.subject}" has been assigned to ${assignee.name}`,
+        senderId: user._id.toString(),
+        data: { ticketId: ticket._id.toString() },
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -449,22 +476,6 @@ export const updateTicketStatus = async (req: Request, res: Response): Promise<v
     const user = (req as any).user;
     const { id } = req.params;
     const { status } = req.body;
-
-    if (!status) {
-      throw new AppError({
-        code: ErrorCode.MISSING_REQUIRED_FIELD,
-        message: 'Please provide status',
-      }, 400);
-    }
-
-    // Validate status
-    if (!Object.values(TicketStatus).includes(status)) {
-      throw new AppError({
-        code: ErrorCode.VALIDATION_FAILED,
-        message: 'Invalid status',
-        details: { status: `Valid values: ${Object.values(TicketStatus).join(', ')}` },
-      }, 400);
-    }
 
     // Find ticket
     const ticket = await Ticket.findById(id);
@@ -498,8 +509,6 @@ export const updateTicketStatus = async (req: Request, res: Response): Promise<v
 
     await ticket.save();
 
-    // Invalidate department caches
-    invalidateDepartmentCache(user.department);
 
     // Emit real-time notification
     emitTicketStatusChanged(
@@ -508,7 +517,9 @@ export const updateTicketStatus = async (req: Request, res: Response): Promise<v
       ticket.subject,
       oldStatus,
       status,
-      user.name
+      user.name,
+      ticket.createdBy?.toString(),
+      user._id.toString()
     );
 
     res.status(200).json({
@@ -533,10 +544,10 @@ export const addInternalNote = async (req: Request, res: Response): Promise<void
   try {
     const user = (req as any).user;
     const { id } = req.params;
-    const { note } = req.body;
+    const { comment } = req.body; // Changed from note to comment for standardization
 
-    if (!note || !note.trim()) {
-      throw new AppError('Please provide a note', 400);
+    if (!user || !user._id) {
+      throw new AppError('User authentication required', 401);
     }
 
     // Find ticket
@@ -553,13 +564,41 @@ export const addInternalNote = async (req: Request, res: Response): Promise<void
 
     // Add internal note as a comment with a special marker
     ticket.comments.push({
-      user: user._id as any,
+      user: user._id,
       userName: `[INTERNAL] ${user.name}`,
-      comment: note,
+      comment: comment,
+      isInternal: true,
       createdAt: new Date(),
     } as any);
 
     await ticket.save();
+
+    // Emit real-time event to department
+    const { emitCommentAdded, notifyDepartment, NotificationType } = require('../utils/socket');
+    
+    emitCommentAdded(
+      ticket.department,
+      ticket._id.toString(),
+      ticket.subject,
+      `[INTERNAL] ${user.name}`,
+      user._id.toString(),
+      comment,
+      true // isInternal = true for internal notes
+    );
+    
+    // Send notification to department members
+    notifyDepartment(ticket.department, {
+      type: NotificationType.INFO,
+      title: 'Internal Note Added',
+      message: `${user.name} added an internal note to: ${ticket.subject}`,
+      senderId: user._id.toString(), // Add senderId
+      data: { 
+        ticketId: ticket._id.toString(),
+        commenter: user.name,
+        note: comment.substring(0, 100) + (comment.length > 100 ? '...' : ''),
+        isInternal: true
+      }
+    });
 
     res.status(200).json({
       success: true,
@@ -580,22 +619,6 @@ export const changeTicketPriority = async (req: Request, res: Response): Promise
     const { id } = req.params;
     const { priority } = req.body;
 
-    if (!priority) {
-      throw new AppError({
-        code: ErrorCode.MISSING_REQUIRED_FIELD,
-        message: 'Please provide priority',
-      }, 400);
-    }
-
-    // Validate priority
-    if (!Object.values(Priority).includes(priority)) {
-      throw new AppError({
-        code: ErrorCode.VALIDATION_FAILED,
-        message: 'Invalid priority',
-        details: { priority: `Valid values: ${Object.values(Priority).join(', ')}` },
-      }, 400);
-    }
-
     // Find ticket
     const ticket = await Ticket.findById(id);
 
@@ -614,8 +637,6 @@ export const changeTicketPriority = async (req: Request, res: Response): Promise
     ticket.priority = priority;
     await ticket.save();
 
-    // Invalidate department caches
-    invalidateDepartmentCache(user.department);
 
     // Emit real-time notification for priority change
     emitTicketPriorityChanged(
@@ -624,7 +645,9 @@ export const changeTicketPriority = async (req: Request, res: Response): Promise
       ticket.subject,
       oldPriority,
       priority,
-      user.name
+      user.name,
+      ticket.createdBy?.toString(),
+      user._id.toString()
     );
 
     res.status(200).json({

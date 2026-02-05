@@ -52,8 +52,8 @@ export const updateMyTicketStatus = async (id: string, status: string) => {
     return response.data
 }
 
-export const addCommentToMyTicket = async (id: string, comment: string) => {
-    const response = await departmentAxios.post(`${API_URL}/my-tickets/${id}/comments`, { comment })
+export const addCommentToMyTicket = async (id: string, comment: string, isInternal: boolean = false) => {
+    const response = await departmentAxios.post(`${API_URL}/my-tickets/${id}/comments`, { comment, isInternal })
     return response.data
 }
 

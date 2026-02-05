@@ -4,11 +4,10 @@ import { useNavigate, Link, useLocation } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ShieldCheck, Loader2, Lock, Mail, Eye, EyeOff, ArrowRight } from "lucide-react"
+import { Loader2, Lock, Mail, Eye, EyeOff, ShieldCheck } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Form,
   FormControl,
@@ -18,6 +17,9 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { useAuth } from "@/contexts/AuthContext"
+
+// Import the specific hero image
+import heroImage from "@/assets/employee-login-hero.png"
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -43,7 +45,6 @@ export default function EmployeeLoginPage() {
     },
   })
 
-  // Check for successful registration message
   useEffect(() => {
     if (location.state?.message) {
       toast.info(location.state.message)
@@ -54,7 +55,6 @@ export default function EmployeeLoginPage() {
     setIsLoading(true)
     try {
       const success = await login(data.email, data.password, data.rememberMe, 'EMPLOYEE')
-      
       if (success) {
         navigate("/employee/dashboard")
       }
@@ -66,59 +66,59 @@ export default function EmployeeLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
-      {/* Left side same as register or slightly modified */}
-      <div className="hidden lg:w-[60%] flex-col justify-between relative p-12 text-white lg:flex bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-500/30 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-0 right-0 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl" />
-        </div>
-
-        <div className="relative z-10 space-y-6">
-          <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20">
-            <ShieldCheck className="h-5 w-5" />
-            <span className="text-lg font-bold tracking-wide">Internal Portal</span>
-          </div>
-          
-          <div className="space-y-4 max-w-xl">
-            <h1 className="text-5xl font-bold tracking-tight leading-tight text-white">
-              Secure Employee Access
-            </h1>
-            <p className="text-xl text-blue-100/90 leading-relaxed font-light">
-              Log in to access your internal dashboard, manage your workspace, and resolve system-wide issues.
-            </p>
-          </div>
-        </div>
-
-        <div className="relative z-10 flex items-center justify-between text-sm text-blue-200/50 font-medium">
-          <span>EduDesk Internal Systems</span>
-          <span>&copy; {new Date().getFullYear()}</span>
+    <div className="flex flex-col lg:flex-row min-h-screen bg-white">
+      {/* Left: Visual Panel - Hidden on medium and small screens */}
+      <div className="hidden lg:block lg:w-[60%] relative overflow-hidden flex-shrink-0">
+        <img 
+          src={heroImage} 
+          alt="Employee Dashboard Preview" 
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        
+        {/* Optional Overlay for text readability if needed, or gradients */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex flex-col justify-end p-12 text-white">
+             <h1 className="text-5xl font-bold leading-tight mb-4 drop-shadow-md">
+            Raise Queries &<br />
+            Track Resolutions Perfectly
+          </h1>
+          <p className="text-lg font-medium text-white/90 drop-shadow-sm max-w-xl">
+             Submit your requests, get timely responses, and monitor your ticket status in real-time.
+          </p>
         </div>
       </div>
 
-      <div className="flex w-full flex-col justify-center p-6 lg:w-[40%] lg:p-8">
+      {/* Right: Login Form - Full width on medium and small screens */}
+      <div className="flex w-full flex-1 flex-col justify-center p-4 sm:p-6 lg:w-[40%] lg:p-12 bg-white min-h-screen lg:min-h-auto">
         <div className="mx-auto w-full max-w-[400px]">
-          <div className="mb-8 text-center lg:text-left">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
-              Welcome back
+          <div className="mb-6 lg:mb-8 text-center">
+            <div className="mb-3 sm:mb-4 inline-flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-[#00A38C]/10 text-[#00A38C]">
+              <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+              Employee Login
             </h2>
-            <p className="mt-2 text-slate-600 dark:text-slate-400">
-              Sign in to your employee account.
+            <p className="mt-2 text-sm sm:text-base text-slate-500">
+              Welcome back! Please enter your details to login.
             </p>
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel>Internal Email</FormLabel>
+                  <FormItem>
+                    <FormLabel className="text-sm sm:text-base">Work Email</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="name@edudesk.com" className="pl-9 h-11" {...field} disabled={isLoading} />
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                        <Input
+                          placeholder="name@cloudblitz.com"
+                          className="pl-9 h-10 sm:h-11 text-sm sm:text-base bg-white border-slate-200 focus:border-[#00A38C] focus:ring-[#00A38C]"
+                          {...field}
+                          disabled={isLoading}
+                        />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -130,27 +130,30 @@ export default function EmployeeLoginPage() {
                 control={form.control}
                 name="password"
                 render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <div className="flex items-center justify-between">
-                       <FormLabel>Password</FormLabel>
-                       <Link to="#" className="text-xs font-medium text-blue-600 hover:underline">Forgot password?</Link>
-                    </div>
+                  <FormItem>
+                    <FormLabel className="text-sm sm:text-base">Password</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                         <Input
                           type={showPassword ? "text" : "password"}
-                          className="pl-9 pr-10 h-11"
+                          className="pl-9 pr-10 h-10 sm:h-11 text-sm sm:text-base bg-white border-slate-200 focus:border-[#00A38C] focus:ring-[#00A38C]"
                           {...field}
                           disabled={isLoading}
                         />
-                        <button
+                        <Button
                           type="button"
-                          className="absolute right-3 top-3"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-slate-400 hover:text-slate-600"
                           onClick={() => setShowPassword(!showPassword)}
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-                        </button>
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -159,26 +162,30 @@ export default function EmployeeLoginPage() {
               />
 
               <div className="flex items-center space-x-2">
-                 <Checkbox id="remember" checked={form.watch('rememberMe')} onCheckedChange={(checked) => form.setValue('rememberMe', !!checked)} />
-                 <label htmlFor="remember" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    Remember me for 30 days
-                 </label>
+
               </div>
 
-              <Button type="submit" className="w-full h-11 bg-blue-600 hover:bg-blue-700 font-semibold" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (
+              <Button 
+                type="submit" 
+                className="w-full bg-[#00A38C] hover:bg-[#008f7a] text-white h-11 sm:h-12 font-bold text-sm sm:text-base shadow-md hover:shadow-lg transition-all" 
+                disabled={isLoading}
+              >
+                {isLoading ? (
                   <>
-                    Sign in <ArrowRight className="ml-2 h-4 w-4" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Authenticating...
                   </>
+                ) : (
+                  "Sign In"
                 )}
               </Button>
             </form>
           </Form>
 
-          <div className="mt-8 text-center text-sm text-muted-foreground">
-            New employee?{" "}
-            <Link to="/employee/register" className="font-medium text-blue-600 hover:text-blue-500 hover:underline">
-              Request access account
+          <div className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-slate-500">
+            Don't have an account?{" "}
+            <Link to="/employee/register" className="font-medium text-[#00A38C] hover:text-[#008f7a] hover:underline">
+              Request access
             </Link>
           </div>
         </div>

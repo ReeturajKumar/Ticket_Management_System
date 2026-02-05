@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useNotifications, type Notification, type NotificationType } from '@/stores/notificationStore'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/contexts/AuthContext'
 
 // ============================================================================
 // NOTIFICATION BELL COMPONENT
@@ -221,6 +222,7 @@ function NotificationItem({ notification, onMarkAsRead, onRemove, onClick }: Not
 
 export function NotificationBell({ className }: { className?: string }) {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification, clearAll } = useNotifications()
 
@@ -231,10 +233,14 @@ export function NotificationBell({ className }: { className?: string }) {
       markAsRead(notification.id)
     }
     
-    // Navigate if it's a ticket notification
+    // Navigate based on user role
     if (notification.data?.ticketId) {
       setOpen(false)
-      navigate(`/department/tickets?ticketId=${notification.data.ticketId}`)
+      if (user?.role === 'EMPLOYEE') {
+        navigate(`/employee/tickets/details/${notification.data.ticketId}`)
+      } else {
+        navigate(`/department/tickets?ticketId=${notification.data.ticketId}`)
+      }
     }
   }
 

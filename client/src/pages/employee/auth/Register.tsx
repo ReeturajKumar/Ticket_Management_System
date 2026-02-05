@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Building2, Loader2, Lock, Mail, User, Eye, EyeOff, ShieldCheck } from "lucide-react"
+import { Loader2, Lock, Mail, User, Eye, EyeOff, ShieldCheck } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,14 +18,12 @@ import {
 } from "@/components/ui/form"
 import { registerEmployee } from "@/services/employeeAuthService"
 
+import heroImage from "@/assets/employee-register-hero.jpg"
+
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
 })
 
 type RegisterFormData = z.infer<typeof registerSchema>
@@ -34,7 +32,6 @@ export default function EmployeeRegisterPage() {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -42,7 +39,6 @@ export default function EmployeeRegisterPage() {
       name: "",
       email: "",
       password: "",
-      confirmPassword: "",
     },
   })
 
@@ -69,66 +65,38 @@ export default function EmployeeRegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
-      {/* Left: Illustration/Info */}
-      <div className="hidden lg:w-[60%] flex-col justify-between relative p-12 text-white lg:flex bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 overflow-hidden">
-        {/* Decorative Background Elements */}
-        <div className="absolute inset-0 z-0">
-          <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-500/30 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute top-1/3 -right-32 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl animate-pulse delay-700" />
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-40" />
-        </div>
-
-        {/* Content */}
-        <div className="relative z-10 space-y-6">
-          <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <span className="text-lg font-bold tracking-wide">Internal Portal</span>
-          </div>
-          
-          <div className="space-y-4 max-w-xl">
-            <h1 className="text-5xl font-bold tracking-tight leading-tight bg-gradient-to-r from-white via-blue-50 to-white bg-clip-text text-transparent">
-              Elevate Your Internal Operations
-            </h1>
-            <p className="text-xl text-blue-100/90 leading-relaxed font-light">
-              Join as a general employee to access cross-departmental tools, internal resources, and support management features.
-            </p>
-          </div>
-        </div>
+    <div className="flex flex-col lg:flex-row min-h-screen bg-white">
+      {/* Left: Visual Panel - Hidden on medium and small screens */}
+      <div className="hidden lg:block lg:w-[60%] relative overflow-hidden flex-shrink-0">
+        <img 
+          src={heroImage} 
+          alt="Employee Registration" 
+          className="absolute inset-0 w-full h-full object-cover"
+        />
         
-        {/* Feature Cards */}
-        <div className="relative z-10 grid gap-5">
-           <div className="group rounded-2xl bg-white/[0.08] p-5 backdrop-blur-xl border border-white/[0.15] hover:bg-white/[0.12] transition-all">
-             <div className="flex items-start gap-4">
-               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/20">
-                 <Building2 className="h-6 w-6" />
-               </div>
-               <div>
-                 <h3 className="text-lg font-bold text-white">Universal Access</h3>
-                 <p className="text-sm text-blue-100/70">Unified platform for all internal tasks and inter-departmental collaboration.</p>
-               </div>
-             </div>
-           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="relative z-10 flex items-center justify-between text-sm text-blue-200/50 font-medium">
-          <span>EduDesk Internal Systems</span>
-          <span>&copy; {new Date().getFullYear()}</span>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex flex-col justify-end p-12 text-white">
+           <h1 className="text-5xl font-bold leading-tight mb-4 drop-shadow-md">
+            Join The Team &<br />
+            Empower Student Success
+          </h1>
+          <p className="text-lg font-medium text-white/90 drop-shadow-sm max-w-xl">
+             Register to start managing queries and tracking support tickets efficiently.
+          </p>
         </div>
       </div>
 
-      {/* Right: Register Form */}
-      <div className="flex w-full flex-col justify-center p-6 lg:w-[40%] lg:p-8">
+      {/* Right: Registration Form - Full width on medium and small screens */}
+      <div className="flex w-full flex-1 flex-col justify-center p-4 sm:p-6 lg:w-[40%] lg:p-12 bg-white min-h-screen lg:min-h-auto">
         <div className="mx-auto w-full max-w-[400px]">
-          <div className="mb-6 text-center lg:text-left">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
-              Register as Employee
+          <div className="mb-6 lg:mb-8 text-center">
+            <div className="mb-3 sm:mb-4 inline-flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-[#00A38C]/10 text-[#00A38C]">
+              <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+              Employee Registration
             </h2>
-            <p className="mt-2 text-slate-600 dark:text-slate-400">
-              Create your internal account and join the team.
+            <p className="mt-2 text-sm sm:text-base text-slate-500">
+              Create your account to join the support team.
             </p>
           </div>
 
@@ -138,12 +106,17 @@ export default function EmployeeRegisterPage() {
                 control={form.control}
                 name="name"
                 render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel>Full Name</FormLabel>
+                  <FormItem>
+                    <FormLabel className="text-sm sm:text-base">Full Name</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="Jane Smith" className="pl-9" {...field} disabled={isLoading} />
+                        <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                        <Input 
+                          placeholder="John Doe" 
+                          className="pl-9 h-10 sm:h-11 text-sm sm:text-base bg-white border-slate-200 focus:border-[#00A38C] focus:ring-[#00A38C]" 
+                          {...field} 
+                          disabled={isLoading} 
+                        />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -155,12 +128,17 @@ export default function EmployeeRegisterPage() {
                 control={form.control}
                 name="email"
                 render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel>Internal Email</FormLabel>
+                  <FormItem>
+                    <FormLabel className="text-sm sm:text-base">Work Email</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="jane.smith@edudesk.com" className="pl-9" {...field} disabled={isLoading} />
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                        <Input 
+                          placeholder="name@cloudblitz.com" 
+                          className="pl-9 h-10 sm:h-11 text-sm sm:text-base bg-white border-slate-200 focus:border-[#00A38C] focus:ring-[#00A38C]" 
+                          {...field} 
+                          disabled={isLoading} 
+                        />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -172,24 +150,26 @@ export default function EmployeeRegisterPage() {
                 control={form.control}
                 name="password"
                 render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel>Password</FormLabel>
+                  <FormItem>
+                    <FormLabel className="text-sm sm:text-base">Password</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                         <Input
                           type={showPassword ? "text" : "password"}
-                          className="pl-9 pr-10"
+                          className="pl-9 pr-10 h-10 sm:h-11 text-sm sm:text-base bg-white border-slate-200 focus:border-[#00A38C] focus:ring-[#00A38C]"
                           {...field}
                           disabled={isLoading}
                         />
-                        <button
+                        <Button
                           type="button"
-                          className="absolute right-3 top-2.5"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-slate-400 hover:text-slate-600"
                           onClick={() => setShowPassword(!showPassword)}
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-                        </button>
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -197,44 +177,26 @@ export default function EmployeeRegisterPage() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          type={showConfirmPassword ? "text" : "password"}
-                          className="pl-9 pr-10"
-                          {...field}
-                          disabled={isLoading}
-                        />
-                        <button
-                          type="button"
-                          className="absolute right-3 top-2.5"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        >
-                          {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <Button 
+                type="submit" 
+                className="w-full bg-[#00A38C] hover:bg-[#008f7a] text-white h-11 sm:h-12 font-bold text-sm sm:text-base shadow-md hover:shadow-lg transition-all" 
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Registering...
+                  </>
+                ) : (
+                  "Request Registration"
                 )}
-              />
-
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Request Registration"}
               </Button>
             </form>
           </Form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-slate-500">
             Have an account?{" "}
-            <Link to="/employee/login" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link to="/employee/login" className="font-medium text-[#00A38C] hover:text-[#008f7a] hover:underline">
               Sign in
             </Link>
           </div>

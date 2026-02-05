@@ -16,7 +16,6 @@ import { NotificationProvider } from "./stores/notificationStore"
 import { 
   DashboardSkeleton, 
   TicketsSkeleton, 
-  ProfileSkeleton, 
   ReportsSkeleton,
   PageSkeleton 
 } from "./components/skeletons"
@@ -27,9 +26,8 @@ import CreatePublicTicketPage from "./pages/public/CreateTicket"
 // Department Auth Pages - loaded immediately (entry points for auth flow)
 import DepartmentLoginPage from "./pages/department/auth/Login"
 import DepartmentRegisterPage from "./pages/department/auth/Register"
-import DepartmentVerifyOTP from "./pages/department/auth/VerifyOTP"
-import DepartmentForgotPassword from "./pages/department/auth/ForgotPassword"
-import DepartmentResetPassword from "./pages/department/auth/ResetPassword"
+
+// Forgot/Reset password routes removed as per request
 
 // Admin Auth Pages - loaded immediately (entry points for auth flow)
 import AdminLoginPage from "./pages/admin/auth/Login"
@@ -39,9 +37,7 @@ import EmployeeLoginPage from "./pages/employee/auth/Login"
 import EmployeeRegisterPage from "./pages/employee/auth/Register"
 
 // Protected Route Components
-import { DepartmentProtectedRoute } from "./components/DepartmentProtectedRoute"
-import { AdminProtectedRoute } from "./components/AdminProtectedRoute"
-import { EmployeeProtectedRoute } from "./components/EmployeeProtectedRoute"
+import { ProtectedRoute } from "./components/ProtectedRoute"
 import AdminTicketDetailsPage from "./pages/admin/tickets/[ticketId]"
 
 // ============================================================================
@@ -50,10 +46,12 @@ import AdminTicketDetailsPage from "./pages/admin/tickets/[ticketId]"
 // This reduces the initial bundle size and improves first load performance
 // ============================================================================
 
-const DepartmentDashboard = lazy(() => import("./pages/department/dashboard"))
+const DepartmentDashboard = lazy(() => import("./pages/department/dashboard/Overview"))
+const DepartmentAnalyticsPage = lazy(() => import("./pages/department/dashboard/AnalyticsPage"))
+const DepartmentTeamPerformancePage = lazy(() => import("./pages/department/dashboard/TeamPerformancePage"))
 const DepartmentTicketsPage = lazy(() => import("./pages/department/tickets"))
 const DepartmentTicketDetailsPage = lazy(() => import("./pages/department/tickets/details"))
-const DepartmentProfilePage = lazy(() => import("./pages/department/profile"))
+// Profile page removed as per request
 const TeamMemberDetailPage = lazy(() => import("./pages/department/team/[userId]"))
 const DepartmentReportsPage = lazy(() => import("./pages/department/reports"))
 
@@ -109,9 +107,8 @@ function App() {
               {/* Department Routes - Public Auth (Not lazy loaded - entry points) */}
               <Route path="/department/login" element={<DepartmentLoginPage />} />
               <Route path="/department/register" element={<DepartmentRegisterPage />} />
-              <Route path="/department/verify-otp" element={<DepartmentVerifyOTP />} />
-              <Route path="/department/forgot-password" element={<DepartmentForgotPassword />} />
-              <Route path="/department/reset-password" element={<DepartmentResetPassword />} />
+
+              {/* Forgot/Reset password routes removed */}
 
               {/* Admin Auth Routes - Public */}
               <Route path="/admin/login" element={<AdminLoginPage />} />
@@ -120,35 +117,34 @@ function App() {
               <Route path="/employee/login" element={<EmployeeLoginPage />} />
               <Route path="/employee/register" element={<EmployeeRegisterPage />} />
 
-              {/* Employee Routes - Protected */}
               <Route
                 path="/employee/dashboard"
                 element={
-                  <EmployeeProtectedRoute>
+                  <ProtectedRoute requiredRoles={['EMPLOYEE']}>
                     <LazyRoute fallback={<DashboardSkeleton />}>
                       <EmployeeDashboard />
                     </LazyRoute>
-                  </EmployeeProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="/employee/tickets"
                 element={
-                  <EmployeeProtectedRoute>
+                  <ProtectedRoute requiredRoles={['EMPLOYEE']}>
                     <LazyRoute fallback={<TicketsSkeleton />}>
                       <EmployeeTicketsPage />
                     </LazyRoute>
-                  </EmployeeProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="/employee/tickets/:id"
                 element={
-                  <EmployeeProtectedRoute>
+                  <ProtectedRoute requiredRoles={['EMPLOYEE']}>
                     <LazyRoute fallback={<PageSkeleton />}>
                       <EmployeeTicketDetailsPage />
                     </LazyRoute>
-                  </EmployeeProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
 
@@ -156,32 +152,43 @@ function App() {
               <Route
                 path="/department/dashboard"
                 element={
-                  <DepartmentProtectedRoute>
+                   <ProtectedRoute requiredRoles={['DEPARTMENT_USER']}>
                     <LazyRoute fallback={<DashboardSkeleton />}>
                       <DepartmentDashboard />
                     </LazyRoute>
-                  </DepartmentProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
               <Route
-                path="/department/profile"
+                path="/department/analytics"
                 element={
-                  <DepartmentProtectedRoute>
-                    <LazyRoute fallback={<ProfileSkeleton />}>
-                      <DepartmentProfilePage />
+                  <ProtectedRoute requiredRoles={['DEPARTMENT_USER']} requireHead>
+                    <LazyRoute fallback={<DashboardSkeleton />}>
+                      <DepartmentAnalyticsPage />
                     </LazyRoute>
-                  </DepartmentProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
+              <Route
+                path="/department/team"
+                element={
+                  <ProtectedRoute requiredRoles={['DEPARTMENT_USER']} requireHead>
+                    <LazyRoute fallback={<DashboardSkeleton />}>
+                      <DepartmentTeamPerformancePage />
+                    </LazyRoute>
+                  </ProtectedRoute>
+                }
+              />
+              {/* Profile route removed */}
               
               <Route
                 path="/department/tickets"
                 element={
-                  <DepartmentProtectedRoute>
+                  <ProtectedRoute requiredRoles={['DEPARTMENT_USER']}>
                     <LazyRoute fallback={<TicketsSkeleton />}>
                       <DepartmentTicketsPage />
                     </LazyRoute>
-                  </DepartmentProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
 
@@ -189,116 +196,115 @@ function App() {
               <Route
                 path="/department/tickets/unassigned"
                 element={
-                  <DepartmentProtectedRoute>
+                  <ProtectedRoute requiredRoles={['DEPARTMENT_USER']}>
                     <LazyRoute fallback={<TicketsSkeleton />}>
                       <DepartmentTicketsPage />
                     </LazyRoute>
-                  </DepartmentProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
               
               <Route
                 path="/department/tickets/:id"
                 element={
-                  <DepartmentProtectedRoute>
+                  <ProtectedRoute requiredRoles={['DEPARTMENT_USER']}>
                     <LazyRoute fallback={<PageSkeleton />}>
                       <DepartmentTicketDetailsPage />
                     </LazyRoute>
-                  </DepartmentProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
 
               <Route
                 path="/department/team/:userId"
                 element={
-                  <DepartmentProtectedRoute>
+                  <ProtectedRoute requiredRoles={['DEPARTMENT_USER']}>
                     <LazyRoute fallback={<PageSkeleton />}>
                       <TeamMemberDetailPage />
                     </LazyRoute>
-                  </DepartmentProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
 
               <Route
                 path="/department/reports"
                 element={
-                  <DepartmentProtectedRoute>
+                  <ProtectedRoute requiredRoles={['DEPARTMENT_USER']} requireHead>
                     <LazyRoute fallback={<ReportsSkeleton />}>
                       <DepartmentReportsPage />
                     </LazyRoute>
-                  </DepartmentProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
 
-              {/* Admin Routes - Protected */}
               <Route
                 path="/admin/dashboard"
                 element={
-                  <AdminProtectedRoute>
+                  <ProtectedRoute requiredRoles={['ADMIN']}>
                     <LazyRoute fallback={<DashboardSkeleton />}>
                       <AdminDashboardPage />
                     </LazyRoute>
-                  </AdminProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="/admin/pending-users"
                 element={
-                  <AdminProtectedRoute>
+                  <ProtectedRoute requiredRoles={['ADMIN']}>
                     <LazyRoute fallback={<PageSkeleton />}>
                       <AdminPendingUsersPage />
                     </LazyRoute>
-                  </AdminProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="/admin/users"
                 element={
-                  <AdminProtectedRoute>
+                  <ProtectedRoute requiredRoles={['ADMIN']}>
                     <LazyRoute fallback={<PageSkeleton />}>
                       <AdminUsersPage />
                     </LazyRoute>
-                  </AdminProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="/admin/users/:userId"
                 element={
-                  <AdminProtectedRoute>
+                  <ProtectedRoute requiredRoles={['ADMIN']}>
                     <LazyRoute fallback={<PageSkeleton />}>
                       <AdminUserDetailsPage />
                     </LazyRoute>
-                  </AdminProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="/admin/tickets"
                 element={
-                  <AdminProtectedRoute>
+                  <ProtectedRoute requiredRoles={['ADMIN']}>
                     <LazyRoute fallback={<TicketsSkeleton />}>
                       <AdminTicketsPage />
                     </LazyRoute>
-                  </AdminProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="/admin/tickets/:ticketId"
                 element={
-                  <AdminProtectedRoute>
+                  <ProtectedRoute requiredRoles={['ADMIN']}>
                     <LazyRoute fallback={<PageSkeleton />}>
                       <AdminTicketDetailsPage />
                     </LazyRoute>
-                  </AdminProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="/admin/analytics"
                 element={
-                  <AdminProtectedRoute>
+                  <ProtectedRoute requiredRoles={['ADMIN']}>
                     <LazyRoute fallback={<ReportsSkeleton />}>
                       <AdminAnalyticsPage />
                     </LazyRoute>
-                  </AdminProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
 
@@ -307,7 +313,19 @@ function App() {
                 <Route path="/" element={<Navigate to="/submit-ticket" replace />} />
                 <Route path="*" element={<Navigate to="/submit-ticket" replace />} />
               </Routes>
-              <ToastContainer position="bottom-right" autoClose={3000} />
+              <ToastContainer 
+                position="bottom-right" 
+                autoClose={4000} 
+                hideProgressBar={false}
+                newestOnTop={true}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+                limit={3}
+              />
             </TicketStoreProvider>
           </NotificationProvider>
         </SocketProvider>

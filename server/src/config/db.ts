@@ -1,46 +1,16 @@
 import mongoose from 'mongoose';
+import config from './appConfig';
 
-/**
- * MongoDB Connection Configuration
- * Optimized with connection pooling and retry logic
- */
+const connectionOptions: mongoose.ConnectOptions = config.mongo.options;
 
-// Connection options for optimal performance
-const connectionOptions: mongoose.ConnectOptions = {
-  // Connection Pool Settings
-  maxPoolSize: 10,          // Maximum number of connections in the pool
-  minPoolSize: 2,           // Minimum number of connections to maintain
-  
-  // Timeout Settings
-  serverSelectionTimeoutMS: 5000,   // Timeout for server selection (5 seconds)
-  socketTimeoutMS: 45000,           // Timeout for socket operations (45 seconds)
-  connectTimeoutMS: 10000,          // Timeout for initial connection (10 seconds)
-  
-  // Keep-alive Settings
-  heartbeatFrequencyMS: 10000,      // Frequency of heartbeat checks
-  
-  // Write Concern
-  w: 'majority',                    // Write concern for data durability
-  
-  // Read Preference
-  readPreference: 'primaryPreferred', // Read from primary, fallback to secondary
-};
+const MAX_RETRIES = config.mongo.maxRetries;
+const RETRY_DELAY_MS = config.mongo.retryDelay;
 
-// Retry configuration
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 5000;
-
-/**
- * Sleep utility for retry delays
- */
 const sleep = (ms: number): Promise<void> => 
   new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * Connect to MongoDB with retry logic
- */
 const connectDB = async (): Promise<void> => {
-  const mongoURI = process.env.MONGO_URI;
+  const mongoURI = config.mongo.uri;
   
   if (!mongoURI) {
     throw new Error('MONGO_URI is not defined in environment variables');
@@ -53,11 +23,8 @@ const connectDB = async (): Promise<void> => {
       const conn = await mongoose.connect(mongoURI, connectionOptions);
       
       console.log(`MongoDB Connected: ${conn.connection.host}`);
-      console.log(`Connection Pool Size: ${connectionOptions.maxPoolSize}`);
       
-      // Set up connection event handlers
       setupConnectionHandlers();
-      
       return;
     } catch (error: any) {
       retries++;
@@ -74,9 +41,6 @@ const connectDB = async (): Promise<void> => {
   }
 };
 
-/**
- * Set up MongoDB connection event handlers
- */
 const setupConnectionHandlers = (): void => {
   const db = mongoose.connection;
   
@@ -96,7 +60,6 @@ const setupConnectionHandlers = (): void => {
     console.log('MongoDB reconnected successfully');
   });
   
-  // Handle process termination gracefully
   process.on('SIGINT', async () => {
     try {
       await db.close();
@@ -109,9 +72,6 @@ const setupConnectionHandlers = (): void => {
   });
 };
 
-/**
- * Get connection pool statistics
- */
 export const getConnectionStats = () => {
   const db = mongoose.connection;
   return {

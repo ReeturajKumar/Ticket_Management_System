@@ -21,12 +21,14 @@ import {
   Activity,
   UserCheck,
   Mail,
-  Fingerprint
+  Fingerprint,
+  Send
 } from "lucide-react"
 import { employeeService } from "@/services/employeeService"
 import { cn } from "@/lib/utils"
 import { toast } from "react-toastify"
 import { useAuth } from "@/contexts/AuthContext"
+import { useRealTimeTicket } from "@/hooks/useSocket"
 
 interface EmployeeTicketDetailsDialogProps {
   ticketId: string | null
@@ -48,6 +50,19 @@ export function EmployeeTicketDetailsDialog({ ticketId, open, onOpenChange }: Em
   const { user } = useAuth()
   const [ticket, setTicket] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [comment, setComment] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Real-time updates for this specific ticket
+  useRealTimeTicket({
+    ticketId: ticketId || '',
+    onCommentAdded: () => {
+      if (ticketId) fetchTicketDetails(ticketId, true)
+    },
+    onStatusChanged: () => {
+      if (ticketId) fetchTicketDetails(ticketId, true)
+    }
+  })
 
   useEffect(() => {
     if (open && ticketId) {
@@ -57,18 +72,38 @@ export function EmployeeTicketDetailsDialog({ ticketId, open, onOpenChange }: Em
     }
   }, [open, ticketId])
 
-  const fetchTicketDetails = async (id: string) => {
+  const fetchTicketDetails = async (id: string, silent = false) => {
     try {
-      setIsLoading(true)
+      if (!silent) setIsLoading(true)
       const response = await employeeService.getTicketDetails(id)
       if (response.success) {
         setTicket(response.data)
       }
     } catch (error) {
       console.error("Failed to fetch ticket details:", error)
-      toast.error("Failed to load ticket details")
+      if (!silent) toast.error("Failed to load ticket details")
     } finally {
-      setIsLoading(false)
+      if (!silent) setIsLoading(false)
+    }
+  }
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!comment.trim() || !ticketId) return
+
+    try {
+      setIsSubmitting(true)
+      const response = await employeeService.addComment(ticketId, comment)
+      if (response.success) {
+        toast.success("Message sent")
+        setComment("")
+        fetchTicketDetails(ticketId, true)
+      }
+    } catch (error) {
+      console.error("Failed to add comment:", error)
+      toast.error("Failed to send message")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -261,6 +296,36 @@ export function EmployeeTicketDetailsDialog({ ticketId, open, onOpenChange }: Em
                 </div>
               </div>
 
+              {/* Comment Input Fixed at Bottom */}
+              {ticket.status !== 'CLOSED' && (
+                <div className="p-4 sm:p-6 border-t border-slate-100 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+                  <form onSubmit={handleAddComment} className="relative flex items-end gap-3 max-w-4xl mx-auto">
+                    <div className="flex-1 relative">
+                       <textarea 
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 pr-14 text-sm font-medium focus:bg-white focus:ring-2 focus:ring-[#ACDF33]/20 focus:border-[#ACDF33]/30 transition-all resize-none min-h-[56px] max-h-32 scrollbar-hide"
+                          placeholder="Type your message to support staff..."
+                          rows={1}
+                          value={comment}
+                          onChange={(e) => setComment(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleAddComment(e);
+                            }
+                          }}
+                       />
+                       <button 
+                          type="submit"
+                          disabled={isSubmitting || !comment.trim()}
+                          className="absolute right-2.5 bottom-2.5 size-9 bg-[#032313] text-[#ACDF33] rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-lg shadow-[#032313]/10"
+                       >
+                          {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                       </button>
+                    </div>
+                  </form>
+                  <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest mt-3 opacity-60">Press Enter to send message</p>
+                </div>
+              )}
             </div>
 
             {/* Right Section: Details (Fixed on Desktop, Stacked on Mobile) */}

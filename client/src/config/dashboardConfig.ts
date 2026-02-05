@@ -1,7 +1,3 @@
-/**
- * Dashboard Configuration
- * Centralized configuration for dashboard targets, thresholds, and display settings
- */
 
 export const DASHBOARD_CONFIG = {
   targets: {

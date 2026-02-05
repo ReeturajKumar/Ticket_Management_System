@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { getCurrentDepartmentUser, logoutDepartmentUser } from "@/services/departmentAuthService"
+import { useAuth } from "@/contexts/AuthContext"
 import { NotificationBell } from "@/components/notifications"
 import {
   LogOut,
@@ -22,7 +22,7 @@ interface DepartmentHeaderProps {
 }
 
 export function DepartmentHeader({}: DepartmentHeaderProps) {
-  const user = getCurrentDepartmentUser()
+  const { user, logout } = useAuth()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   
   // Get user initials for avatar
@@ -36,7 +36,7 @@ export function DepartmentHeader({}: DepartmentHeaderProps) {
   }
 
   const handleLogout = async () => {
-    await logoutDepartmentUser()
+    await logout()
     window.location.href = '/department/login'
   }
 

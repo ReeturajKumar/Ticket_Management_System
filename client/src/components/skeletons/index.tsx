@@ -5,7 +5,6 @@
 
 export { DashboardSkeleton } from './DashboardSkeleton'
 export { TicketsSkeleton, TicketCardSkeleton, TicketListSkeleton } from './TicketsSkeleton'
-export { ProfileSkeleton } from './ProfileSkeleton'
 export { ReportsSkeleton } from './ReportsSkeleton'
 
 // Generic page skeleton

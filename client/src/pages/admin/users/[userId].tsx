@@ -193,11 +193,9 @@ export default function AdminUserDetailsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="USER">User</SelectItem>
                         <SelectItem value="EMPLOYEE">Employee</SelectItem>
                         <SelectItem value="DEPARTMENT_USER">Department User</SelectItem>
                         <SelectItem value="ADMIN">Admin</SelectItem>
-                        <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (

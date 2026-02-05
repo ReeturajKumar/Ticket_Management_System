@@ -177,18 +177,6 @@ export const exportReport = async (req: Request, res: Response): Promise<void> =
     const user = (req as any).user;
     const { format, type, startDate, endDate } = req.query;
 
-    if (!format || !type) {
-      throw new AppError('Please provide format (csv/excel/pdf) and type (tickets/team/summary)', 400);
-    }
-
-    if (!['csv', 'excel', 'pdf'].includes(format as string)) {
-      throw new AppError('Invalid format. Use csv, excel or pdf', 400);
-    }
-
-    if (!['tickets', 'team', 'summary'].includes(type as string)) {
-      throw new AppError('Invalid type. Use tickets, team, or summary', 400);
-    }
-
     // Calculate date range
     let start: Date = new Date();
     start.setMonth(start.getMonth() - 1);

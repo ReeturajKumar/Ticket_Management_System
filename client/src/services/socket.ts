@@ -52,7 +52,6 @@ export function connectSocket(userId: string, department?: string): Socket | nul
 
   // Prevent multiple simultaneous connection attempts
   if (isConnecting || connectionAttempts > 0) {
-    console.log('🔌 Connection already in progress or attempted, skipping duplicate')
     return socket
   }
 
@@ -60,10 +59,10 @@ export function connectSocket(userId: string, department?: string): Socket | nul
 
   isConnecting = true
   // Check for both department and admin tokens
-  const token = localStorage.getItem('dept_accessToken') || localStorage.getItem('admin_accessToken')
+  const token = localStorage.getItem('dept_token') || localStorage.getItem('admin_token')
 
   if (!token) {
-    console.warn('Cannot connect socket: No access token')
+    console.warn('Cannot connect socket: No auth token')
     isConnecting = false
     return null
   }
@@ -82,74 +81,59 @@ export function connectSocket(userId: string, department?: string): Socket | nul
 
     // Connection event handlers
     socket.on('connect', () => {
+      console.log('[Socket] 🔌 Connected to WebSocket server');
       isConnecting = false
       reconnectAttempts = 0
 
       // Authenticate and join department room (or admin room)
-      // Note: Server expects 'authenticate' and 'join:department' events (with colon)
       socket?.emit('authenticate', { userId, department: department || undefined })
+      console.log('[Socket] 🔐 Authenticating with userId:', userId, 'department:', department);
       if (department) {
         socket?.emit('join:department', department)
-      } else {
-        // For admin users without department, join admin room
-        socket?.emit('join:admin', 'admin')
+        console.log('[Socket] 🏢 Joining department room:', department);
       }
     })
 
     socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error.message)
+      console.warn('[Socket] Connection error:', error.message);
       isConnecting = false
       reconnectAttempts++
-
-      if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        console.error('Max reconnection attempts reached')
-      }
     })
 
     socket.on('disconnect', (reason) => {
       isConnecting = false
-
-      // Auto-reconnect for certain disconnect reasons
       if (reason === 'io server disconnect') {
-        // Server disconnected us, try to reconnect
         socket?.connect()
       }
     })
 
-    socket.on('reconnect', (_attemptNumber) => {
+    socket.on('reconnect', () => {
       reconnectAttempts = 0
-
-      // Re-authenticate after reconnection
       socket?.emit('authenticate', { userId, department: department || undefined })
       if (department) {
         socket?.emit('join:department', department)
-      } else {
-        // For admin users without department, join admin room
-        socket?.emit('join:admin', 'admin')
       }
     })
 
-    socket.on('error', (error) => {
-      console.error('Socket error:', error)
+    socket.on('error', () => {
+      // Error handled silently as per request to reduce logs
     })
 
     // Authentication response
-    socket.on('authenticated', (_data) => {
-      // Successfully authenticated
-      connectionAttempts = 0 // Reset connection attempts on success
+    socket.on('authenticated', (data) => {
+      console.log('[Socket] ✅ Authenticated successfully:', data);
+      connectionAttempts = 0
     })
 
-    socket.on('authentication-error', (error) => {
-      console.error('Socket authentication failed:', error)
-      connectionAttempts = 0 // Reset on error
+    socket.on('authentication-error', () => {
+      connectionAttempts = 0
       disconnectSocket()
     })
 
     return socket
   } catch (error) {
-    console.error('Failed to connect socket:', error)
     isConnecting = false
-    connectionAttempts = 0 // Reset on error
+    connectionAttempts = 0
     return null
   }
 }
@@ -309,7 +293,9 @@ export interface TicketCreatedEvent {
   subject: string
   department: string
   priority: string
+  status: string
   createdBy: string
+  authorId?: string
   createdAt: string
 }
 
@@ -340,11 +326,15 @@ export interface TicketPriorityChangedEvent {
 
 export interface TicketCommentAddedEvent {
   ticketId: string
-  commentId: string
-  content: string
+  ticketSubject?: string
+  department?: string
+  commentId?: string
+  content?: string
   authorId: string
   authorName: string
+  isInternal?: boolean
   createdAt: string
+  timestamp?: string
 }
 
 export interface BulkOperationEvent {

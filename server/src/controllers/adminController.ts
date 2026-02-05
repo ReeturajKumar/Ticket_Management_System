@@ -3,8 +3,7 @@ import User from '../models/User';
 import Ticket from '../models/Ticket';
 import { UserRole, Department, TicketStatus, Priority } from '../constants';
 import AppError from '../utils/AppError';
-import { cacheGet, cacheSet, CACHE_KEYS, CACHE_TTL, invalidateDepartmentCache, invalidateAdminCache } from '../utils/cache';
-import { hashPassword } from '../utils/password';
+import { hashPassword } from '../utils/security';
 import { emitUserCreated, emitUserUpdated } from '../utils/socket';
 
 /**
@@ -17,7 +16,6 @@ export const getPendingUsers = async (req: Request, res: Response): Promise<void
     const pendingUsers = await User.find({
       role: { $in: [UserRole.DEPARTMENT_USER, UserRole.EMPLOYEE] },
       approvalStatus: 'PENDING',
-      isVerified: true, // Only show verified users
     }).select('name email department isHead role createdAt');
 
     res.status(200).json({
@@ -48,26 +46,8 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
   try {
     const { name, email, password, role, department, isHead, approvalStatus } = req.body;
 
-    // Validate required fields
-    if (!name || !email || !password || !role) {
-      throw new AppError('Please provide name, email, password, and role', 400);
-    }
-
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      throw new AppError('User with this email already exists', 409);
-    }
-
-    // Prevent creating admin users
-    if (role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN) {
-      throw new AppError('Cannot create admin users through this interface', 400);
-    }
-
-    // Validate department if role is DEPARTMENT_USER
-    if (role === UserRole.DEPARTMENT_USER && !department) {
-      throw new AppError('Department is required for department users', 400);
-    }
 
     // Hash password
     const hashedPassword = await hashPassword(password);
@@ -82,17 +62,10 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       isHead: role === UserRole.DEPARTMENT_USER ? (isHead || false) : undefined,
       approvalStatus: role === UserRole.DEPARTMENT_USER ? (approvalStatus || 'APPROVED') : undefined,
       isApproved: role === UserRole.DEPARTMENT_USER ? (approvalStatus === 'APPROVED') : true,
-      isVerified: true, // Admin-created users are auto-verified
       approvedBy: role === UserRole.DEPARTMENT_USER && approvalStatus === 'APPROVED' ? req.user!.userId as any : undefined,
       approvedAt: role === UserRole.DEPARTMENT_USER && approvalStatus === 'APPROVED' ? new Date() : undefined,
-      sessions: [],
     });
 
-    // Invalidate caches
-    if (user.department) {
-      invalidateDepartmentCache(user.department);
-    }
-    invalidateAdminCache();
 
     // Emit real-time update
     emitUserCreated(user);
@@ -151,11 +124,6 @@ export const approveUser = async (req: Request, res: Response): Promise<void> =>
 
     await user.save();
 
-    // Invalidate caches
-    if (user.department) {
-      invalidateDepartmentCache(user.department);
-    }
-    invalidateAdminCache();
 
     // Emit real-time update
     emitUserUpdated(user);
@@ -188,10 +156,6 @@ export const rejectUser = async (req: Request, res: Response): Promise<void> => 
     const { reason } = req.body;
     const adminId = req.user!.userId;
 
-    if (!reason) {
-      throw new AppError('Please provide a rejection reason', 400);
-    }
-
     // Find user
     const user = await User.findById(userId);
     if (!user) {
@@ -217,11 +181,6 @@ export const rejectUser = async (req: Request, res: Response): Promise<void> => 
 
     await user.save();
 
-    // Invalidate caches
-    if (user.department) {
-      invalidateDepartmentCache(user.department);
-    }
-    invalidateAdminCache();
 
     // Emit real-time update
     emitUserUpdated(user);
@@ -249,40 +208,68 @@ export const rejectUser = async (req: Request, res: Response): Promise<void> => 
  */
 export const getAdminDashboardOverview = async (req: Request, res: Response): Promise<void> => {
   try {
-    const cacheKey = CACHE_KEYS.ADMIN_DASHBOARD_OVERVIEW;
-    const cachedData = cacheGet(cacheKey);
+    const { period = 'all', startDate: queryStartDate, endDate: queryEndDate } = req.query;
     
-    if (cachedData) {
-      res.status(200).json({
-        success: true,
-        data: cachedData,
-        cached: true,
-      });
-      return;
+    // Calculate date filter
+    let dateFilter: any = {};
+    if (period !== 'all') {
+      const startDate = new Date();
+      if (period === 'today') {
+        startDate.setHours(0, 0, 0, 0);
+      } else if (period === 'last_week') {
+        startDate.setDate(startDate.getDate() - 7);
+        startDate.setHours(0, 0, 0, 0);
+      } else if (period === 'last_month') {
+        startDate.setDate(startDate.getDate() - 30);
+        startDate.setHours(0, 0, 0, 0);
+      } else if (period === 'last_3_months') {
+        startDate.setDate(startDate.getDate() - 90);
+        startDate.setHours(0, 0, 0, 0);
+      } else if (period === 'last_6_months') {
+        startDate.setDate(startDate.getDate() - 180);
+        startDate.setHours(0, 0, 0, 0);
+      } else if (period === 'custom' && queryStartDate) {
+        dateFilter.createdAt = { 
+          $gte: new Date(queryStartDate as string),
+          $lte: queryEndDate ? new Date(queryEndDate as string) : new Date()
+        };
+      }
+      
+      if (period !== 'custom' && period !== 'all') {
+        dateFilter.createdAt = { $gte: startDate };
+      }
     }
 
-    // Get total users count by role
-    const [totalUsers, departmentUsers, employees, pendingUsers, approvedUsers] = await Promise.all([
-      User.countDocuments(),
-      User.countDocuments({ role: UserRole.DEPARTMENT_USER }),
-      User.countDocuments({ role: UserRole.EMPLOYEE }),
-      User.countDocuments({ role: { $in: [UserRole.DEPARTMENT_USER, UserRole.EMPLOYEE] }, approvalStatus: 'PENDING' }),
-      User.countDocuments({ role: { $in: [UserRole.DEPARTMENT_USER, UserRole.EMPLOYEE] }, approvalStatus: 'APPROVED' }),
+    // Get counts with unified date filter
+    const [
+      totalUsers, 
+      departmentUsers, 
+      employees, 
+      pendingUsers, 
+      approvedUsers,
+      totalTickets,
+      openTickets,
+      inProgressTickets,
+      resolvedTickets,
+      closedTickets,
+      waitingForUserTickets
+    ] = await Promise.all([
+      User.countDocuments(dateFilter),
+      User.countDocuments({ ...dateFilter, role: UserRole.DEPARTMENT_USER }),
+      User.countDocuments({ ...dateFilter, role: UserRole.EMPLOYEE }),
+      User.countDocuments({ ...dateFilter, role: { $in: [UserRole.DEPARTMENT_USER, UserRole.EMPLOYEE] }, approvalStatus: 'PENDING' }),
+      User.countDocuments({ ...dateFilter, role: { $in: [UserRole.DEPARTMENT_USER, UserRole.EMPLOYEE] }, approvalStatus: 'APPROVED' }),
+      Ticket.countDocuments(dateFilter),
+      Ticket.countDocuments({ ...dateFilter, status: TicketStatus.OPEN }),
+      Ticket.countDocuments({ ...dateFilter, status: TicketStatus.IN_PROGRESS }),
+      Ticket.countDocuments({ ...dateFilter, status: TicketStatus.RESOLVED }),
+      Ticket.countDocuments({ ...dateFilter, status: TicketStatus.CLOSED }),
+      Ticket.countDocuments({ ...dateFilter, status: TicketStatus.WAITING_FOR_USER }),
     ]);
 
-    // Get total tickets count
-    const totalTickets = await Ticket.countDocuments();
-    
-    // Get tickets by status
-    const [openTickets, inProgressTickets, resolvedTickets, closedTickets] = await Promise.all([
-      Ticket.countDocuments({ status: TicketStatus.OPEN }),
-      Ticket.countDocuments({ status: TicketStatus.IN_PROGRESS }),
-      Ticket.countDocuments({ status: TicketStatus.RESOLVED }),
-      Ticket.countDocuments({ status: TicketStatus.CLOSED }),
-    ]);
-
-    // Get tickets by priority
+    // Get tickets by priority with filter
     const ticketsByPriority = await Ticket.aggregate([
+      { $match: dateFilter },
       {
         $group: {
           _id: '$priority',
@@ -303,8 +290,9 @@ export const getAdminDashboardOverview = async (req: Request, res: Response): Pr
       }
     });
 
-    // Get tickets by department
+    // Get tickets by department with filter
     const ticketsByDepartment = await Ticket.aggregate([
+      { $match: dateFilter },
       {
         $group: {
           _id: '$department',
@@ -320,10 +308,11 @@ export const getAdminDashboardOverview = async (req: Request, res: Response): Pr
       }
     });
 
-    // Get users by department
+    // Get users by department with date filter
     const usersByDepartment = await User.aggregate([
       {
         $match: {
+          ...dateFilter,
           role: UserRole.DEPARTMENT_USER,
           department: { $exists: true },
         },
@@ -353,7 +342,62 @@ export const getAdminDashboardOverview = async (req: Request, res: Response): Pr
       }
     });
 
-    // Get recent tickets (last 10)
+    // Get ticket trends for the period
+    const ticketTrendsPromise = Ticket.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const resolvedTrendsPromise = Ticket.aggregate([
+      { 
+        $match: { 
+          ...dateFilter, 
+          status: { $in: [TicketStatus.RESOLVED, TicketStatus.CLOSED] },
+          resolvedAt: { $ne: null }
+        } 
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$resolvedAt' } },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const [ticketTrends, resolvedTrends] = await Promise.all([ticketTrendsPromise, resolvedTrendsPromise]);
+
+    // Calculate the full date range for the selected period
+    const trends: Array<{ date: string; created: number; resolved: number }> = [];
+    const now = new Date();
+    let daysToBackfill = 0;
+
+    if (period === 'today') daysToBackfill = 1;
+    else if (period === 'last_week') daysToBackfill = 7;
+    else if (period === 'last_month') daysToBackfill = 30;
+    else if (period === 'last_3_months') daysToBackfill = 90;
+    else if (period === 'last_6_months') daysToBackfill = 180;
+    else if (period === 'all') daysToBackfill = 30; // Default to 30 for 'all' to show some context
+
+    const createdMap = new Map(ticketTrends.map((t: any) => [t._id, t.count]));
+    const resolvedMap = new Map(resolvedTrends.map((t: any) => [t._id, t.count]));
+
+    for (let i = daysToBackfill - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      trends.push({
+        date: dateStr,
+        created: createdMap.get(dateStr) || 0,
+        resolved: resolvedMap.get(dateStr) || 0,
+      });
+    }
+
+    // Get recent tickets (Always global for the activity stream)
     const recentTickets = await Ticket.find()
       .sort({ createdAt: -1 })
       .limit(10)
@@ -372,10 +416,12 @@ export const getAdminDashboardOverview = async (req: Request, res: Response): Pr
         inProgressTickets,
         resolvedTickets,
         closedTickets,
+        waitingForUserTickets
       },
       byPriority: priorityBreakdown,
       byDepartment: departmentBreakdown,
       usersByDepartment: departmentUsersBreakdown,
+      trends,
       recentTickets: recentTickets.map((ticket) => ({
         id: ticket._id,
         subject: ticket.subject,
@@ -387,9 +433,6 @@ export const getAdminDashboardOverview = async (req: Request, res: Response): Pr
       })),
     };
 
-    // Cache for 5 minutes
-    cacheSet(cacheKey, responseData, 5 * 60 * 1000);
-
     res.status(200).json({
       success: true,
       data: responseData,
@@ -400,7 +443,7 @@ export const getAdminDashboardOverview = async (req: Request, res: Response): Pr
 };
 
 /**
- * Get All Users (with filters)
+ * Get All Users (Admin View)
  * GET /api/v1/admin/users
  */
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
@@ -414,12 +457,12 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
     // Build filter
     const filter: any = {};
     
-    // Exclude admin users (ADMIN and SUPER_ADMIN) from the list
-    filter.role = { $nin: [UserRole.ADMIN, UserRole.SUPER_ADMIN] };
+    // Exclude admin users (ADMIN) from the list
+    filter.role = { $nin: [UserRole.ADMIN] };
     
     if (role) {
       // If a specific role is requested, apply it but still exclude admins
-      if (role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN) {
+      if (role === UserRole.ADMIN) {
         // If admin role is requested, return empty result
         filter.role = { $in: [] }; // Empty array means no results
       } else {
@@ -488,7 +531,7 @@ export const getUserDetails = async (req: Request, res: Response): Promise<void>
     const { userId } = req.params;
 
     const user = await User.findById(userId)
-      .select('-password -refreshToken -sessions -verificationOTP -resetPasswordToken')
+      .select('-password -refreshToken -sessions')
       .lean();
 
     if (!user) {
@@ -540,6 +583,7 @@ export const getUserDetails = async (req: Request, res: Response): Promise<void>
   }
 };
 
+
 /**
  * Update User
  * PATCH /api/v1/admin/users/:userId
@@ -547,23 +591,36 @@ export const getUserDetails = async (req: Request, res: Response): Promise<void>
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
-    const { name, email, role, department, isHead, approvalStatus } = req.body;
+    const updateData = req.body;
 
     const user = await User.findById(userId);
     if (!user) {
       throw new AppError('User not found', 404);
     }
 
-    // Update allowed fields
-    if (name !== undefined) user.name = name;
-    if (email !== undefined) user.email = email;
-    if (role !== undefined) user.role = role;
-    if (department !== undefined) user.department = department;
-    if (isHead !== undefined) user.isHead = isHead;
-    if (approvalStatus !== undefined) {
-      user.approvalStatus = approvalStatus;
-      user.isApproved = approvalStatus === 'APPROVED';
-      if (approvalStatus === 'APPROVED') {
+    // Update fields
+    if (updateData.name) user.name = updateData.name;
+    if (updateData.email) user.email = updateData.email.toLowerCase();
+    
+    if (updateData.role) {
+      user.role = updateData.role;
+      // If role changes, handle department/isHead accordingly
+      if (updateData.role === UserRole.DEPARTMENT_USER) {
+        if (updateData.department !== undefined) user.department = updateData.department;
+        if (updateData.isHead !== undefined) user.isHead = updateData.isHead;
+      } else {
+        user.department = undefined;
+        user.isHead = undefined;
+      }
+    } else if (user.role === UserRole.DEPARTMENT_USER) {
+      if (updateData.department !== undefined) user.department = updateData.department;
+      if (updateData.isHead !== undefined) user.isHead = updateData.isHead;
+    }
+
+    if (updateData.approvalStatus) {
+      user.approvalStatus = updateData.approvalStatus;
+      user.isApproved = updateData.approvalStatus === 'APPROVED';
+      if (user.isApproved && !user.approvedBy) {
         user.approvedBy = req.user!.userId as any;
         user.approvedAt = new Date();
       }
@@ -571,10 +628,8 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 
     await user.save();
 
-    // Invalidate caches
-    if (user.department) {
-      invalidateDepartmentCache(user.department);
-    }
+    // Emit real-time update
+    emitUserUpdated(user);
 
     res.status(200).json({
       success: true,
@@ -588,6 +643,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
           department: user.department,
           isHead: user.isHead,
           approvalStatus: user.approvalStatus,
+          isApproved: user.isApproved,
         },
       },
     });
@@ -595,6 +651,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     throw error;
   }
 };
+
 
 /**
  * Get All Tickets (Admin View)
@@ -786,17 +843,6 @@ export const getAdminAnalytics = async (req: Request, res: Response): Promise<vo
     if (period === '7d') daysAgo = 7;
     if (period === '90d') daysAgo = 90;
 
-    const cacheKey = `${CACHE_KEYS.ADMIN_ANALYTICS}:${period}`;
-    const cachedData = cacheGet(cacheKey);
-    
-    if (cachedData) {
-      res.status(200).json({
-        success: true,
-        data: cachedData,
-        cached: true,
-      });
-      return;
-    }
 
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - daysAgo);
@@ -893,8 +939,6 @@ export const getAdminAnalytics = async (req: Request, res: Response): Promise<vo
       })),
     };
 
-    // Cache for 10 minutes
-    cacheSet(cacheKey, responseData, 10 * 60 * 1000);
 
     res.status(200).json({
       success: true,
@@ -970,6 +1014,29 @@ export const getSystemStats = async (req: Request, res: Response): Promise<void>
           total: totalTickets,
           active: activeTickets,
         },
+      },
+    });
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+/**
+ * Get Admin Constants (Roles, Departments, etc.)
+ * GET /api/v1/admin/constants
+ */
+export const getAdminConstants = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Filter out admin roles - these should not be assignable through the UI
+    const assignableRoles = Object.values(UserRole).filter(
+      role => role !== UserRole.ADMIN
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        roles: assignableRoles,
+        departments: Object.values(Department),
       },
     });
   } catch (error: any) {

@@ -22,9 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2, Send, CheckCircle2, LifeBuoy } from 'lucide-react'
+import { Loader2, Send, CheckCircle2, ShieldCheck } from 'lucide-react'
 
-// Helper to format enum strings nicely (e.g. "PLACEMENT_CELL" -> "Placement Cell")
+// Helper to format enum strings nicely
 const formatEnumString = (str: string) => {
   return str
     .split('_')
@@ -52,7 +52,6 @@ export default function CreatePublicTicketPage() {
   const [priorities, setPriorities] = useState<string[]>([])
   const [limitError, setLimitError] = useState(false)
 
-  // Fetch config on mount
   useEffect(() => {
     const fetchConfig = async () => {
       const result = await getPublicConfig()
@@ -60,8 +59,6 @@ export default function CreatePublicTicketPage() {
         setDepartments(result.data.departments || [])
         setPriorities(result.data.priorities || [])
       } else {
-        // Silently handle - server may not be running
-        // Fallback to default values if needed
         setLimitError(true)
       }
     }
@@ -103,69 +100,51 @@ export default function CreatePublicTicketPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background font-sans text-foreground">
+    <div className="flex min-h-screen bg-white">
       
-      {/* Left Column: Image & Branding (Hidden on mobile) */}
-      <div className="relative hidden w-1/2 lg:flex flex-col justify-between overflow-hidden bg-secondary text-secondary-foreground">
+      {/* Left: Visual Panel - Reduced width to 50% for more balance */}
+      <div className="hidden lg:block lg:w-[60%] relative overflow-hidden flex-shrink-0 bg-slate-900 h-screen sticky top-0">
+        <img 
+          src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=2070&auto=format&fit=crop" 
+          alt="Student Support" 
+          className="absolute inset-0 w-full h-full object-cover opacity-80"
+        />
         
-        {/* Background Image with Overlay */}
-        <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=2070&auto=format&fit=crop" 
-            alt="Modern Corporate Office" 
-            className="h-full w-full object-cover opacity-30"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-secondary via-secondary/60 to-transparent" />
-        </div>
-
-        {/* Branding Content */}
-        <div className="relative z-10 p-12 h-full flex flex-col justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 backdrop-blur-md border border-primary/30">
-              <LifeBuoy className="h-6 w-6 text-primary" />
-            </div>
-            <span className="text-xl font-bold tracking-wide">EduDesk</span>
-          </div>
-
-          <div className="space-y-6 max-w-lg mb-12">
-            <h1 className="text-5xl font-bold tracking-tight leading-tight">
-              Here to Help You Succeed
-            </h1>
-            <p className="text-xl text-foreground/70 font-light leading-relaxed">
-              Facing an issue? Submit your query and our department teams will resolve it as quickly as possible. We are dedicated to supporting your success.
-            </p>
-          </div>
-          
-          <div className="text-sm text-foreground/50">
-            &copy; {new Date().getFullYear()} EduDesk Support. All rights reserved.
-          </div>
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/95 via-slate-900/40 to-transparent flex flex-col justify-end p-10 text-white text-left">
+           <h1 className="text-3xl lg:text-4xl font-bold leading-tight mb-4 drop-shadow-xl">
+            Here to Help You Succeed
+          </h1>
+          <p className="text-base lg:text-lg font-medium text-slate-200 drop-shadow-md max-w-md leading-relaxed">
+             Submit your query and our department teams will resolve it as quickly as possible.
+          </p>
         </div>
       </div>
 
-      {/* Right Column: Form */}
-      <div className="flex w-full flex-col justify-center lg:w-1/2 bg-background dark:bg-background px-4 py-6 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
-        <div className="mx-auto w-full max-w-lg lg:w-[480px]">
+      {/* Right: Form - Increased width to 50% */}
+      <div className="flex w-full lg:w-[40%] flex-col justify-center px-6 py-8 lg:p-12 bg-white flex-1 min-h-screen">
+        <div className="mx-auto w-full max-w-md">
           
           {isSuccess ? (
-            <div className="flex flex-col items-center justify-center space-y-6 text-center animate-in fade-in zoom-in duration-300">
-              <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-10 w-10 text-green-600" />
+            <div className="flex flex-col items-center justify-center space-y-4 text-center animate-in fade-in zoom-in duration-300 py-6">
+              <div className="h-20 w-20 rounded-full bg-[#00A38C]/10 flex items-center justify-center mb-2">
+                <CheckCircle2 className="h-10 w-10 text-[#00A38C]" />
               </div>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bold tracking-tight text-slate-900">Ticket Received!</h2>
-                <p className="text-lg text-slate-600">
+              <div className="space-y-1">
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900">Ticket Received!</h2>
+                <p className="text-base text-slate-500 font-medium">
                   Your support request has been successfully submitted.
                 </p>
               </div>
-              <div className="rounded-lg bg-transparent p-6 border border-slate-200 w-full text-left space-y-4">
-                <p className="text-sm text-slate-500">
+              <div className="rounded-xl bg-slate-50 p-6 border border-slate-100 w-full text-left space-y-3 shadow-sm">
+                <p className="text-xs text-slate-600 leading-relaxed">
                   We have sent a confirmation email to the address you provided. Please check your inbox (and spam folder) for your Ticket ID and updates.
                 </p>
                 <div className="pt-2">
                    <Button 
                     onClick={() => setIsSuccess(false)} 
                     variant="outline" 
-                    className="w-full border-primary/20 text-primary hover:bg-primary/10 hover:text-primary"
+                    className="w-full border-[#00A38C] text-[#00A38C] hover:bg-[#00A38C]/10 hover:text-[#00A38C] font-bold h-10"
                   >
                     Submit Another Request
                   </Button>
@@ -173,165 +152,168 @@ export default function CreatePublicTicketPage() {
               </div>
             </div>
           ) : (
-            <div className="space-y-6">
-              <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                  Submit a Support Ticket
+            <>
+              <div className="mb-6 text-center lg:text-left">
+
+                <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-slate-900">
+                  Submit a Ticket
                 </h2>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-slate-500">
                   Fill in the details below to reach the right department.
                 </p>
               </div>
 
               {limitError && (
-                 <div className="p-3 mb-4 text-xs text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
-                    <span className="font-medium">Limit Reached!</span> You have submitted too many requests recently. Please try again later.
+                 <div className="p-3 mb-4 text-xs text-red-800 rounded-lg bg-red-50 border border-red-100 flex items-center gap-2 animate-pulse" role="alert">
+                    <ShieldCheck className="h-4 w-4" />
+                    <div>
+                      <span className="font-bold block">Limit Reached!</span>
+                      Please try again later.
+                    </div>
                  </div>
               )}
 
-              <div className="rounded-xl bg-transparent p-5 border border-slate-100">
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+                  
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Your Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Jane Doe" {...field} className="h-9 text-sm bg-white border-slate-200 focus:border-[#00A38C] focus:ring-[#00A38C]" />
+                          </FormControl>
+                          <FormMessage className="text-[10px]" />
+                        </FormItem>
+                      )}
+                    />
                     
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <FormField
+                    <FormField
                         control={form.control}
-                        name="name"
+                        name="email"
                         render={({ field }) => (
-                          <FormItem className="space-y-1">
-                            <FormLabel className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Your Name</FormLabel>
+                            <FormItem className="space-y-1">
+                            <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Email Address</FormLabel>
                             <FormControl>
-                              <Input placeholder="Jane Doe" {...field} className="h-9 bg-slate-50/50" />
+                                <Input placeholder="name@company.com" {...field} className="h-9 text-sm bg-white border-slate-200 focus:border-[#00A38C] focus:ring-[#00A38C]" />
                             </FormControl>
-                            <FormMessage />
-                          </FormItem>
+                            <FormMessage className="text-[10px]" />
+                            </FormItem>
                         )}
-                      />
-                      
-                      <FormField
-                          control={form.control}
-                          name="email"
-                          render={({ field }) => (
-                              <FormItem className="space-y-1">
-                              <FormLabel className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Email Address</FormLabel>
-                              <FormControl>
-                                  <Input placeholder="name@company.com" {...field} className="h-9 bg-slate-50/50" />
-                              </FormControl>
-                              <FormMessage />
-                              </FormItem>
-                          )}
-                      />
-                    </div>
+                    />
+                  </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <FormField
-                          control={form.control}
-                          name="department"
-                          render={({ field }) => (
-                              <FormItem className="space-y-1">
-                              <FormLabel className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Department</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                  <SelectTrigger className="h-9 bg-slate-50/50">
-                                      <SelectValue placeholder={departments.length > 0 ? "Select..." : "Loading..."} />
-                                  </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                      {departments.map((dept) => (
-                                          <SelectItem key={dept} value={dept}>
-                                              {formatEnumString(dept)}
-                                          </SelectItem>
-                                      ))}
-                                      {departments.length === 0 && <SelectItem value="loading" disabled>Loading departments...</SelectItem>}
-                                  </SelectContent>
-                              </Select>
-                              <FormMessage />
-                              </FormItem>
-                          )}
-                      />
-
-                      <FormField
-                          control={form.control}
-                          name="priority"
-                          render={({ field }) => (
-                              <FormItem className="space-y-1">
-                              <FormLabel className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Urgency</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                  <SelectTrigger className="h-9 bg-slate-50/50">
-                                      <SelectValue placeholder={priorities.length > 0 ? "Select..." : "Loading..."} />
-                                  </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                      {priorities.map((priority) => (
-                                          <SelectItem key={priority} value={priority}>
-                                              {formatEnumString(priority)}
-                                          </SelectItem>
-                                      ))}
-                                      {priorities.length === 0 && <SelectItem value="loading" disabled>Loading priorities...</SelectItem>}
-                                  </SelectContent>
-                              </Select>
-                              <FormMessage />
-                              </FormItem>
-                          )}
-                      />
-                    </div>
-
+                  <div className="grid gap-3 md:grid-cols-2">
                     <FormField
-                      control={form.control}
-                      name="subject"
-                      render={({ field }) => (
-                        <FormItem className="space-y-1">
-                          <FormLabel className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Subject</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., Issue with VPN access or HR policy query" {...field} className="h-9 bg-slate-50/50" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                        control={form.control}
+                        name="department"
+                        render={({ field }) => (
+                            <FormItem className="space-y-1">
+                            <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Department</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger className="h-9 text-sm bg-white border-slate-200 focus:ring-[#00A38C] focus:border-[#00A38C]">
+                                    <SelectValue placeholder="Select..." />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {departments.map((dept) => (
+                                        <SelectItem key={dept} value={dept} className="text-sm">
+                                            {formatEnumString(dept)}
+                                        </SelectItem>
+                                    ))}
+                                    {departments.length === 0 && <SelectItem value="loading" disabled>Loading...</SelectItem>}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage className="text-[10px]" />
+                            </FormItem>
+                        )}
                     />
 
                     <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem className="space-y-1">
-                          <FormLabel className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Description</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Please provide specific details about your request..." 
-                              className="min-h-[80px] bg-slate-50/50 resize-y"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                        control={form.control}
+                        name="priority"
+                        render={({ field }) => (
+                            <FormItem className="space-y-1">
+                            <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Urgency</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger className="h-9 text-sm bg-white border-slate-200 focus:ring-[#00A38C] focus:border-[#00A38C]">
+                                    <SelectValue placeholder="Select..." />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {priorities.map((priority) => (
+                                        <SelectItem key={priority} value={priority} className="text-sm">
+                                            {formatEnumString(priority)}
+                                        </SelectItem>
+                                    ))}
+                                    {priorities.length === 0 && <SelectItem value="loading" disabled>Loading...</SelectItem>}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage className="text-[10px]" />
+                            </FormItem>
+                        )}
                     />
+                  </div>
 
-                    <div className="pt-2">
-                        <Button 
-                            type="submit" 
-                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 h-10 text-sm font-bold" 
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                            <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Submitting Request...
-                            </>
-                            ) : (
-                            <>
-                                <Send className="mr-2 h-4 w-4" />
-                                Submit Ticket
-                            </>
-                            )}
-                        </Button>
-                    </div>
-                  </form>
-                </Form>
-              </div>
-            </div>
+                  <FormField
+                    control={form.control}
+                    name="subject"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Subject</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Brief summary of your issue..." {...field} className="h-9 text-sm bg-white border-slate-200 focus:border-[#00A38C] focus:ring-[#00A38C]" />
+                        </FormControl>
+                        <FormMessage className="text-[10px]" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Description</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Please provide specific details about your request..." 
+                            className="min-h-[80px] bg-white border-slate-200 resize-y focus:border-[#00A38C] focus:ring-[#00A38C] text-sm"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage className="text-[10px]" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="pt-2">
+                      <Button 
+                          type="submit" 
+                          className="w-full bg-[#00A38C] hover:bg-[#008f7a] text-white shadow-lg shadow-[#00A38C]/20 h-10 text-sm font-bold transition-all transform active:scale-[0.98]" 
+                          disabled={isLoading}
+                      >
+                          {isLoading ? (
+                          <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Submitting...
+                          </>
+                          ) : (
+                          <>
+                              <Send className="mr-2 h-4 w-4" />
+                              Submit Ticket
+                          </>
+                          )}
+                      </Button>
+                  </div>
+                </form>
+              </Form>
+            </>
           )}
         </div>
       </div>

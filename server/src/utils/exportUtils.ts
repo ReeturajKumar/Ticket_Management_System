@@ -3,23 +3,19 @@ import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
+import config from '../config/appConfig';
 
-// Create exports directory if it doesn't exist
-const exportsDir = path.join(__dirname, '../../exports');
+const exportsDir = config.paths.exports;
 if (!fs.existsSync(exportsDir)) {
   fs.mkdirSync(exportsDir, { recursive: true });
 }
 
-/**
- * Generate CSV file from data
- */
 export const generateCSV = async (
   data: any[],
   headers: { id: string; title: string }[],
   filename: string
 ): Promise<string> => {
   const filePath = path.join(exportsDir, filename);
-
   const csvWriter = createObjectCsvWriter({
     path: filePath,
     header: headers,
@@ -29,9 +25,6 @@ export const generateCSV = async (
   return filePath;
 };
 
-/**
- * Generate Excel file from data
- */
 export const generateExcel = async (
   data: any[],
   headers: { id: string; title: string }[],
@@ -41,26 +34,19 @@ export const generateExcel = async (
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Report');
 
-  // Convert header format { id: 'key', title: 'Title' } to columns
   worksheet.columns = headers.map(h => ({
     header: h.title,
     key: h.id,
     width: 25 
   }));
 
-  // Add rows
   worksheet.addRows(data);
-
-  // Style header row
   worksheet.getRow(1).font = { bold: true };
   
   await workbook.xlsx.writeFile(filePath);
   return filePath;
 };
 
-/**
- * Generate PDF file from data
- */
 export const generatePDF = async (
   title: string,
   data: any,
@@ -73,50 +59,30 @@ export const generatePDF = async (
     const stream = fs.createWriteStream(filePath);
 
     doc.pipe(stream);
-
-    // Add title
     doc.fontSize(20).text(title, { align: 'center' });
     doc.moveDown();
-
-    // Add metadata
     doc.fontSize(10).text(`Generated: ${new Date().toLocaleString()}`, { align: 'right' });
     doc.moveDown();
 
-    // Add summary section
-    if (data.summary) {
-      doc.fontSize(14).text('Summary', { underline: true });
-      doc.moveDown(0.5);
-      doc.fontSize(10);
-      Object.entries(data.summary).forEach(([key, value]) => {
-        doc.text(`${key}: ${value}`);
-      });
-      doc.moveDown();
-    }
+    const sections = [
+      { key: 'summary', title: 'Summary' },
+      { key: 'byPriority', title: 'By Priority' },
+      { key: 'byStatus', title: 'By Status' }
+    ];
 
-    // Add by priority section
-    if (data.byPriority) {
-      doc.fontSize(14).text('By Priority', { underline: true });
-      doc.moveDown(0.5);
-      doc.fontSize(10);
-      Object.entries(data.byPriority).forEach(([key, value]) => {
-        doc.text(`${key}: ${value}`);
-      });
-      doc.moveDown();
-    }
+    sections.forEach(({ key, title }) => {
+      if (data[key]) {
+        doc.fontSize(14).text(title, { underline: true });
+        doc.moveDown(0.5);
+        doc.fontSize(10);
+        Object.entries(data[key]).forEach(([k, v]) => {
+          doc.text(`${k}: ${v}`);
+        });
+        doc.moveDown();
+      }
+    });
 
-    // Add by status section
-    if (data.byStatus) {
-      doc.fontSize(14).text('By Status', { underline: true });
-      doc.moveDown(0.5);
-      doc.fontSize(10);
-      Object.entries(data.byStatus).forEach(([key, value]) => {
-        doc.text(`${key}: ${value}`);
-      });
-      doc.moveDown();
-    }
-
-    // Add team performance section
-    if (data.teamPerformance && data.teamPerformance.length > 0) {
+    if (data.teamPerformance?.length > 0) {
       doc.fontSize(14).text('Team Performance', { underline: true });
       doc.moveDown(0.5);
       doc.fontSize(10);
@@ -126,27 +92,21 @@ export const generatePDF = async (
     }
 
     doc.end();
-
     stream.on('finish', () => resolve(filePath));
     stream.on('error', reject);
   });
 };
 
-/**
- * Clean up old export files (older than 24 hours)
- */
 export const cleanupOldExports = (): void => {
   try {
     const files = fs.readdirSync(exportsDir);
     const now = Date.now();
-    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+    const maxAge = 24 * 60 * 60 * 1000;
 
     files.forEach((file) => {
       const filePath = path.join(exportsDir, file);
       const stats = fs.statSync(filePath);
-      const age = now - stats.mtimeMs;
-
-      if (age > maxAge) {
+      if (now - stats.mtimeMs > maxAge) {
         fs.unlinkSync(filePath);
         console.log(`Deleted old export file: ${file}`);
       }

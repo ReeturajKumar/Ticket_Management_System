@@ -33,175 +33,54 @@ interface UseSocketConnectionOptions {
  * Automatically connects when authenticated and disconnects on logout
  */
 export function useSocketConnection(options: UseSocketConnectionOptions = {}) {
-  const { autoConnect = true, showToasts = false } = options
+  const { autoConnect = true } = options
   const { user, isAuthenticated } = useAuth()
-  const [isConnected, setIsConnected] = useState(false) // Start as false, will update when connected
-  const connectionAttempted = useRef<string | null>(null) // Track which user we attempted to connect for
+  const [isConnected, setIsConnected] = useState(false)
 
-  console.log('🔌 Socket connection hook initialized', { 
-    autoConnect, 
-    isAuthenticated, 
-    userId: user?.id, 
-    department: user?.department 
-  })
-
-  // Connect to socket when authenticated
+  // Sync connection state with current socket
   useEffect(() => {
-    if (!autoConnect || !isAuthenticated || !user) {
+    if (!isAuthenticated || !user) {
       setIsConnected(false)
       return
     }
 
-    // Check if socket already exists and is connected
-    const existingSocket = getSocket()
-    if (existingSocket?.connected) {
-      console.log('🔌 Socket already connected, skipping reconnection')
-      setIsConnected(true)
-      return
-    }
-
-    // Reset connection attempt if user changed (logout/login scenario)
-    const userKey = `${user.id}-${user.department || 'no-dept'}`
-    if (connectionAttempted.current !== userKey) {
-      connectionAttempted.current = userKey
-      // Disconnect existing socket if user changed
-      if (existingSocket) {
-        console.log('🔌 User changed, disconnecting existing socket')
-        disconnectSocket()
-      }
-      // Reset connection state when user changes
-      setIsConnected(false)
-    } else {
-      // Already attempted for this user, check current status immediately
+    const socket = getSocket()
+    
+    // Function to update local state based on actual socket state
+    const updateStatus = () => {
       const currentSocket = getSocket()
-      if (currentSocket?.connected) {
-        setIsConnected(true)
-        return
-      }
-      // If not connected, continue to set up connection
+      setIsConnected(currentSocket?.connected || false)
     }
 
-    const socket = connectSocket(user.id, user.department)
+    // Initial check
+    updateStatus()
 
     if (socket) {
-      // Listen for connection state changes - set up IMMEDIATELY
-      const handleConnect = () => {
-        setIsConnected(true)
-        if (showToasts) {
-          toast.success('Real-time updates connected', { autoClose: 2000 })
-        }
+      // Listen for status changes
+      socket.on('connect', updateStatus)
+      socket.on('authenticated', updateStatus)
+      socket.on('disconnect', updateStatus)
+
+      // Handle auto-connect if requested and not connected
+      if (autoConnect && !socket.connected) {
+        connectSocket(user.id, user.department)
       }
 
-      const handleDisconnect = () => {
-        setIsConnected(false)
-        if (showToasts) {
-          toast.warn('Real-time updates disconnected', { autoClose: 2000 })
-        }
-      }
-
-      // Set up event listeners FIRST, before checking state
-      // This ensures we catch the connect event even if it fires immediately
-      socket.on('connect', handleConnect)
-      socket.on('disconnect', handleDisconnect)
-      
-      // Also listen for 'authenticated' event (fires after successful auth)
-      const handleAuthenticated = () => {
-        // Socket is fully authenticated and ready
-        setIsConnected(true)
-      }
-      socket.on('authenticated', handleAuthenticated)
-
-      // Check initial state immediately - socket might already be connected
-      // Do this AFTER setting up listeners so we catch any immediate connections
-      // Use multiple quick checks to catch fast connections
-      const checkConnectionState = () => {
-        const currentSocket = getSocket()
-        if (currentSocket?.connected) {
-          setIsConnected(true)
-          return true
-        }
-        return false
-      }
-
-      // Store all timeouts/intervals for cleanup
-      const quickCheckTimeouts: ReturnType<typeof setTimeout>[] = []
-      let checkInterval: ReturnType<typeof setInterval> | null = null
-      let timeoutId: ReturnType<typeof setTimeout> | null = null
-
-      // Check immediately (synchronous check)
-      const isAlreadyConnected = checkConnectionState()
-      
-      // Also check after a microtask (next event loop tick) to catch very fast connections
-      setTimeout(() => checkConnectionState(), 0)
-      
-      // If not connected yet, set up aggressive checking
-      if (!isAlreadyConnected) {
-        // Not connected yet - set up aggressive checking
-        // Check multiple times quickly to catch fast connections
-        const quickChecks = [0, 25, 50, 100, 150, 200, 300, 500] // Check at these intervals (ms)
-        
-        quickChecks.forEach((delay) => {
-          const timeoutId = setTimeout(() => {
-            if (checkConnectionState() && delay > 0 && showToasts) {
-              toast.success('Real-time updates connected', { autoClose: 2000 })
-            }
-          }, delay)
-          quickCheckTimeouts.push(timeoutId)
-        })
-
-        // Also use interval for ongoing check (in case connection takes longer)
-        checkInterval = setInterval(() => {
-          if (checkConnectionState()) {
-            if (showToasts) {
-              toast.success('Real-time updates connected', { autoClose: 2000 })
-            }
-            // Stop checking once connected
-            if (checkInterval) {
-              clearInterval(checkInterval)
-              checkInterval = null
-            }
-            if (timeoutId) {
-              clearTimeout(timeoutId)
-              timeoutId = null
-            }
-            // Clear quick check timeouts
-            quickCheckTimeouts.forEach(clearTimeout)
-          }
-        }, 50) // Very fast check (50ms) for immediate feedback
-
-        // Clear interval after 2 seconds (connection should happen quickly)
-        timeoutId = setTimeout(() => {
-          if (checkInterval) {
-            clearInterval(checkInterval)
-            checkInterval = null
-          }
-        }, 2000)
-      }
-
-      // Return cleanup function
       return () => {
-        quickCheckTimeouts.forEach(clearTimeout)
-        if (checkInterval) {
-          clearInterval(checkInterval)
-        }
-        if (timeoutId) {
-          clearTimeout(timeoutId)
-        }
-        socket.off('connect', handleConnect)
-        socket.off('disconnect', handleDisconnect)
-        socket.off('authenticated', handleAuthenticated)
+        socket.off('connect', updateStatus)
+        socket.off('authenticated', updateStatus)
+        socket.off('disconnect', updateStatus)
       }
+    } else if (autoConnect) {
+      // Create new socket
+      connectSocket(user.id, user.department)
+      
+      // We'll catch the 'connect' event on the next render through getSocket()
+      // But let's check again in a moment
+      const timer = setTimeout(updateStatus, 500)
+      return () => clearTimeout(timer)
     }
-  }, [autoConnect, isAuthenticated, user?.id, user?.department, showToasts])
-
-  // Disconnect when user logs out
-  useEffect(() => {
-    if (!isAuthenticated) {
-      disconnectSocket()
-      setIsConnected(false)
-      connectionAttempted.current = null // Reset on logout
-    }
-  }, [isAuthenticated])
+  }, [autoConnect, isAuthenticated, user?.id, user?.department])
 
   // Manual connect/disconnect
   const connect = useCallback(() => {
@@ -236,6 +115,8 @@ interface UseRealTimeTicketsOptions {
   onTicketStatusChanged?: (data: TicketStatusChangedEvent) => void
   /** Callback when ticket priority changes */
   onTicketPriorityChanged?: (data: TicketPriorityChangedEvent) => void
+  /** Callback when comment is added to any ticket */
+  onCommentAdded?: (data: TicketCommentAddedEvent) => void
   /** Show toast notifications (default: true) */
   showNotifications?: boolean
   /** Auto-refresh data callback */
@@ -252,11 +133,13 @@ export function useRealTimeTickets(options: UseRealTimeTicketsOptions = {}) {
     onTicketAssigned,
     onTicketStatusChanged,
     onTicketPriorityChanged,
+    onCommentAdded,
     showNotifications = true,
     onRefresh,
   } = options
 
   const { user } = useAuth()
+  const { isConnected } = useSocketConnection({ autoConnect: false }) // Just get state
   const refreshRef = useRef(onRefresh)
   
   // Keep refs updated
@@ -266,22 +149,40 @@ export function useRealTimeTickets(options: UseRealTimeTicketsOptions = {}) {
 
   useEffect(() => {
     const socket = getSocket()
-    if (!socket || !user) return
-
-    console.log('🔌 Setting up real-time ticket listeners for user:', user.id, user.department)
+    if (!socket || !user || !isConnected) return
 
     const unsubscribers: (() => void)[] = []
 
     // Ticket created
     unsubscribers.push(
       subscribeToEvent<TicketCreatedEvent>('ticket:created', (data) => {
-        console.log('🎫 Ticket created event received:', data)
-        console.log('👤 Current user:', user.id, user.department)
+        console.log('[WebSocket] ticket:created event received:', data);
         
         // Different logic for employees vs department users
-        const shouldNotify = user.department 
-          ? data.department === user.department  // Department users only get their department's tickets
-          : data.createdBy === user.id     // Employees only get their own tickets
+        let shouldNotify = false;
+        let shouldRefresh = false;
+        
+        // Check if the current user is the one who triggered this event
+        const currentUserId = user.id || (user as any)._id || (user as any).userId;
+        // For ticket creations, authorId in the payload contains the ID of the creator
+        const actorId = (data as any).senderId || data.authorId;
+        const isSelfAction = actorId && currentUserId && actorId.toString() === currentUserId.toString();
+
+        // Different logic for employees vs department users
+        if (user.role === 'DEPARTMENT_USER' && user.department) {
+           // Refresh if:
+           // 1. Ticket is in same department (for department tickets)
+           // 2. Current user created it (for internal requests/my requests)
+           shouldRefresh = data.department === user.department || isSelfAction;
+           // Only notify if someone else created it in same department
+           shouldNotify = data.department === user.department && !isSelfAction;
+        }
+        else if (user.role === 'EMPLOYEE') {
+           // For employees, refresh if it's for them
+           shouldRefresh = data.authorId === user.id;
+           // Notify if someone else created it
+           shouldNotify = shouldRefresh && !isSelfAction;
+        }
           
         if (showNotifications && shouldNotify) {
           toast.info(`New ticket: ${data.subject}`, {
@@ -293,19 +194,36 @@ export function useRealTimeTickets(options: UseRealTimeTicketsOptions = {}) {
           })
         }
         onTicketCreated?.(data)
-        refreshRef.current?.()
+        
+        // Always refresh if it's relevant to this user/department
+        if (shouldRefresh) {
+          console.log('[WebSocket] Refreshing dashboard due to ticket:created');
+          refreshRef.current?.()
+        } else {
+          console.log('[WebSocket] Skipping refresh - not relevant to current user/department');
+        }
       })
     )
 
     // Ticket assigned
     unsubscribers.push(
       subscribeToEvent<TicketAssignedEvent>('ticket:assigned', (data) => {
-        // Debug logging to track events
-        console.log('🎫 Ticket assigned event received:', data)
-        console.log('👤 Current user:', user.id, user.department)
+        console.log('[WebSocket] ticket:assigned event received:', data);
+        const currentUserId = user.id || (user as any)._id || (user as any).userId;
+        const actorId = (data as any).senderId || (data as any).assignedBy;
+        const isSelfAction = actorId && currentUserId && actorId.toString() === currentUserId.toString();
         
-        // For ticket assignment, notify if assigned to this user (regardless of department)
-        const shouldNotify = data.assigneeId === user.id
+        let shouldNotify = false;
+        let shouldRefresh = false;
+        
+        // Refresh if in same department or assigned to current user
+        if (user.role === 'DEPARTMENT_USER' && user.department) {
+          shouldRefresh = data.department === user.department;
+          shouldNotify = data.assigneeId === currentUserId && !isSelfAction;
+        } else if (user.role === 'EMPLOYEE') {
+          shouldRefresh = data.assigneeId === currentUserId;
+          shouldNotify = shouldRefresh && !isSelfAction;
+        }
         
         if (showNotifications && shouldNotify) {
           toast.info(`Ticket assigned to you: ${data.subject}`, {
@@ -313,36 +231,87 @@ export function useRealTimeTickets(options: UseRealTimeTicketsOptions = {}) {
           })
         }
         onTicketAssigned?.(data)
-        refreshRef.current?.()
+        if (shouldRefresh) {
+          console.log('[WebSocket] Refreshing dashboard due to ticket:assigned');
+          refreshRef.current?.()
+        }
       })
     )
 
-    // Ticket status changed - for employees, check if they created the ticket or it's assigned to them
+    // Ticket status changed
     unsubscribers.push(
       subscribeToEvent<TicketStatusChangedEvent>('ticket:status-changed', (data) => {
-        // Note: We don't have ticket creator/assignee info in this event, so employees get all status changes
-        // In a real implementation, you'd want to filter by user involvement
-        if (showNotifications) {
+        console.log('[WebSocket] ticket:status-changed event received:', data);
+        const currentUserId = user.id || (user as any)._id || (user as any).userId;
+        const actorId = (data as any).senderId || (data as any).changedBy;
+        const isSelfAction = actorId && currentUserId && actorId.toString() === currentUserId.toString();
+
+        let shouldRefresh = false;
+        
+        // Always refresh if in same department
+        if (user.role === 'DEPARTMENT_USER' && user.department) {
+          shouldRefresh = data.department === user.department;
+        } else if (user.role === 'EMPLOYEE') {
+          shouldRefresh = true; // Employees should refresh for any status change
+        }
+
+        if (showNotifications && !isSelfAction && shouldRefresh) {
           toast.info(
             `Ticket status changed: ${data.previousStatus} → ${data.newStatus}`,
             { autoClose: 3000 }
           )
         }
         onTicketStatusChanged?.(data)
-        refreshRef.current?.()
+        if (shouldRefresh) {
+          console.log('[WebSocket] Refreshing dashboard due to ticket:status-changed');
+          refreshRef.current?.()
+        }
       })
     )
 
-    // Ticket priority changed - similar logic to status changes
+    // Ticket priority changed
     unsubscribers.push(
       subscribeToEvent<TicketPriorityChangedEvent>('ticket:priority-changed', (data) => {
-        if (showNotifications) {
+        console.log('[WebSocket] ticket:priority-changed event received:', data);
+        const currentUserId = user.id || (user as any)._id || (user as any).userId;
+        const actorId = (data as any).senderId || (data as any).changedBy;
+        const isSelfAction = actorId && currentUserId && actorId.toString() === currentUserId.toString();
+
+        let shouldRefresh = false;
+        
+        // Always refresh if in same department
+        if (user.role === 'DEPARTMENT_USER' && user.department) {
+          shouldRefresh = data.department === user.department;
+        } else if (user.role === 'EMPLOYEE') {
+          shouldRefresh = true; // Employees should refresh for any priority change
+        }
+
+        if (showNotifications && !isSelfAction && shouldRefresh) {
           toast.info(
             `Ticket priority changed: ${data.previousPriority} → ${data.newPriority}`,
             { autoClose: 3000 }
           )
         }
         onTicketPriorityChanged?.(data)
+        if (shouldRefresh) {
+          console.log('[WebSocket] Refreshing dashboard due to ticket:priority-changed');
+          refreshRef.current?.()
+        }
+      })
+    )
+
+    // Ticket comment added
+    unsubscribers.push(
+      subscribeToEvent<TicketCommentAddedEvent>('ticket:comment-added', (data) => {
+        // Toast notification disabled as per request - using bell icon notifications instead
+        /*
+        if (showNotifications && data.authorId !== user.id) {
+          toast.info(`New comment on ticket "${data.ticketSubject}" by ${data.authorName}`, {
+            autoClose: 4000,
+          })
+        }
+        */
+        onCommentAdded?.(data)
         refreshRef.current?.()
       })
     )
@@ -351,7 +320,7 @@ export function useRealTimeTickets(options: UseRealTimeTicketsOptions = {}) {
     return () => {
       unsubscribers.forEach((unsubscribe) => unsubscribe())
     }
-  }, [user, showNotifications, onTicketCreated, onTicketAssigned, onTicketStatusChanged, onTicketPriorityChanged])
+  }, [user, isConnected, showNotifications, onTicketCreated, onTicketAssigned, onTicketStatusChanged, onTicketPriorityChanged, onCommentAdded])
 }
 
 // ============================================================================
@@ -381,11 +350,12 @@ export function useRealTimeTicket(options: UseRealTimeTicketOptions) {
   } = options
 
   const { user } = useAuth()
+  const { isConnected } = useSocketConnection({ autoConnect: false })
   const [viewers, setViewers] = useState<string[]>([])
 
   useEffect(() => {
     const socket = getSocket()
-    if (!socket || !ticketId || !user) return
+    if (!socket || !ticketId || !user || !isConnected) return
 
     // Join ticket room for detailed updates
     joinTicketRoom(ticketId)
@@ -396,9 +366,12 @@ export function useRealTimeTicket(options: UseRealTimeTicketOptions) {
     unsubscribers.push(
       subscribeToEvent<TicketCommentAddedEvent>('ticket:comment-added', (data) => {
         if (data.ticketId === ticketId) {
+          // Toast notifications disabled - using header notifications
+          /*
           if (showNotifications && data.authorId !== user.id) {
             toast.info(`New comment from ${data.authorName}`, { autoClose: 3000 })
           }
+          */
           onCommentAdded?.(data)
         }
       })
@@ -428,7 +401,7 @@ export function useRealTimeTicket(options: UseRealTimeTicketOptions) {
       leaveTicketRoom(ticketId)
       unsubscribers.forEach((unsubscribe) => unsubscribe())
     }
-  }, [ticketId, user, showNotifications, onCommentAdded, onStatusChanged, onViewersChanged])
+  }, [ticketId, user, isConnected, showNotifications, onCommentAdded, onStatusChanged, onViewersChanged])
 
   return { viewers }
 }

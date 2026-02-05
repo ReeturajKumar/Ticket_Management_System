@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { loginAdminUser } from '../controllers/adminAuthController';
 import {
   getPendingUsers,
   approveUser,
@@ -12,54 +13,57 @@ import {
   getTicketDetails,
   getAdminAnalytics,
   getSystemStats,
+  getAdminConstants,
 } from '../controllers/adminController';
+import {
+  getAnalyticsOverview,
+  getDepartmentAnalytics,
+  getStaffAnalytics,
+  exportTickets,
+  exportAnalyticsReport,
+  exportUsers,
+  getTicketTrends,
+} from '../controllers/adminAnalyticsController';
+import { loginLimiter } from '../middleware/rateLimiter';
 import { authenticate } from '../middleware/auth';
+import { validate, createUserSchema, updateUserSchema, rejectionSchema, loginSchema } from '../utils/validation';
 
-const router = Router();
+const adminAuthRouter = Router();
+adminAuthRouter.post('/login', loginLimiter, validate(loginSchema), loginAdminUser);
 
-// All admin routes require authentication
-// TODO: Add admin role check middleware
-router.use(authenticate);
+const adminActionRouter = Router();
+adminActionRouter.use(authenticate);
 
-// Dashboard & Overview
-// GET /api/v1/admin/dashboard/overview - Get admin dashboard overview
-router.get('/dashboard/overview', getAdminDashboardOverview);
+// Dashboard
+adminActionRouter.get('/dashboard/overview', getAdminDashboardOverview);
 
-// Analytics
-// GET /api/v1/admin/analytics - Get admin analytics
-router.get('/analytics', getAdminAnalytics);
+// Analytics - Overview & Metrics
+adminActionRouter.get('/analytics', getAdminAnalytics);
+adminActionRouter.get('/analytics/overview', getAnalyticsOverview);
+adminActionRouter.get('/analytics/departments', getDepartmentAnalytics);
+adminActionRouter.get('/analytics/staff', getStaffAnalytics);
+adminActionRouter.get('/analytics/trends', getTicketTrends);
 
-// System Statistics
-// GET /api/v1/admin/stats - Get system statistics
-router.get('/stats', getSystemStats);
+// Analytics - Export
+adminActionRouter.get('/analytics/export/tickets', exportTickets);
+adminActionRouter.get('/analytics/export/users', exportUsers);
+adminActionRouter.get('/analytics/export/report', exportAnalyticsReport);
+
+// System
+adminActionRouter.get('/stats', getSystemStats);
+adminActionRouter.get('/constants', getAdminConstants);
 
 // User Management
-// GET /api/v1/admin/pending-users - Get pending department user requests
-router.get('/pending-users', getPendingUsers);
-
-// POST /api/v1/admin/users - Create new user
-router.post('/users', createUser);
-
-// GET /api/v1/admin/users - Get all users (with filters)
-router.get('/users', getAllUsers);
-
-// GET /api/v1/admin/users/:userId - Get user details
-router.get('/users/:userId', getUserDetails);
-
-// PATCH /api/v1/admin/users/:userId - Update user
-router.patch('/users/:userId', updateUser);
-
-// POST /api/v1/admin/approve-user/:userId - Approve department user
-router.post('/approve-user/:userId', approveUser);
-
-// POST /api/v1/admin/reject-user/:userId - Reject department user
-router.post('/reject-user/:userId', rejectUser);
+adminActionRouter.get('/pending-users', getPendingUsers);
+adminActionRouter.post('/users', validate(createUserSchema), createUser);
+adminActionRouter.get('/users', getAllUsers);
+adminActionRouter.get('/users/:userId', getUserDetails);
+adminActionRouter.patch('/users/:userId', validate(updateUserSchema), updateUser);
+adminActionRouter.post('/approve-user/:userId', approveUser);
+adminActionRouter.post('/reject-user/:userId', validate(rejectionSchema), rejectUser);
 
 // Ticket Management
-// GET /api/v1/admin/tickets - Get all tickets (admin view)
-router.get('/tickets', getAllTickets);
+adminActionRouter.get('/tickets', getAllTickets);
+adminActionRouter.get('/tickets/:ticketId', getTicketDetails);
 
-// GET /api/v1/admin/tickets/:ticketId - Get ticket details (admin view)
-router.get('/tickets/:ticketId', getTicketDetails);
-
-export default router;
+export { adminAuthRouter, adminActionRouter };

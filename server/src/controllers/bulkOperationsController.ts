@@ -4,10 +4,9 @@ import Ticket from '../models/Ticket';
 import User from '../models/User';
 import { TicketStatus, UserRole } from '../constants';
 import AppError, { ErrorCode } from '../utils/AppError';
-import { invalidateDepartmentCache } from '../utils/cache';
 import { withTransaction } from '../utils/transaction';
 import logger, { logAudit } from '../utils/logger';
-import { emitBulkOperationCompleted, emitBulkOperationStarted } from '../utils/socket';
+import { emitBulkOperationCompleted, emitBulkOperationStarted, emitToUser, notifyUser, NotificationType, SOCKET_EVENTS } from '../utils/socket';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -19,30 +18,7 @@ export const bulkAssignTickets = async (req: Request, res: Response): Promise<vo
   const { ticketIds, assignedTo } = req.body;
   const operationId = uuidv4();
 
-  // Input validation is now handled by validation middleware
-  // But we keep these checks as fallback
-  if (!ticketIds || !Array.isArray(ticketIds) || ticketIds.length === 0) {
-    throw new AppError({
-      code: ErrorCode.VALIDATION_FAILED,
-      message: 'Please provide an array of ticket IDs',
-    }, 400);
-  }
-
-  if (ticketIds.length > 100) {
-    throw new AppError({
-      code: ErrorCode.VALIDATION_FAILED,
-      message: 'Cannot bulk assign more than 100 tickets at once',
-    }, 400);
-  }
-
-  if (!assignedTo) {
-    throw new AppError({
-      code: ErrorCode.MISSING_REQUIRED_FIELD,
-      message: 'Please provide assignedTo user ID',
-    }, 400);
-  }
-
-  // Verify assignee is a team member
+  // Verify assignee is a team member (STAFF ONLY, NOT HEADS)
   const assignee = await User.findById(assignedTo);
 
   if (!assignee) {
@@ -51,6 +27,11 @@ export const bulkAssignTickets = async (req: Request, res: Response): Promise<vo
 
   if (assignee.role !== UserRole.DEPARTMENT_USER || assignee.department !== user.department) {
     throw AppError.forbidden('Can only assign to team members in your department');
+  }
+
+  // NEW: Prevent assigning to department heads
+  if (assignee.isHead) {
+    throw AppError.forbidden('Cannot assign tickets to department heads. Please assign to staff members only.');
   }
 
   // Emit operation started notification
@@ -147,8 +128,38 @@ export const bulkAssignTickets = async (req: Request, res: Response): Promise<vo
 
     const totalModified = result.modifiedCount;
 
-    // Invalidate department caches
-    invalidateDepartmentCache(user.department);
+    // NEW: Notify internal ticket creators about bulk assignments
+    if (totalModified > 0) {
+      // Get the tickets that were actually modified to notify their creators
+      const modifiedTickets = await Ticket.find({
+        _id: { $in: objectIds },
+        department: user.department,
+        assignedTo: assignee._id, // Now assigned to the selected user
+      }).select('_id subject createdBy').lean();
+
+      // Notify each internal ticket creator
+      for (const ticket of modifiedTickets) {
+        if (ticket.createdBy && ticket.createdBy.toString() !== assignee._id.toString()) {
+          emitToUser(ticket.createdBy.toString(), SOCKET_EVENTS.TICKET_ASSIGNED, {
+            ticketId: ticket._id.toString(),
+            subject: ticket.subject,
+            assigneeId: assignee._id.toString(),
+            assigneeName: assignee.name,
+            assignedBy: user.name,
+            department: user.department,
+          });
+          
+          notifyUser(ticket.createdBy.toString(), {
+            type: NotificationType.INFO,
+            title: 'Your Ticket Assigned',
+            message: `Your internal ticket "${ticket.subject}" has been assigned to ${assignee.name}`,
+            senderId: user._id.toString(),
+            data: { ticketId: ticket._id.toString() },
+          });
+        }
+      }
+    }
+
 
     // Log audit event
     logAudit('bulk-assign', user._id.toString(), 'tickets', {
@@ -199,37 +210,6 @@ export const bulkUpdateStatus = async (req: Request, res: Response): Promise<voi
   const { ticketIds, status } = req.body;
   const operationId = uuidv4();
 
-  // Input validation fallback
-  if (!ticketIds || !Array.isArray(ticketIds) || ticketIds.length === 0) {
-    throw new AppError({
-      code: ErrorCode.VALIDATION_FAILED,
-      message: 'Please provide an array of ticket IDs',
-    }, 400);
-  }
-
-  if (ticketIds.length > 100) {
-    throw new AppError({
-      code: ErrorCode.VALIDATION_FAILED,
-      message: 'Cannot bulk update more than 100 tickets at once',
-    }, 400);
-  }
-
-  if (!status) {
-    throw new AppError({
-      code: ErrorCode.MISSING_REQUIRED_FIELD,
-      message: 'Please provide status',
-    }, 400);
-  }
-
-  // Validate status
-  if (!Object.values(TicketStatus).includes(status)) {
-    throw new AppError({
-      code: ErrorCode.VALIDATION_FAILED,
-      message: 'Invalid status',
-      details: { status: `Valid values: ${Object.values(TicketStatus).join(', ')}` },
-    }, 400);
-  }
-
   // Emit operation started notification
   emitBulkOperationStarted(user._id.toString(), operationId, 'bulk-status', ticketIds.length);
 
@@ -272,8 +252,29 @@ export const bulkUpdateStatus = async (req: Request, res: Response): Promise<voi
       );
     });
 
-    // Invalidate department caches
-    invalidateDepartmentCache(user.department);
+    // NEW: Notify internal ticket creators about bulk status changes
+    if (result.modifiedCount > 0) {
+      // Get the tickets that were actually modified to notify their creators
+      const modifiedTickets = await Ticket.find({
+        _id: { $in: objectIds },
+        department: user.department,
+        status: status, // Now has the new status
+      }).select('_id subject createdBy').lean();
+
+      // Notify each internal ticket creator
+      for (const ticket of modifiedTickets) {
+        if (ticket.createdBy) {
+          notifyUser(ticket.createdBy.toString(), {
+            type: NotificationType.SUCCESS,
+            title: 'Your Ticket Updated',
+            message: `Your internal ticket "${ticket.subject}" status changed to ${status}`,
+            senderId: user._id.toString(),
+            data: { ticketId: ticket._id.toString() }
+          });
+        }
+      }
+    }
+
 
     // Log audit event
     logAudit('bulk-status-update', user._id.toString(), 'tickets', {

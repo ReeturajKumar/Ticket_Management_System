@@ -189,7 +189,7 @@ interface TicketStoreContextType {
 const TicketStoreContext = createContext<TicketStoreContextType | null>(null)
 
 // Storage key for persistence
-const STORAGE_KEY = 'edudesk-ticket-store'
+const STORAGE_KEY = 'CloudBlitz-ticket-store'
 
 // Load persisted state from localStorage
 function loadPersistedState(): Partial<TicketStoreState> {

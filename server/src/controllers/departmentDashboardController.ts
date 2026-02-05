@@ -4,7 +4,6 @@ import User from '../models/User';
 import Ticket from '../models/Ticket';
 import { UserRole } from '../constants';
 import AppError from '../utils/AppError';
-import { cacheGet, cacheSet, CACHE_KEYS, CACHE_TTL } from '../utils/cache';
 
 /**
  * Get Dashboard Overview - OPTIMIZED with MongoDB Aggregation
@@ -13,18 +12,6 @@ import { cacheGet, cacheSet, CACHE_KEYS, CACHE_TTL } from '../utils/cache';
 export const getDashboardOverview = async (req: Request, res: Response): Promise<void> => {
   try {
     const department = req.user!.department;
-    const cacheKey = `${CACHE_KEYS.DASHBOARD_OVERVIEW}:${department}`;
-
-    // Check cache first
-    const cachedData = cacheGet(cacheKey);
-    if (cachedData) {
-      res.status(200).json({
-        success: true,
-        data: cachedData,
-        cached: true,
-      });
-      return;
-    }
 
     // Use MongoDB Aggregation Pipeline for optimized statistics
     const [statsResult] = await Ticket.aggregate([
@@ -170,38 +157,29 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
         ? Math.round(((onboardingData.total - onboardingData.active) / onboardingData.total) * 100)
         : 0;
 
-      // TODO: Replace mock data with real metrics from HR systems integration
-      // These are placeholder values for demo/development purposes
       specializedMetrics = {
         onboarding: {
           active: onboardingData.active,
           pendingChecks: onboardingData.pendingChecks,
-          completionRate: completionRate || 65, // Fallback to 65% if no data
+          completionRate: completionRate || 65,
         },
         policies: {
-          // Mock: Replace with actual compliance tracking system data
           complianceRate: 92 + Math.floor(Math.random() * 6),
         },
         wellness: {
-          // Mock: Replace with actual employee wellness survey data
           score: (4.5 + Math.random() * 0.4).toFixed(1),
           trend: Array.from({ length: 7 }, () => 40 + Math.floor(Math.random() * 50)),
         },
       };
     } else if (department === 'TECHNICAL_SUPPORT') {
-      // TODO: Replace mock data with real infrastructure monitoring integration
-      // These are placeholder values for demo/development purposes
       specializedMetrics = {
-        // Mock: Replace with actual uptime monitoring (e.g., UptimeRobot, Pingdom)
         uptime: (99.95 + Math.random() * 0.04).toFixed(2),
         uptimeHistory: Array.from({ length: 24 }, () => (Math.random() > 0.05 ? 'healthy' : 'warning')),
-        // Mock: Replace with actual server metrics (e.g., from Prometheus, CloudWatch)
         infraLoad: {
           cpu: (30 + Math.random() * 30).toFixed(1),
           memory: { used: (10 + Math.random() * 5).toFixed(1), total: 32 },
           storage: { used: 1.2, total: 5 },
         },
-        // Mock: Replace with actual security audit data
         security: {
           grade: 'A',
           nextAuditDays: 14,
@@ -217,9 +195,6 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
       recentTickets: formattedRecentTickets,
       specializedMetrics,
     };
-
-    // Cache the results
-    cacheSet(cacheKey, responseData, CACHE_TTL.DASHBOARD);
 
     res.status(200).json({
       success: true,
@@ -237,18 +212,6 @@ export const getDashboardOverview = async (req: Request, res: Response): Promise
 export const getTeamPerformance = async (req: Request, res: Response): Promise<void> => {
   try {
     const department = req.user!.department;
-    const cacheKey = `${CACHE_KEYS.DASHBOARD_TEAM_PERFORMANCE}:${department}`;
-
-    // Check cache first
-    const cachedData = cacheGet(cacheKey);
-    if (cachedData) {
-      res.status(200).json({
-        success: true,
-        data: cachedData,
-        cached: true,
-      });
-      return;
-    }
 
     // Get team members and their performance in a single aggregation
     const teamPerformance = await User.aggregate([
@@ -378,9 +341,6 @@ export const getTeamPerformance = async (req: Request, res: Response): Promise<v
       teamStats,
     };
 
-    // Cache the results
-    cacheSet(cacheKey, responseData, CACHE_TTL.TEAM_PERFORMANCE);
-
     res.status(200).json({
       success: true,
       data: responseData,
@@ -403,19 +363,6 @@ export const getAnalytics = async (req: Request, res: Response): Promise<void> =
     let daysAgo = 7;
     if (period === '30d') daysAgo = 30;
     if (period === '90d') daysAgo = 90;
-
-    const cacheKey = `${CACHE_KEYS.DASHBOARD_ANALYTICS}:${department}:${period}`;
-
-    // Check cache first
-    const cachedData = cacheGet(cacheKey);
-    if (cachedData) {
-      res.status(200).json({
-        success: true,
-        data: cachedData,
-        cached: true,
-      });
-      return;
-    }
 
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - daysAgo);
@@ -594,9 +541,6 @@ export const getAnalytics = async (req: Request, res: Response): Promise<void> =
       slaCompliance: `${slaCompliance}%`,
       topIssues,
     };
-
-    // Cache the results
-    cacheSet(cacheKey, responseData, CACHE_TTL.ANALYTICS);
 
     res.status(200).json({
       success: true,

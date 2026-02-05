@@ -13,6 +13,8 @@ import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { toast } from "react-toastify"
 import { EmployeeTicketDetailsDialog } from "@/components/employee/EmployeeTicketDetailsDialog"
+import { useSocketConnection, useRealTimeTickets } from "@/hooks/useSocket"
+import { useDebouncedCallback } from "@/hooks/useDebounce"
 
 export default function EmployeeTicketsPage() {
   const [tickets, setTickets] = useState<any[]>([])
@@ -23,9 +25,8 @@ export default function EmployeeTicketsPage() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
   const navigate = useNavigate()
 
-  useEffect(() => {
-    fetchTickets()
-  }, [])
+  // Initialize socket connection
+  useSocketConnection({ autoConnect: true })
 
   const fetchTickets = async () => {
     try {
@@ -41,6 +42,23 @@ export default function EmployeeTicketsPage() {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchTickets()
+  }, [])
+
+  // Create debounced version to prevent multiple rapid API calls
+  const { debouncedCallback: debouncedRefetch } = useDebouncedCallback(fetchTickets, 1000)
+
+  // Listen for real-time ticket events
+  useRealTimeTickets({
+    showNotifications: false,
+    onTicketCreated: () => debouncedRefetch(),
+    onTicketAssigned: () => debouncedRefetch(),
+    onTicketStatusChanged: () => debouncedRefetch(),
+    onTicketPriorityChanged: () => debouncedRefetch(),
+    onRefresh: () => debouncedRefetch(),
+  })
 
   const filteredTickets = tickets.filter(ticket => {
     const matchesSearch = ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) || 
